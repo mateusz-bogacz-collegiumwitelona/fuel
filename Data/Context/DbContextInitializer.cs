@@ -8,7 +8,9 @@ namespace Data.Context
         public static ApplicationDbContext Create(string connectionString)
         {
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseNpgsql(connectionString)
+                .UseNpgsql(
+                    connectionString,
+                    o => o.UseNetTopologySuite())
                 .Options;
 
             return new ApplicationDbContext(options);
