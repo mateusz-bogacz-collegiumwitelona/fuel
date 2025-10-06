@@ -1,4 +1,7 @@
 using Data.Context;
+using Data.Seeder;
+using Data.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 
@@ -24,6 +27,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 var redisHost = builder.Configuration["Redis:Host"] ?? "redis";
 var redisPort = builder.Configuration["Redis:Port"] ?? "6379";
 
+//register identity
+builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
+
+
 var options = new ConfigurationOptions
 {
     EndPoints = { $"{redisHost}:{redisPort}" },
@@ -43,7 +52,7 @@ if (app.Environment.IsDevelopment())
 }
 
 
-//auto migration 
+//auto migration and seeding
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -51,7 +60,13 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var dbContext = services.GetRequiredService<ApplicationDbContext>();
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+        var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+
         await dbContext.Database.MigrateAsync();
+
+        var seeder = new SeedData(roleManager, userManager, dbContext);
+        await seeder.InicializeAsync();
     }
     catch (Exception ex)
     {

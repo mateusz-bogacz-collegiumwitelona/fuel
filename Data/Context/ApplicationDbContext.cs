@@ -16,13 +16,13 @@ namespace Data.Context
             : base(options)
         { }
 
-        DbSet<ApplicationUser> ApplicationUsers { get; set; }
-        DbSet<Brand> Brands { get; set; }
-        DbSet<FuelPrice> FuelPrices { get; set; }
-        DbSet<FuelType> FuelTypes { get; set; }
-        DbSet<Logging> Logging { get; set; }
-        DbSet<PriceProposal> PriceProposals { get; set; }
-        DbSet<Station> Stations { get; set; }
+        public DbSet<Brand> Brand { get; set; }
+        public DbSet<FuelPrice> FuelPrices { get; set; }
+        public DbSet<FuelType> FuelTypes { get; set; }
+        public DbSet<Logging> Logging { get; set; }
+        public DbSet<PriceProposal> PriceProposals { get; set; }
+        public DbSet<Station> Stations { get; set; }
+        public DbSet<ProposalStatisict> ProposalStatisicts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
