@@ -26,9 +26,4 @@
     <ProjectReference Include="..\DTO\DTO.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Interfaces\" />
-    <Folder Include="Reopsitories\" />
-  </ItemGroup>
-
 </Project>

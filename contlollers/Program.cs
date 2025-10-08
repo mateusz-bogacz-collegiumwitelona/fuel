@@ -1,5 +1,7 @@
 using Data.Context;
+using Data.Interfaces;
 using Data.Models;
+using Data.Reopsitories;
 using Data.Seeder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -8,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using Services.Interfaces;
 using Services.Services;
 using StackExchange.Redis;
+using System.Reflection;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -103,9 +106,11 @@ var redis = ConnectionMultiplexer.Connect(options);
 builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
 
 //regiser repo 
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 //register services
 builder.Services.AddScoped<ILoginServices, LoginServices>();
+builder.Services.AddScoped<IUserServices, UserServices>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -136,6 +141,10 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
+
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    c.IncludeXmlComments(xmlPath);
 });
 
 var app = builder.Build();
