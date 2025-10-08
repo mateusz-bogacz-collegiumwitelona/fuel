@@ -107,10 +107,12 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
 
 //regiser repo 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IStationRepository, StationRepository>();
 
 //register services
 builder.Services.AddScoped<ILoginServices, LoginServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
+builder.Services.AddScoped<IStationServices, StationServices>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

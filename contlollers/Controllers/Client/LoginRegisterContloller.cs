@@ -36,10 +36,11 @@ namespace contlollers.Controllers.Client
         /// }
         /// </param>
         /// <returns>Jwt Token</returns>
-        /// <response code="404">Can't find user with email</response>
+        /// <response code="200">User login</response>
         /// <response code="401">Invalid login attempt</response>
         /// <response code="403">User has no roles assigned</response>
-        /// <response code="200">User login</response>
+        /// <response code="404">Can't find user with email</response>
+        /// <response code="500">Something bad in backend. Call 911</response>
         [HttpPost("login")]
         public async Task<IActionResult> LoginAsync([FromBody] LoginRequest request)
         {
@@ -73,7 +74,7 @@ namespace contlollers.Controllers.Client
         /// <returns>IdentityResult with messages</returns>
         /// <response code="400">Validation Errors or Error with repo</response>
         /// <response code="201">Success</response>
-
+        /// <response code="500">Something bad in backend. Call priest or Dev</response>
         [HttpPost("register")]
         public async Task<IActionResult> RegisterNewUserAsync([FromBody] RegisterNewUserRequest request)
         {
