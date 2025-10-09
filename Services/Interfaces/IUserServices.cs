@@ -11,6 +11,7 @@ namespace Services.Interfaces
 {
     public interface IUserServices
     {
-        Task<Result<IdentityResult>> RegisterNewUser(RegisterNewUserRequest request);
+        Task<Result<ConfirmEmailRequest>> RegisterNewUser(RegisterNewUserRequest request);
+        Task<Result<IdentityResult>> ConfirmEmailAsync(ConfirmEmailRequest request);
     }
 }

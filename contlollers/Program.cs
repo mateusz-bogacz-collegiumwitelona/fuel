@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Services.Interfaces;
+using Services.Helpers;
 using Services.Services;
 using StackExchange.Redis;
 using System.Reflection;
@@ -112,10 +113,12 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IStationRepository, StationRepository>();
 
-//register services
+//register services and helpers
 builder.Services.AddScoped<ILoginServices, LoginServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
 builder.Services.AddScoped<IStationServices, StationServices>();
+builder.Services.AddScoped<IEmailServices, EmailServices>();
+builder.Services.AddScoped<IEmaliBody, EmailBodys>();
 
 builder.Services.AddControllers(op =>
 {

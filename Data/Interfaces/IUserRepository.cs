@@ -11,5 +11,7 @@ namespace Data.Interfaces
     public interface IUserRepository
     {
         Task<IdentityResult> RegisterNewUser(RegisterNewUserRequest request);
+        Task<string> GenerateConfirEmailTokenAsync(string email);
+        Task<IdentityResult> ConfirmEmailAsync(ConfirmEmailRequest request);
     }
 }

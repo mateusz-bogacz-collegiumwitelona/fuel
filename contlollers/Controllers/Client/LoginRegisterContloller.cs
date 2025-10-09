@@ -91,5 +91,26 @@ namespace contlollers.Controllers.Client
                     errors = result.Errors
                 });
         }
+
+        /// <summary>
+        /// Make email confirmation for user
+        /// </summary>
+        /// <param name="email"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        [AllowAnonymous]
+        [HttpPost("confirm-email")]
+        public async Task<IActionResult> ConfirmEmailAsync([FromBody] ConfirmEmailRequest request)
+        {
+            var result = await _userServices.ConfirmEmailAsync(request);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
     }
 }
