@@ -4,7 +4,9 @@ using Data.Models;
 using Data.Reopsitories;
 using Data.Seeder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Services.Interfaces;
@@ -37,7 +39,8 @@ builder.Services.AddAuthentication(options =>
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 
 })
-.AddJwtBearer(options => {
+.AddJwtBearer(options =>
+{
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -114,7 +117,14 @@ builder.Services.AddScoped<ILoginServices, LoginServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
 builder.Services.AddScoped<IStationServices, StationServices>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(op =>
+{
+    var policy = new AuthorizationPolicyBuilder()
+                    .RequireAuthenticatedUser()
+                    .Build();
+
+    op.Filters.Add(new AuthorizeFilter(policy));
+});
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -177,7 +187,7 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-       Console.WriteLine($"error during migration: {ex.Message} | {ex.InnerException}");
+        Console.WriteLine($"error during migration: {ex.Message} | {ex.InnerException}");
     }
 }
 

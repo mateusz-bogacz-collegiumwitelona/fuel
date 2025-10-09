@@ -1,4 +1,5 @@
 ﻿using DTO.Requests;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
@@ -41,6 +42,7 @@ namespace contlollers.Controllers.Client
         /// <response code="403">User has no roles assigned</response>
         /// <response code="404">Can't find user with email</response>
         /// <response code="500">Something bad in backend. Call 911</response>
+        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> LoginAsync([FromBody] LoginRequest request)
         {
@@ -75,6 +77,7 @@ namespace contlollers.Controllers.Client
         /// <response code="400">Validation Errors or Error with repo</response>
         /// <response code="201">Success</response>
         /// <response code="500">Something bad in backend. Call priest or Dev</response>
+        [AllowAnonymous]
         [HttpPost("register")]
         public async Task<IActionResult> RegisterNewUserAsync([FromBody] RegisterNewUserRequest request)
         {
