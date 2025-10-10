@@ -20,7 +20,7 @@ builder.Services.AddCors(op =>
 {
     op.AddPolicy("AllowClient", p =>
     {
-        p.WithOrigins("https://localhost:4000")
+        p.WithOrigins("https://localhost:4000", "http://localhost:4000")
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials();
@@ -182,16 +182,16 @@ using (var scope = app.Services.CreateScope())
 }
 
 //middleware
-app.UseHttpsRedirection();
-
 app.UseRouting();
 
-app.UseCors();
+app.UseCors("AllowClient");
 
 app.UseAuthentication();
-
 app.UseAuthorization();
 
+app.UseHttpsRedirection();
+
 app.MapControllers();
+
 
 app.Run();
