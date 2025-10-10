@@ -156,5 +156,20 @@ namespace Data.Reopsitories
                     });
             }
         }
+
+        public async Task<string> GeneratePasswordResetToken(string email)
+        {
+
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null) return null;
+
+
+            string token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+            if (string.IsNullOrEmpty(token)) return null;
+
+            return token;
+        }
     }
 }

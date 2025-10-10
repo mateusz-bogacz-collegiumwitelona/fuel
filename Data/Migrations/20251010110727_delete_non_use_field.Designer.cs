@@ -3,6 +3,7 @@ using System;
 using Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251010110727_delete_non_use_field")]
+    partial class delete_non_use_field
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -235,7 +238,7 @@ namespace Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<Guid>("ReviewedBy")
+                    b.Property<Guid>("RewiewedBy")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("StationId")
@@ -258,7 +261,7 @@ namespace Data.Migrations
                     b.ToTable("PriceProposals");
                 });
 
-            modelBuilder.Entity("Data.Models.ProposalStatistic", b =>
+            modelBuilder.Entity("Data.Models.ProposalStatisict", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -270,6 +273,10 @@ namespace Data.Migrations
 
                     b.Property<int>("ApprovedProposals")
                         .HasColumnType("integer");
+
+                    b.Property<decimal>("ProposedPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<int>("RejectedProposals")
                         .HasColumnType("integer");
@@ -497,11 +504,11 @@ namespace Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Data.Models.ProposalStatistic", b =>
+            modelBuilder.Entity("Data.Models.ProposalStatisict", b =>
                 {
                     b.HasOne("Data.Models.ApplicationUser", "User")
                         .WithOne("ProposalStatisict")
-                        .HasForeignKey("Data.Models.ProposalStatistic", "UserId")
+                        .HasForeignKey("Data.Models.ProposalStatisict", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

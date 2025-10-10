@@ -12,15 +12,11 @@ namespace contlollers.Controllers.Client
     [EnableCors("AllowClient")]
     public class LoginRegisterContloller : ControllerBase
     {
-        private readonly ILoginServices _login;
-        private readonly IUserServices _userServices;
+        private readonly ILoginRegisterServices _login;
 
-        public LoginRegisterContloller(
-            ILoginServices login,
-            IUserServices userServices)
+        public LoginRegisterContloller(ILoginRegisterServices login)
         {
             _login = login;
-            _userServices = userServices;
         }
 
         /// <summary>
@@ -81,7 +77,7 @@ namespace contlollers.Controllers.Client
         [HttpPost("register")]
         public async Task<IActionResult> RegisterNewUserAsync([FromBody] RegisterNewUserRequest request)
         {
-            var result = await _userServices.RegisterNewUser(request);
+            var result = await _login.RegisterNewUser(request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new
@@ -102,7 +98,7 @@ namespace contlollers.Controllers.Client
         [HttpPost("confirm-email")]
         public async Task<IActionResult> ConfirmEmailAsync([FromBody] ConfirmEmailRequest request)
         {
-            var result = await _userServices.ConfirmEmailAsync(request);
+            var result = await _login.ConfirmEmailAsync(request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

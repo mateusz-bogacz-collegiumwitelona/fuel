@@ -12,6 +12,6 @@ namespace Data.Models
         public int Points { get; set; }
         public DateTime CreatedAt { get; set; }
         public ICollection<PriceProposal> PriceProposal { get; set; } = new List<PriceProposal>();
-        public ProposalStatisict ProposalStatisict { get; set; }
+        public ProposalStatistic ProposalStatistic { get; set; }
     }
 }

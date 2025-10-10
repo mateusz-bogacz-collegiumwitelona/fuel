@@ -114,7 +114,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IStationRepository, StationRepository>();
 
 //register services and helpers
-builder.Services.AddScoped<ILoginServices, LoginServices>();
+builder.Services.AddScoped<ILoginRegisterServices, LoginRegisterServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
 builder.Services.AddScoped<IStationServices, StationServices>();
 builder.Services.AddScoped<IEmailServices, EmailServices>();

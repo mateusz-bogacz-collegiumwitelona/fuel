@@ -13,5 +13,6 @@ namespace Data.Interfaces
         Task<IdentityResult> RegisterNewUser(RegisterNewUserRequest request);
         Task<string> GenerateConfirEmailTokenAsync(string email);
         Task<IdentityResult> ConfirmEmailAsync(ConfirmEmailRequest request);
+        Task<string> GeneratePasswordResetToken(string email);
     }
 }
