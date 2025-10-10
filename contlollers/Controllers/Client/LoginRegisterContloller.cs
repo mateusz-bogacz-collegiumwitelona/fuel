@@ -1,4 +1,5 @@
 ﻿using DTO.Requests;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
@@ -11,15 +12,11 @@ namespace contlollers.Controllers.Client
     [EnableCors("AllowClient")]
     public class LoginRegisterContloller : ControllerBase
     {
-        private readonly ILoginServices _login;
-        private readonly IUserServices _userServices;
+        private readonly ILoginRegisterServices _login;
 
-        public LoginRegisterContloller(
-            ILoginServices login,
-            IUserServices userServices)
+        public LoginRegisterContloller(ILoginRegisterServices login)
         {
             _login = login;
-            _userServices = userServices;
         }
 
         /// <summary>
@@ -41,6 +38,7 @@ namespace contlollers.Controllers.Client
         /// <response code="403">User has no roles assigned</response>
         /// <response code="404">Can't find user with email</response>
         /// <response code="500">Something bad in backend. Call 911</response>
+        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> LoginAsync([FromBody] LoginRequest request)
         {
@@ -75,10 +73,32 @@ namespace contlollers.Controllers.Client
         /// <response code="400">Validation Errors or Error with repo</response>
         /// <response code="201">Success</response>
         /// <response code="500">Something bad in backend. Call priest or Dev</response>
+        [AllowAnonymous]
         [HttpPost("register")]
         public async Task<IActionResult> RegisterNewUserAsync([FromBody] RegisterNewUserRequest request)
         {
-            var result = await _userServices.RegisterNewUser(request);
+            var result = await _login.RegisterNewUser(request);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Make email confirmation for user
+        /// </summary>
+        /// <param name="email"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        [AllowAnonymous]
+        [HttpPost("confirm-email")]
+        public async Task<IActionResult> ConfirmEmailAsync([FromBody] ConfirmEmailRequest request)
+        {
+            var result = await _login.ConfirmEmailAsync(request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

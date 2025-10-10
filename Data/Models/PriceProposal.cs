@@ -25,7 +25,7 @@ namespace Data.Models
         public string PhotoUrl { get; set; }
         public PriceProposalStatus Status { get; set; }
         public string? AdminComment { get; set; }
-        public Guid RewiewedBy { get; set; }
+        public Guid ReviewedBy { get; set; }
         public DateTime CreatedAt { get; set; }
 
         

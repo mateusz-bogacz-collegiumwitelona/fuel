@@ -18,15 +18,17 @@ namespace Contlollers.Controllers.Client
         }
 
         /// <summary>
-        /// Get all stations for pin and dialog in map
+        /// Get all stations for pin and dialog in map.
         /// </summary>
-        /// <returns>
-        /// List of stations:
-        /// - BrandName – Station brand name  
-        /// - Address – Station address  
-        /// - Latitude – Station latitude (Y)  
-        /// - Longitude – Station longitude (X)
-        /// </returns>
+        /// <remarks>
+        /// Returns a list of stations with their:
+        /// {
+        /// "brandName": string,
+        /// "address": string,
+        /// "latitude": double,
+       ///  "longitude": double
+       /// },...
+        /// </remarks>
         /// <response code="200">Everything is fine</response>
         /// <response code="404">Can't find stations</response>
         /// <response code="500">Something bad in backend. Pray to god emperor</response>

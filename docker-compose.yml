@@ -26,6 +26,8 @@ services:
       - Redis__Host=${REDIS_HOST}
       - Redis__Port=${REDIS_PORT}
       - Mail__Host=mailpit
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_HTTP_PORTS=8080
     ports:
       - "${DOT_NET_PORT}:8080"
     networks:

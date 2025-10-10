@@ -4,10 +4,13 @@ using Data.Models;
 using Data.Reopsitories;
 using Data.Seeder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Services.Interfaces;
+using Services.Helpers;
 using Services.Services;
 using StackExchange.Redis;
 using System.Reflection;
@@ -37,7 +40,8 @@ builder.Services.AddAuthentication(options =>
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 
 })
-.AddJwtBearer(options => {
+.AddJwtBearer(options =>
+{
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -109,12 +113,21 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IStationRepository, StationRepository>();
 
-//register services
-builder.Services.AddScoped<ILoginServices, LoginServices>();
+//register services and helpers
+builder.Services.AddScoped<ILoginRegisterServices, LoginRegisterServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
 builder.Services.AddScoped<IStationServices, StationServices>();
+builder.Services.AddScoped<IEmailServices, EmailServices>();
+builder.Services.AddScoped<IEmaliBody, EmailBodys>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(op =>
+{
+    var policy = new AuthorizationPolicyBuilder()
+                    .RequireAuthenticatedUser()
+                    .Build();
+
+    op.Filters.Add(new AuthorizeFilter(policy));
+});
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -177,7 +190,7 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-       Console.WriteLine($"error during migration: {ex.Message} | {ex.InnerException}");
+        Console.WriteLine($"error during migration: {ex.Message} | {ex.InnerException}");
     }
 }
 

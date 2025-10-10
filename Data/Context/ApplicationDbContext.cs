@@ -22,7 +22,7 @@ namespace Data.Context
         public DbSet<Logging> Logging { get; set; }
         public DbSet<PriceProposal> PriceProposals { get; set; }
         public DbSet<Station> Stations { get; set; }
-        public DbSet<ProposalStatisict> ProposalStatisicts { get; set; }
+        public DbSet<ProposalStatistic> ProposalStatisicts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -48,19 +48,15 @@ namespace Data.Context
                 .Property(fp => fp.Price)
                 .HasPrecision(18, 2);
 
-            builder.Entity<ProposalStatisict>()
-                .Property(ps => ps.ProposedPrice)
-                .HasPrecision(18, 2);
-
-            builder.Entity<ProposalStatisict>()
+            builder.Entity<ProposalStatistic>()
                 .Property(ps => ps.AcceptedRate)
                 .HasPrecision(5, 2);
 
 
             builder.Entity<ApplicationUser>()
-                .HasOne(au => au.ProposalStatisict)
+                .HasOne(au => au.ProposalStatistic)
                 .WithOne(ps => ps.User)
-                .HasForeignKey<ProposalStatisict>(ps => ps.UserId)
+                .HasForeignKey<ProposalStatistic>(ps => ps.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<ApplicationUser>()
