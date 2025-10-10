@@ -41,6 +41,7 @@ namespace Data.Seeder
             if (!await _context.FuelTypes.AnyAsync()) await SeedFuelTypesAsync();
             if (!await _context.FuelPrices.AnyAsync()) await SeedFuelPriceAsync();
             if (!await _context.PriceProposals.AnyAsync()) await SeedPriceProposials();
+            if (!await _context.ProposalStatisicts.AnyAsync()) await SeedPriceProposial();
 
             Console.WriteLine("Database seeding completed.");
         }
@@ -367,6 +368,52 @@ namespace Data.Seeder
             catch (Exception ex)
             {
                 Console.WriteLine($"An error occurred while seeding price proposials: {ex.Message} | {ex.InnerException}");
+            }
+        }
+
+        public async Task SeedPriceProposial()
+        {
+            try
+            {
+                var users = await _context.Users.ToListAsync();
+
+                foreach (var user in users)
+                {
+                    if (!await _context.ProposalStatisicts.AnyAsync(ps => ps.UserId == user.Id))
+                    {
+                        int total = _random.Next(1, 20);
+                        int approved = _random.Next(1, total);
+                        int rejected = total - approved;
+                        int rate = (int)(((double)approved / total) * 100);
+
+                        var poposal = new ProposalStatistic
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = user.Id,
+                            User = user,
+                            TotalProposals = total,
+                            ApprovedProposals = approved,
+                            RejectedProposals = rejected,
+                            AcceptedRate = rate,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+
+                        await _context.ProposalStatisicts.AddAsync(poposal);
+                    }
+                }
+
+                int result = await _context.SaveChangesAsync();
+
+                if (result <= 0) {
+                    Console.WriteLine("Error during save changes");
+                } else
+                {
+                    Console.WriteLine("Save success");
+                }
+            } 
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{ex.Message} | {ex.InnerException}");
             }
         }
     }

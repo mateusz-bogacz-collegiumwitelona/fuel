@@ -4,6 +4,7 @@ using Data.Models;
 using DTO.Requests;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Razor.Internal;
 using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
@@ -18,7 +19,7 @@ namespace Data.Reopsitories
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
-
+        private readonly IProposalStatisticRepository _proposalStatistic;
 
         public UserRepository(
             ApplicationDbContext context,
@@ -100,6 +101,14 @@ namespace Data.Reopsitories
                             Description = $"Failed to assign role '{defaultRole}' to user. Errors: {errors}"
                         });
                 }
+
+                bool isHaveProposalRecord = await _proposalStatistic.AddProposalStatisticRecordAsunc(request.Email);
+
+                if (!isHaveProposalRecord) return IdentityResult
+                        .Failed(new IdentityError
+                        {
+                            Description = $"Failed to add Proposal record for {request.Email}"
+                        });
 
                 return IdentityResult.Success;
             }
