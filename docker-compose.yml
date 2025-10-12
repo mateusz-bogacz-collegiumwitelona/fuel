@@ -16,6 +16,7 @@ services:
       dockerfile: contlollers/Dockerfile
     volumes:
       - shared-volume:/shared/volume
+      -  ./logs:/app/logs
     depends_on:
       postgis:
         condition: service_healthy

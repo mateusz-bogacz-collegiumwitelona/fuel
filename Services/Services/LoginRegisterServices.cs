@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Services.Helpers;
 using Services.Interfaces;
@@ -27,6 +28,7 @@ namespace Services.Services
         private readonly IConfiguration _configuration;
         private readonly IUserRepository _userRepository;
         private readonly IEmailServices _emailServices;
+        private readonly ILogger<LoginRegisterServices> _logger;
 
         public LoginRegisterServices(
             UserManager<ApplicationUser> userManager,
@@ -34,7 +36,8 @@ namespace Services.Services
             RoleManager<IdentityRole<Guid>> roleManager,
             IConfiguration configuration,
             IUserRepository userRepository,
-            IEmailServices emailServices
+            IEmailServices emailServices,
+            ILogger<LoginRegisterServices> logger
             )
         {
             _userManager = userManager;
@@ -43,6 +46,7 @@ namespace Services.Services
             _configuration = configuration;
             _userRepository = userRepository;
             _emailServices = emailServices;
+            _logger = logger;
         }
 
 
@@ -54,6 +58,8 @@ namespace Services.Services
 
                 if (user == null)
                 {
+                    _logger.LogWarning("Login attempt failed. User with email {Email} not found.", request.Email);
+
                     return Result<LoginResponse>.Bad(
                         $"Can't find user with this email: {request.Email}",
                         StatusCodes.Status404NotFound
@@ -69,6 +75,7 @@ namespace Services.Services
 
                 if (!result.Succeeded)
                 {
+                    _logger.LogWarning("Invalid login attempt for user with email {Email}.", request.Email);
                     return Result<LoginResponse>.Bad(
                         "Invalid login attempt.",
                         StatusCodes.Status401Unauthorized
@@ -79,6 +86,7 @@ namespace Services.Services
 
                 if (roles == null || !roles.Any())
                 {
+                    _logger.LogWarning("User with email {Email} has no roles assigned.", request.Email);
                     return Result<LoginResponse>.Bad(
                         "User has no roles assigned.",
                         StatusCodes.Status403Forbidden
@@ -97,22 +105,62 @@ namespace Services.Services
                     claims.Add(new Claim(ClaimTypes.Role, role));
                 }
 
-                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+                var keyString = _configuration["Jwt:Key"];
+                var issuer = _configuration["Jwt:Issuer"];
+                var audience = _configuration["Jwt:Audience"];
+
+                if (string.IsNullOrWhiteSpace(keyString) ||
+                    string.IsNullOrWhiteSpace(issuer) ||
+                    string.IsNullOrWhiteSpace(audience))
+                {
+                    _logger.LogError("JWT configuration is missing or invalid.");
+                    return Result<LoginResponse>.Bad(
+                        "Internal server error.",
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { "JWT configuration is missing or invalid." }
+                        );
+                }
+
+                if (keyString.Length < 32)
+                {
+                    _logger.LogError("JWT key length is insufficient. It must be at least 16 characters long.");
+                    return Result<LoginResponse>.Bad(
+                        "Internal server error.",
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { "JWT key length is insufficient. It must be at least 16 characters long." }
+                        );
+                }
+
+                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-                var token = new JwtSecurityToken(
-                    issuer: _configuration["Jwt:Issuer"],
-                    audience: _configuration["Jwt:Audience"],
-                    claims: claims,
-                    expires: DateTime.Now.AddHours(3),
-                    signingCredentials: creds
-                    );
+                JwtSecurityToken token;
+
+                try
+                {
+                    token = new JwtSecurityToken(
+                                issuer: issuer,
+                                audience: audience,
+                                claims: claims,
+                                expires: DateTime.UtcNow.AddHours(3),
+                                signingCredentials: creds
+                            );
+                } catch (Exception tokenEx)
+                {
+                    _logger.LogError(tokenEx, "Error creating JWT token for user {Email}.", request.Email);
+                    return Result<LoginResponse>.Bad(
+                        "Internal server error.",
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { $"{tokenEx.Message} | {tokenEx.InnerException}" }
+                        );
+                }
 
                 var auth = new LoginResponse
                 {
                     Token = new JwtSecurityTokenHandler().WriteToken(token),
                     Expiration = token.ValidTo
                 };
+                _logger.LogInformation("JWT token successfully generated for user {Email}, expires at {Expiration}.", request.Email, token.ValidTo);
 
                 return Result<LoginResponse>.Good(
                     "Login successful.",

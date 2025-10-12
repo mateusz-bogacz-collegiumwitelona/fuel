@@ -3,6 +3,7 @@ using Data.Interfaces;
 using Data.Models;
 using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,26 +16,37 @@ namespace Data.Reopsitories
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ILogger<ProposalStatisticRepository> _logger;
 
         public ProposalStatisticRepository(
             ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager
+            UserManager<ApplicationUser> userManager,
+            ILogger<ProposalStatisticRepository> logger
             )
         {
             _context = context;
             _userManager = userManager;
+            _logger = logger;
         }
 
         public async Task<GetProposalStatisticResponse> GetUserProposalStatisticAsync(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
 
-            if (user == null) return null;
+            if (user == null)
+            {
+                _logger.LogWarning("User with email {Email} not found.", email);
+                return null;
+            }
 
             var proposals = _context.ProposalStatisicts
                 .FirstOrDefault(ps => ps.UserId == user.Id);
 
-            if (proposals == null) return null;
+            if (proposals == null)
+            {
+                _logger.LogWarning("No proposal statistics found for user with email {Email}.", email);
+                return null;
+            }
 
             return new GetProposalStatisticResponse
             {
@@ -49,6 +61,12 @@ namespace Data.Reopsitories
         public async Task<bool> AddProposalStatisticRecordAsunc(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
+            {
+                _logger.LogWarning("User with email {Email} not found.", email);
+                return false;
+            }
 
             var proposal = new ProposalStatistic
             {
@@ -65,7 +83,12 @@ namespace Data.Reopsitories
             await _context.ProposalStatisicts.AddAsync(proposal);
             int isSaved = await _context.SaveChangesAsync();
 
-            if (isSaved <= 0) return false;
+            if (isSaved <= 0)
+            {
+                _logger.LogError("Failed to add proposal statistics for user with email {Email}.", email);
+                return false;
+            }
+
             return true;
         }
 

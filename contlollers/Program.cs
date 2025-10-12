@@ -1,3 +1,4 @@
+using Data.Config;
 using Data.Context;
 using Data.Interfaces;
 using Data.Models;
@@ -9,14 +10,41 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Services.Interfaces;
+using Serilog;
+using Serilog.Events;
+using Serilog.Sinks.PeriodicBatching;
 using Services.Helpers;
+using Services.Interfaces;
 using Services.Services;
 using StackExchange.Redis;
 using System.Reflection;
 using System.Text;
+//log configuration
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File($"logs/log{DateTime.UtcNow}.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((ctx, services, config) =>
+{
+    config
+    .MinimumLevel.Information()
+    .WriteTo.Console()
+    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day)
+    .WriteTo.Sink(
+        new PeriodicBatchingSink(
+            new EfCoreSinkConfig(services),
+            new PeriodicBatchingSinkOptions
+            {
+                BatchSizeLimit = 50,
+                Period = TimeSpan.FromSeconds(2),
+                EagerlyEmitFirstEvent = false,
+                QueueLimit = 10000
+            }))
+    .Enrich.FromLogContext();
+});
 
 //CORS policy
 builder.Services.AddCors(op =>
