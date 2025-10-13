@@ -94,7 +94,62 @@ namespace Data.Reopsitories
 
         public async Task<bool> UpdateTotalProposalsAsync(bool proposial, string email)
         {
-            return true;
+            try
+            {
+                var user = await _userManager.FindByEmailAsync(email);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("User with email {Email} not found.", email);
+                    return false;
+                }
+
+                var userProposialStats = _context.ProposalStatisicts
+                    .FirstOrDefault(ps => ps.UserId == user.Id);
+
+                if (userProposialStats == null)
+                {
+                    _logger.LogWarning("No proposal statistics found for user with email {Email}.", email);
+                    return false;
+                }
+
+                int newTotalProposals = (userProposialStats.TotalProposals ?? 0) + 1;
+                userProposialStats.TotalProposals = newTotalProposals;
+
+                if (proposial)
+                {
+                    int newApprovedProposals = (userProposialStats.ApprovedProposals ?? 0) + 1;
+                    userProposialStats.ApprovedProposals = newApprovedProposals;
+                }
+                else
+                {
+                    int newRejectedProposals = (userProposialStats.RejectedProposals ?? 0) + 1;
+                    userProposialStats.RejectedProposals = newRejectedProposals;
+                }
+
+                int newAcceptedRate = userProposialStats.TotalProposals > 0
+                    ? (int)(((double)userProposialStats.ApprovedProposals / userProposialStats.TotalProposals) * 100)
+                    : 0;
+
+                userProposialStats.AcceptedRate = newAcceptedRate;
+
+                userProposialStats.UpdatedAt = DateTime.UtcNow;
+
+                int isSaved = await _context.SaveChangesAsync();
+
+                if (isSaved <= 0)
+                {
+                    _logger.LogError("Failed to update proposal statistics for user with email {Email}.", email);
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while updating proposal statistics for user with email {Email}.", email);
+                return false;
+            }
         }
     }
 }
