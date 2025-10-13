@@ -10,6 +10,11 @@ namespace Services.Interfaces
 {
     public interface IStationServices
     {
-        Task<Result<List<GetAllStationsForMap>>> GetAllStationsForMapAsync();
+        Task<Result<List<GetStationsResponse>>> GetAllStationsForMapAsync();
+        Task<Result<List<GetStationsResponse>>> GetNearestStationAsync(
+            double latitude,
+            double longitude,
+            int? count
+            );
     }
 }

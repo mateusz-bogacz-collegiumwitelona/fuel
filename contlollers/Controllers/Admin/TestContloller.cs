@@ -24,11 +24,11 @@ namespace contlollers.Controllers.Test
             _test = test;
         }
 
-
         /// <summary>
         /// Tests the connection to Redis.
         /// </summary>
         /// <remarks>
+        /// <![CDATA[
         /// Returns a JSON with connection status:
         ///
         /// GOOD (Redis connected successfully):
@@ -48,6 +48,7 @@ namespace contlollers.Controllers.Test
         ///   "responseTime": string,
         ///   "endpoints": List<string> or null
         /// }
+        /// ]]>
         /// </remarks>
         /// <response code="200">Redis connected successfully</response>
         /// <response code="503">Cannot connect to Redis or timeout</response>
@@ -56,7 +57,7 @@ namespace contlollers.Controllers.Test
         public async Task<IActionResult> GetGetIsRedisConnectAsync()
         {
             var result = await _test.GetIsRedisConnectAsync();
-            
+
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new
@@ -68,10 +69,12 @@ namespace contlollers.Controllers.Test
                 });
         }
 
+
         /// <summary>
         /// Tests the connection to PostgreSQL and PostGIS.
         /// </summary>
         /// <remarks>
+        /// <![CDATA[
         /// Returns a JSON with connection status:
         ///
         /// GOOD (PostGIS active):
@@ -95,6 +98,7 @@ namespace contlollers.Controllers.Test
         ///   "postgisInstalled": bool,
         ///   "postgisVersion": string or null
         /// }
+        /// ]]>
         /// </remarks>
         /// <response code="200">PostgreSQL connected and PostGIS active</response>
         /// <response code="503">Cannot connect to database</response>
