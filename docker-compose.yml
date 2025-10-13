@@ -1,4 +1,4 @@
-networks:
+﻿networks:
   dev:
     driver: bridge
 
@@ -8,15 +8,15 @@ volumes:
   redis-data: {}
 
 services:
-  contlollers:
-    image: ${DOCKER_REGISTRY-}contlollers
+  controllers:  
+    image: ${DOCKER_REGISTRY-}controllers
     container_name: api-dev
     build:
       context: .
-      dockerfile: contlollers/Dockerfile
+      dockerfile: Controllers/Dockerfile
     volumes:
       - shared-volume:/shared/volume
-      -  ./logs:/app/logs
+      - ./logs:/app/logs
     depends_on:
       postgis:
         condition: service_healthy
@@ -35,20 +35,24 @@ services:
       - dev
 
   tests:
-    image: ${DOCKER_REGISTRY-}contlollers
     build:
       context: .
-      dockerfile: contlollers/Dockerfile
-    command: ["dotnet", "test", "--logger:console;verbosity=detailed"]
+      dockerfile: Tests/Dockerfile
+    container_name: tests
+    depends_on:
+      - postgis
+      - redis
+    environment:
+      - ConnectionStrings__DefaultConnection=User ID=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Host=postgis;Port=${POSTGRES_PORT};Database=${POSTGRES_DB};
+      - Redis__Host=${REDIS_HOST}
+      - Redis__Port=${REDIS_PORT}
+      - ASPNETCORE_ENVIRONMENT=Test
     volumes:
       - shared-volume:/shared/volume
-    depends_on:
-      postgis:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
+    networks: 
       - dev
+    stdin_open: true
+    tty: true
 
   postgis:
     image: postgis/postgis:17-3.5
