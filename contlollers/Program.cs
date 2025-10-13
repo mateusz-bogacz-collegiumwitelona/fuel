@@ -141,14 +141,18 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IStationRepository, StationRepository>();
 builder.Services.AddScoped<IProposalStatisticRepository, ProposalStatisticRepository>();
+builder.Services.AddScoped<ITestRepository, TestRepository>();
 
-//register services and helpers
+//register services 
 builder.Services.AddScoped<ILoginRegisterServices, LoginRegisterServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
 builder.Services.AddScoped<IStationServices, StationServices>();
 builder.Services.AddScoped<IEmailServices, EmailServices>();
-builder.Services.AddScoped<IEmaliBody, EmailBodys>();
 builder.Services.AddScoped<IProposalStatisticServices, ProposalStatisticServices>();
+builder.Services.AddScoped<ITestServices, TestServices>();
+
+//register helpers
+builder.Services.AddScoped<IEmaliBody, EmailBodys>();
 
 builder.Services.AddControllers(op =>
 {
