@@ -120,14 +120,8 @@ builder.Services.AddScoped<IStationServices, StationServices>();
 builder.Services.AddScoped<IEmailServices, EmailServices>();
 builder.Services.AddScoped<IEmaliBody, EmailBodys>();
 
-builder.Services.AddControllers(op =>
-{
-    var policy = new AuthorizationPolicyBuilder()
-                    .RequireAuthenticatedUser()
-                    .Build();
+builder.Services.AddControllers();
 
-    op.Filters.Add(new AuthorizeFilter(policy));
-});
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

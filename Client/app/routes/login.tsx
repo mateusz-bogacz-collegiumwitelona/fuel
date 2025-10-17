@@ -1,6 +1,5 @@
 import * as React from "react";
 
-// Prosta funkcja do odczytania danych z tokena JWT
 function parseJwt(token: string) {
   try {
     return JSON.parse(atob(token.split(".")[1]));
@@ -20,7 +19,7 @@ export default function Login() {
     setMessage("Logowanie...");
 
     try {
-      const response = await fetch("https://localhost:51619/api/login", {
+      const response = await fetch("http://localhost:5111/api/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -36,15 +35,21 @@ export default function Login() {
 
       const data = await response.json();
 
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("token_expiration", data.expiration);
+if (data.token) {
+  localStorage.setItem("token", data.token);
+  localStorage.setItem("token_expiration", data.expiration);
+  localStorage.setItem("email",data.email);
+  // // Zapis do cookies (ważne np. 7 dni)
+  // const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+  // document.cookie = `token=${data.token}; expires=${expires}; path=/`;
+  // document.cookie = `email=${email}; expires=${expires}; path=/`;
+  // document.cookie = `token_expiration=${data.expiration}; expires=${expires}; path=/`;
 
-        const decoded = parseJwt(data.token);
-        const role =
-          decoded?.[
-            "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
-          ];
+  const decoded = parseJwt(data.token);
+  const role =
+    decoded?.[
+      "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+    ];
 
         setMessage("Zalogowano pomyślnie!");
 

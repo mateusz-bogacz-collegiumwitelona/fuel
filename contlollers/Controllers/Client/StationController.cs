@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Services.Interfaces;
 
 namespace Contlollers.Controllers.Client
@@ -32,7 +33,8 @@ namespace Contlollers.Controllers.Client
         /// <response code="200">Everything is fine</response>
         /// <response code="404">Can't find stations</response>
         /// <response code="500">Something bad in backend. Pray to god emperor</response>
-        [HttpGet("map/all")]
+        [AllowAnonymous]
+		[HttpGet("map/all")]
         public async Task<IActionResult> GetAllStationsForMapAsync()
         {
             var result = await _stationServices.GetAllStationsForMapAsync();
