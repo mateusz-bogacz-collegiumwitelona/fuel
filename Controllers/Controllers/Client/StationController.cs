@@ -26,8 +26,8 @@ namespace Contlollers.Controllers.Client
         /// "brandName": string,
         /// "address": string,
         /// "latitude": double,
-       ///  "longitude": double
-       /// },...]
+        ///  "longitude": double
+        /// },...]
         /// </remarks>
         /// <response code="200">Everything is fine</response>
         /// <response code="404">Can't find stations / Validation error</response>

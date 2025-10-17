@@ -21,21 +21,24 @@ namespace Data.Reopsitories
         }
 
         public async Task<List<GetStationsResponse>> GetAllStationsForMapAsync()
-         => await _context.Stations
-            .Select(s => new GetStationsResponse
-            {
-                BrandName = s.Brand.Name,
-                Address = s.Address,
-                Latitude = s.Location.Y,
-                Longitude = s.Location.X
-            })
+        => await _context.Stations
+                .Select(s => new GetStationsResponse
+                {
+                    BrandName = s.Brand.Name,
+                    Street = s.Address.Street,
+                    HouseNumber = s.Address.HouseNumber,
+                    City = s.Address.City,
+                    PostalCode = s.Address.PostalCode,
+                    Latitude = s.Address.Location.Y,
+                    Longitude = s.Address.Location.X
+                })
             .ToListAsync();
 
 
         public async Task<List<GetStationsResponse>> GetNearestStationAsync(
             double latitude,
-            double longitude,
-            int? count 
+           double longitude,
+            int? count
             )
         {
             var userLocation = new Point(longitude, latitude) { SRID = 4326 };
@@ -43,15 +46,18 @@ namespace Data.Reopsitories
             if (count == null || count <= 0) count = 3;
 
             return await _context.Stations
-                .OrderBy(s => s.Location.Distance(userLocation))
+                .OrderBy(s => s.Address.Location.Distance(userLocation))
                 .Take(count.Value)
                 .Include(s => s.Brand)
                 .Select(s => new GetStationsResponse
                 {
                     BrandName = s.Brand.Name,
-                    Address = s.Address,
-                    Latitude = s.Location.Y,
-                    Longitude = s.Location.X
+                    Street = s.Address.Street,
+                    HouseNumber = s.Address.HouseNumber,
+                    City = s.Address.City,
+                    PostalCode = s.Address.PostalCode,
+                    Latitude = s.Address.Location.Y,
+                    Longitude = s.Address.Location.X
                 })
                 .ToListAsync();
         }

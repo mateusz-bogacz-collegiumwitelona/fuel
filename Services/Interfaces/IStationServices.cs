@@ -15,6 +15,6 @@ namespace Services.Interfaces
             double latitude,
             double longitude,
             int? count
-            );
+        );
     }
 }

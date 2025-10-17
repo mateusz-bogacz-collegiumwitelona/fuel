@@ -23,6 +23,7 @@ namespace Data.Context
         public DbSet<PriceProposal> PriceProposals { get; set; }
         public DbSet<Station> Stations { get; set; }
         public DbSet<ProposalStatistic> ProposalStatisicts { get; set; }
+        public DbSet<StationAddress> StationAddress { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -96,7 +97,13 @@ namespace Data.Context
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Station>()
-                .Property(s => s.Location)
+                .HasOne(s => s.Address)
+                .WithMany(a => a.Stations)
+                .HasForeignKey(s => s.AddressId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+           builder.Entity<StationAddress>()
+                .Property(sa => sa.Location)
                 .HasColumnType("geometry(Point, 4326)");
         }
     }
