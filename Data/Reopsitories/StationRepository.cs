@@ -1,13 +1,14 @@
 ﻿using Data.Context;
 using Data.Interfaces;
+using DTO.Requests;
 using DTO.Responses;
 using Microsoft.EntityFrameworkCore;
+using NetTopologySuite.Geometries;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using NetTopologySuite.Geometries;
 
 namespace Data.Reopsitories
 {
@@ -20,8 +21,31 @@ namespace Data.Reopsitories
             _context = context;
         }
 
-        public async Task<List<GetStationsResponse>> GetAllStationsForMapAsync()
-        => await _context.Stations
+        public async Task<List<GetStationsResponse>> GetAllStationsForMapAsync(GetStationsRequest request)
+        {
+            var query = _context.Stations
+                .Include(s => s.Brand)
+                .Include(s => s.Address)
+                .AsQueryable();
+
+            if (request.BrandName != null && request.BrandName.Count > 0)
+                query = query.Where(s => request.BrandName.Contains(s.Brand.Name));
+
+            if (request.LocationLatitude.HasValue && request.LocationLongitude.HasValue && request.Distance.HasValue)
+            {
+                var userLocation = new Point(request.LocationLongitude.Value, request.LocationLatitude.Value) 
+                { 
+                    SRID = 4326 
+                };
+
+                double distanceInMeters = request.Distance.Value * 1000;
+
+                query = query.Where(
+                    s => s.Address.Location.Distance(userLocation) <= distanceInMeters
+                );
+            }
+
+            return await query
                 .Select(s => new GetStationsResponse
                 {
                     BrandName = s.Brand.Name,
@@ -32,12 +56,13 @@ namespace Data.Reopsitories
                     Latitude = s.Address.Location.Y,
                     Longitude = s.Address.Location.X
                 })
-            .ToListAsync();
+                .ToListAsync();
+        }
 
 
         public async Task<List<GetStationsResponse>> GetNearestStationAsync(
             double latitude,
-           double longitude,
+            double longitude,
             int? count
             )
         {

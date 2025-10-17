@@ -1,4 +1,5 @@
-﻿using DTO.Responses;
+﻿using DTO.Requests;
+using DTO.Responses;
 using Services.Helpers;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ namespace Services.Interfaces
 {
     public interface IStationServices
     {
-        Task<Result<List<GetStationsResponse>>> GetAllStationsForMapAsync();
+        Task<Result<List<GetStationsResponse>>> GetAllStationsForMapAsync(GetStationsRequest request);
         Task<Result<List<GetStationsResponse>>> GetNearestStationAsync(
             double latitude,
             double longitude,

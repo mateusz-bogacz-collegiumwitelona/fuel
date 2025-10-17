@@ -25,34 +25,43 @@ namespace contlollers.Controllers.Test
         }
 
         /// <summary>
-        /// Tests the connection to Redis.
+        /// Test the connection to the Redis server.
         /// </summary>
         /// <remarks>
-        /// <![CDATA[
-        /// Returns a JSON with connection status:
+        /// Description: Checks if the application can successfully connect to the configured Redis instance.
+        /// Returns a JSON object describing the connection result, response time, and available endpoints.
         ///
-        /// GOOD (Redis connected successfully):
+        /// Example response — Successful connection
+        /// ```json
         /// {
-        ///   "success": bool,
-        ///   "message": string,
-        ///   "errors": List<string> or null,
-        ///   "responseTime": string,
-        ///   "endpoints": List<string> or null
+        ///   "success": true,
+        ///   "message": "Redis connection successful.",
+        ///   "errors": null,
+        ///   "responseTime": "42ms",
+        ///   "endpoints": [ "localhost:6379" ]
         /// }
+        /// ```
         ///
-        /// BAD (Redis connection failed):
+        /// Example response — Failed connection
+        /// ```json
         /// {
-        ///   "success": bool,
-        ///   "message": string,
-        ///   "errors": List<string>,
-        ///   "responseTime": string,
-        ///   "endpoints": List<string> or null
+        ///   "success": false,
+        ///   "message": "Redis connection failed.",
+        ///   "errors": [ "Timeout while connecting to Redis.", "Connection refused." ],
+        ///   "responseTime": "5000ms",
+        ///   "endpoints": null
         /// }
-        /// ]]>
+        /// ```
+        ///
+        /// Notes
+        /// - `success` — indicates if the Redis connection test passed.
+        /// - `responseTime` — total time measured for the connection attempt.
+        /// - `endpoints` — list of Redis endpoints discovered (if available).
         /// </remarks>
         /// <response code="200">Redis connected successfully</response>
-        /// <response code="503">Cannot connect to Redis or timeout</response>
-        /// <response code="500">Unexpected error occurred</response>
+        /// <response code="503">Cannot connect to Redis or connection timeout</response>
+        /// <response code="500">Unexpected internal server error</response>
+
         [HttpGet("redis")]
         public async Task<IActionResult> GetGetIsRedisConnectAsync()
         {
@@ -71,38 +80,49 @@ namespace contlollers.Controllers.Test
 
 
         /// <summary>
-        /// Tests the connection to PostgreSQL and PostGIS.
+        /// Test the connection to PostgreSQL and verify if PostGIS is active.
         /// </summary>
         /// <remarks>
-        /// <![CDATA[
-        /// Returns a JSON with connection status:
+        /// Description: Checks if the application can connect to the PostgreSQL database and if PostGIS is installed and active.
+        /// Returns a JSON object describing connection status, PostGIS availability, and version.
         ///
-        /// GOOD (PostGIS active):
+        /// Example response — Good connection (PostGIS active)
+        /// ```json
         /// {
-        ///   "success": bool,
-        ///   "message": string,
-        ///   "errors": List<string> or null,
-        ///   "responseTime": string,
-        ///   "canConnect": bool,
-        ///   "postgisInstalled": bool,
-        ///   "postgisVersion": string or null
+        ///   "success": true,
+        ///   "message": "PostgreSQL connected and PostGIS active.",
+        ///   "errors": null,
+        ///   "responseTime": "38ms",
+        ///   "canConnect": true,
+        ///   "postgisInstalled": true,
+        ///   "postgisVersion": "3.3.3"
         /// }
+        /// ```
         ///
-        /// BAD (Cannot connect or PostGIS missing):
+        /// Example response — Bad connection or PostGIS missing
+        /// ```json
         /// {
-        ///   "success": bool,
-        ///   "message": string,
-        ///   "errors": List<string>,
-        ///   "responseTime": string,
-        ///   "canConnect": bool,
-        ///   "postgisInstalled": bool,
-        ///   "postgisVersion": string or null
+        ///   "success": false,
+        ///   "message": "Cannot connect to PostgreSQL or PostGIS not installed.",
+        ///   "errors": [ "Timeout while connecting to database.", "PostGIS extension missing." ],
+        ///   "responseTime": "5000ms",
+        ///   "canConnect": false,
+        ///   "postgisInstalled": false,
+        ///   "postgisVersion": null
         /// }
-        /// ]]>
+        /// ```
+        ///
+        /// Notes
+        /// - `success` indicates whether the database connection and PostGIS check passed.
+        /// - `canConnect` shows if the database connection itself succeeded.
+        /// - `postgisInstalled` confirms if the PostGIS extension is installed.
+        /// - `postgisVersion` contains the installed PostGIS version (if available).
+        /// - `responseTime` measures how long the connection test took.
         /// </remarks>
         /// <response code="200">PostgreSQL connected and PostGIS active</response>
         /// <response code="503">Cannot connect to database</response>
-        /// <response code="500">Unexpected error occurred</response>
+        /// <response code="500">Unexpected internal server error</response>
+
         [HttpGet("postgres")]
         public async Task<IActionResult> GetIsPostgresConnectAsync()
         {

@@ -20,29 +20,40 @@ namespace contlollers.Controllers.Client
         }
 
         /// <summary>
-        /// Login user and return JWT token
+        /// Authenticate user and return a JWT access token.
         /// </summary>
-        /// <param name="request">
-        /// DTO with email and password.
-        /// <br/><br/>
-        /// <b>Example request:</b>
-        /// <br/>
-        /// {
-        ///     "email": "user@example.pl",
-        ///     "password": "User123!"
-        /// }
-        /// </param>
         /// <remarks>
+        /// Description
+        /// Authenticates a user using their email and password.
+        /// If the credentials are valid, a JWT token is generated and returned.
+        /// 
+        /// Example request body
+        /// ```json
         /// {
-        ///   "token": "string",
-        ///   "expiration": "DateTime"
+        ///   "email": "user@example.pl",
+        ///   "password": "User123!"
         /// }
+        /// ```
+        ///
+        /// Example response
+        /// ```json
+        /// {
+        ///   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        ///   "expiration": "2025-10-17T12:34:56Z"
+        /// }
+        /// ```
+        ///
+        /// Notes
+        /// - The returned `token` should be sent in the `Authorization` header as:  
+        ///   `Bearer {token}`
+        /// - The `expiration` field represents the UTC time when the token becomes invalid.
         /// </remarks>
-        /// <response code="200">User login</response>
-        /// <response code="401">Invalid login attempt</response>
-        /// <response code="403">User has no roles assigned</response>
-        /// <response code="404">Can't find user with email</response>
-        /// <response code="500">Something bad in backend. Call 911</response>
+        /// <response code="200">User successfully logged in</response>
+        /// <response code="401">Invalid email or password</response>
+        /// <response code="403">User has no assigned roles</response>
+        /// <response code="404">User with the given email not found</response>
+        /// <response code="500">Server error — something went wrong in the backend</response>
+
         [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> LoginAsync([FromBody] LoginRequest request)

@@ -18,22 +18,37 @@ namespace Contlollers.Controllers.Client
         }
 
         /// <summary>
-        /// Get user proposal statistics by email
+        /// Retrieve proposal statistics for a user by their email address.
         /// </summary>
-        /// <param name="email">user email</param>
         /// <remarks>
-        /// Returns a json with stats:
+        /// Description: Returns summarized statistics about all proposals submitted by the user with the given email.
+        ///
+        /// Example request
+        /// ```http
+        /// GET /api/proposals/statistics?email=user@example.pl
+        /// ```
+        ///
+        /// Example response
+        /// ```json
         /// {
-        /// "totalProposals": int,
-        /// "approvedProposals": int,
-        /// "rejectedProposals": int,
-        /// "acceptedRate": int,
-        /// "updatedAt": "DateTime.UTCNow"
+        ///   "totalProposals": 42,
+        ///   "approvedProposals": 30,
+        ///   "rejectedProposals": 12,
+        ///   "acceptedRate": 71,
+        ///   "updatedAt": "2025-10-17T12:34:56Z"
         /// }
+        /// ```
+        ///
+        /// Notes
+        /// - `acceptedRate` is calculated as the percentage of approved proposals out of the total.
+        /// - `updatedAt` is the timestamp (UTC) of the last statistics update.
+        /// - The request requires a valid existing user email.
         /// </remarks>
-        /// <response code="200">OK</response>
-        /// <response code="400">Validation Errors or Error with repo</response>
-        /// <response code="404">Data not found</response>
+        /// <param name="email">User's email address used to look up their proposal statistics.</param>
+        /// <response code="200">Statistics successfully retrieved</response>
+        /// <response code="400">Validation error or internal repository issue</response>
+        /// <response code="404">User or statistics not found</response>
+        /// <response code="500">Unexpected server error</response>
         [HttpGet]
         public async Task<IActionResult> GetUserProposalStatisticResponse(string email)
         {

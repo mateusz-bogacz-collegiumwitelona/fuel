@@ -1,4 +1,5 @@
 ﻿using Data.Interfaces;
+using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -26,13 +27,13 @@ namespace Services.Services
             _logger = logger;
         }
 
-        public async Task<Result<List<GetStationsResponse>>> GetAllStationsForMapAsync()
+        public async Task<Result<List<GetStationsResponse>>> GetAllStationsForMapAsync(GetStationsRequest request)
         {
             try
             {
-                var resutlt = await _stationRepository.GetAllStationsForMapAsync();
+                var resutlt = await _stationRepository.GetAllStationsForMapAsync(request);
 
-                if (resutlt == null)
+                if (resutlt == null || resutlt.Count == 0)
                 {
                     _logger.LogWarning("No stations found in the database.");
                     return Result<List<GetStationsResponse>>.Bad(
