@@ -3,6 +3,7 @@ using Data.Interfaces;
 using DTO.Requests;
 using DTO.Responses;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NetTopologySuite.Geometries;
 using System;
 using System.Collections.Generic;
@@ -15,10 +16,20 @@ namespace Data.Reopsitories
     public class StationRepository : IStationRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<StationRepository> _logger;
 
-        public StationRepository(ApplicationDbContext context)
+        private const int SRID_VALUE = 4326;
+        private const double METERS_PER_DEGREE = 111320.0;
+
+        private double MetersToRadius(int distance)
+          => (distance * 1000) / 111320.0;
+
+        public StationRepository(
+            ApplicationDbContext context,
+            ILogger<StationRepository> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<List<GetStationsResponse>> GetAllStationsForMapAsync(GetStationsRequest request)
@@ -31,21 +42,23 @@ namespace Data.Reopsitories
             if (request.BrandName != null && request.BrandName.Count > 0)
                 query = query.Where(s => request.BrandName.Contains(s.Brand.Name));
 
-            if (request.LocationLatitude.HasValue && request.LocationLongitude.HasValue && request.Distance.HasValue)
+            if (request.LocationLatitude.HasValue &&
+                request.LocationLongitude.HasValue &&
+                request.Distance.HasValue)
             {
-                var userLocation = new Point(request.LocationLongitude.Value, request.LocationLatitude.Value) 
-                { 
-                    SRID = 4326 
-                };
+                double lat = request.LocationLatitude.Value;
+                double lon = request.LocationLongitude.Value;
 
-                double distanceInMeters = request.Distance.Value * 1000;
+                var userLocation = new Point(lon, lat) { SRID = SRID_VALUE };
 
-                query = query.Where(
-                    s => s.Address.Location.Distance(userLocation) <= distanceInMeters
+                query = query.Where(s =>
+                    s.Address.Location.Distance(userLocation) <= MetersToRadius(request.Distance.Value)
                 );
+
+                var sql = query.ToQueryString();
             }
 
-            return await query
+            var result = await query
                 .Select(s => new GetStationsResponse
                 {
                     BrandName = s.Brand.Name,
@@ -57,6 +70,8 @@ namespace Data.Reopsitories
                     Longitude = s.Address.Location.X
                 })
                 .ToListAsync();
+
+            return result;
         }
 
 
@@ -66,7 +81,7 @@ namespace Data.Reopsitories
             int? count
             )
         {
-            var userLocation = new Point(longitude, latitude) { SRID = 4326 };
+            var userLocation = new Point(longitude, latitude) { SRID = SRID_VALUE };
 
             if (count == null || count <= 0) count = 3;
 
