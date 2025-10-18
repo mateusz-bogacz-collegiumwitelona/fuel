@@ -10,7 +10,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Services.Helpers;
 using Services.Interfaces;
-using Microsoft.Extensions.Logging;
 
 namespace Services.Services
 {
@@ -18,16 +17,12 @@ namespace Services.Services
     {
         private readonly IConfiguration _config;
         private readonly IEmaliBody _emailBodys;
-        private readonly ILogger<EmailServices> _logger;
-
         public EmailServices (
             IConfiguration config,
-            IEmaliBody emaliBody,
-            ILogger<EmailServices> logger)
+            IEmaliBody emaliBody)
         {
             _config = config;
             _emailBodys = emaliBody;
-            _logger = logger;
         }
 
         public async Task<Result<IActionResult>> SendEmailConfirmationAsync(
@@ -69,12 +64,10 @@ namespace Services.Services
             }            
             catch (Exception ex)
             {
-                _logger.LogError($"Error sending email to {email}: {ex.Message} | {ex.InnerException} ");
-
                 return Result<IActionResult>.Bad(
                     "Failed to send email",
                     StatusCodes.Status500InternalServerError,
-                    new List<string> { $"{ex.Message} | {ex.InnerException}" }
+                    new List<string> { ex.Message }
                     );
 
             }

@@ -32,12 +32,7 @@ namespace contlollers.Controllers.Client
         ///     "password": "User123!"
         /// }
         /// </param>
-        /// <remarks>
-        /// {
-        ///   "token": "string",
-        ///   "expiration": "DateTime"
-        /// }
-        /// </remarks>
+        /// <returns>Jwt Token</returns>
         /// <response code="200">User login</response>
         /// <response code="401">Invalid login attempt</response>
         /// <response code="403">User has no roles assigned</response>

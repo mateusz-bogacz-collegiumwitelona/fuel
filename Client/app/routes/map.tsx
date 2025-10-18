@@ -16,31 +16,28 @@ export default function MapView() {
     Marker?: any;
     Popup?: any;
   }>({});
-  const [markerIcon, setMarkerIcon] = useState<any>(null);
-  const [status, setStatus] = useState<
-    "loading" | "error" | "unauthorized" | "ready"
-  >("loading");
+  const [L, setL] = useState<any>(null);
+
+  const brandColors: Record<string, string> = {
+    Orlen: "red",
+    BP: "green",
+    Shell: "yellow",
+    "Circle K": "orange",
+    Moya: "blue",
+    Lotos: "gold",
+  };
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     (async () => {
-      const [rl, L] = await Promise.all([
+      const [rl, leaflet] = await Promise.all([
         import("react-leaflet"),
         import("leaflet"),
       ]);
 
-      const icon = L.icon({
-        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        shadowUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41],
-      });
-
-      setMarkerIcon(icon);
+      setL(leaflet);
       setMapComponents({
         MapContainer: rl.MapContainer,
         TileLayer: rl.TileLayer,
@@ -51,92 +48,104 @@ export default function MapView() {
   }, []);
 
   useEffect(() => {
-    const fetchStations = async () => {
-      try {
-        const res = await fetch("http://localhost:5111/api/station/map/all", {
-          credentials: "include",
-        });
+    if (typeof window === "undefined") return;
 
-        // jeśli backend zwrócił redirect / login HTML
-        const contentType = res.headers.get("content-type");
-        if (res.status === 401 || res.status === 403) {
-          setStatus("unauthorized");
-          return;
-        }
-        if (contentType && !contentType.includes("application/json")) {
-          setStatus("unauthorized");
-          return;
-        }
-        if (!res.ok) throw new Error("Błąd połączenia z serwerem");
+    const token = localStorage.getItem("token");
 
-        const data = await res.json();
-        setStations(data);
-        setStatus("ready");
-      } catch (err) {
-        console.error("Błąd pobierania stacji:", err);
-        setStatus("error");
-      }
-    };
-
-    fetchStations();
+    fetch("http://localhost:5111/api/station/map/all", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      credentials: "include",
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error(`Błąd serwera: ${r.status}`);
+        return r.json();
+      })
+      .then((data: Station[]) => setStations(data))
+      .catch((e) => console.error("Błąd pobierania stacji:", e));
   }, []);
 
   const { MapContainer, TileLayer, Marker, Popup } = MapComponents;
-  if (!MapContainer) return <p style={{ textAlign: "center" }}>Ładowanie mapy...</p>;
+  if (!MapContainer || !L) return null; 
 
-  if (status === "loading")
-    return <p style={{ textAlign: "center" }}>Ładowanie danych...</p>;
 
-  if (status === "unauthorized")
-    return (
-      <div style={{ textAlign: "center", marginTop: "2rem" }}>
-        <p style={{ color: "red", fontWeight: "bold" }}>
-          Sesja wygasła lub brak autoryzacji.
-        </p>
-        <p>
-          <a
-            href="http://localhost:5111/Account/Login"
-            style={{
-              color: "blue",
-              textDecoration: "underline",
-              cursor: "pointer",
-            }}
-          >
-            Zaloguj się ponownie
-          </a>
-          , aby zobaczyć stacje.
-        </p>
-      </div>
-    );
-
-  if (status === "error")
-    return (
-      <p style={{ color: "red", textAlign: "center", marginTop: "2rem" }}>
-        Wystąpił błąd podczas pobierania danych z serwera.
-      </p>
-    );
+  const getMarkerIcon = (brand: string) => {
+    const color = brandColors[brand] || "gray";
+    return new L.Icon({
+      iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
+      shadowUrl:
+        "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-shadow.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    });
+  };
 
   return (
-    <div style={{ height: "100vh", width: "100vw" }}>
-      <MapContainer
-        center={[52.2297, 21.0122]}
-        zoom={7}
-        style={{ height: "100%", width: "100%" }}
-      >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="&copy; OpenStreetMap contributors"
-        />
-        {stations.map((s, i) => (
-          <Marker key={i} position={[s.latitude, s.longitude]} icon={markerIcon}>
-            <Popup>
-              <strong>{s.brandName}</strong>
-              <br />
-              {s.address}
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+    <div className="min-h-screen bg-gray-900 text-white">
+
+      <header className="w-full bg-gray-800 shadow-sm">
+        <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="text-xl font-bold">FuelStats</div>
+            <nav className="hidden md:flex gap-2 items-center">
+              <a href="/dashboard" className="btn btn-ghost btn-sm">Dashboard</a>
+              <a href="/map" className="btn btn-ghost btn-sm btn-active">Mapa</a>
+              <a href="/list" className="btn btn-ghost btn-sm">Lista</a>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold">
+            Mapa stacji benzynowych
+          </h1>
+            <a href="/dashboard"
+            className="btn bg-blue-600 hover:bg-blue-500 text-white font-semibold text-base px-5 py-2 rounded-l shadow-lg transition-all duration-200">
+            ← Powrót do dashboardu
+            </a>
+        </div>
+        <div className="bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-700">
+          <div className="h-[70vh] w-full">
+            <MapContainer
+              center={[52.2297, 21.0122]}
+              zoom={7}
+              style={{ height: "100%", width: "100%" }}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution="&copy; OpenStreetMap contributors"
+              />
+              {stations.map((s, i) => (
+                <Marker
+                  key={i}
+                  position={[s.latitude, s.longitude]}
+                  icon={getMarkerIcon(s.brandName)}
+                >
+                  <Popup>
+                    <strong>{s.brandName}</strong>
+                    <br />
+                    {s.address}
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
+        </div>
+      </main>
+
+
+      <footer className="mt-12 py-6 text-center text-sm text-gray-400">
+        © FuelStats
+      </footer>
     </div>
   );
 }

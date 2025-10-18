@@ -1,4 +1,4 @@
-﻿networks:
+networks:
   dev:
     driver: bridge
 
@@ -8,15 +8,14 @@ volumes:
   redis-data: {}
 
 services:
-  controllers:  
-    image: ${DOCKER_REGISTRY-}controllers
+  contlollers:
+    image: ${DOCKER_REGISTRY-}contlollers
     container_name: api-dev
     build:
       context: .
-      dockerfile: Controllers/Dockerfile
+      dockerfile: contlollers/Dockerfile
     volumes:
       - shared-volume:/shared/volume
-      - ./logs:/app/logs
     depends_on:
       postgis:
         condition: service_healthy
@@ -30,29 +29,25 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       - ASPNETCORE_HTTP_PORTS=8080
     ports:
-      - "${API_PORT}:8080"
+      - "${DOT_NET_PORT}:8080"
     networks:
       - dev
 
   tests:
+    image: ${DOCKER_REGISTRY-}contlollers
     build:
       context: .
-      dockerfile: Tests/Dockerfile
-    container_name: tests
-    depends_on:
-      - postgis
-      - redis
-    environment:
-      - ConnectionStrings__DefaultConnection=User ID=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Host=postgis;Port=${POSTGRES_PORT};Database=${POSTGRES_DB};
-      - Redis__Host=${REDIS_HOST}
-      - Redis__Port=${REDIS_PORT}
-      - ASPNETCORE_ENVIRONMENT=Test
+      dockerfile: contlollers/Dockerfile
+    command: ["dotnet", "test", "--logger:console;verbosity=detailed"]
     volumes:
       - shared-volume:/shared/volume
-    networks: 
+    depends_on:
+      postgis:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
       - dev
-    stdin_open: true
-    tty: true
 
   postgis:
     image: postgis/postgis:17-3.5

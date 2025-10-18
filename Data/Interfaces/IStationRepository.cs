@@ -9,7 +9,6 @@ namespace Data.Interfaces
 {
     public interface IStationRepository
     {
-        Task<List<GetStationsResponse>> GetAllStationsForMapAsync();
-        Task<List<GetStationsResponse>> GetNearestStationAsync(double latitude, double longitude, int? count);
+        Task<List<GetAllStationsForMap>> GetAllStationsForMapAsync();
     }
 }

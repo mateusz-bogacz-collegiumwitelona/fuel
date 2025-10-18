@@ -1,6 +1,6 @@
 ﻿namespace DTO.Responses
 {
-    public class GetStationsResponse
+    public class GetAllStationsForMap
     {
         public string BrandName { get; set; }
         public string Address { get; set; }

@@ -500,7 +500,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Data.Models.ProposalStatistic", b =>
                 {
                     b.HasOne("Data.Models.ApplicationUser", "User")
-                        .WithOne("ProposalStatistic")
+                        .WithOne("ProposalStatisict")
                         .HasForeignKey("Data.Models.ProposalStatistic", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -574,7 +574,7 @@ namespace Data.Migrations
                 {
                     b.Navigation("PriceProposal");
 
-                    b.Navigation("ProposalStatistic")
+                    b.Navigation("ProposalStatisict")
                         .IsRequired();
                 });
 
