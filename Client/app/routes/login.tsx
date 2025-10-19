@@ -1,4 +1,6 @@
 import * as React from "react";
+import Header from "../components/header";
+import Footer from "../components/footer";
 
 function parseJwt(token: string) {
   try {
@@ -98,6 +100,7 @@ if (data.token) {
         onSubmit={handleLogin}
         className="bg-gray-800 p-8 rounded-2xl shadow-lg flex flex-col gap-4 w-full max-w-sm"
       >
+      <header className="w-full bg-gray-800 shadow-sm"> ... </header>
         <h2 className="text-2xl font-bold text-center mb-2">Logowanie</h2>
 
         <input
@@ -129,6 +132,7 @@ if (data.token) {
           <p className="text-center text-sm text-gray-300 mt-2">{message}</p>
         )}
       </form>
+      <footer className="mt-12 py-6 text-center text-sm text-gray-400">© FuelStats</footer>
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import * as React from "react";
+import Header from "../components/header";
+import Footer from "../components/footer";
 
 // ====================
 // Dashboard z zapytaniami do backendu:
@@ -314,31 +316,8 @@ export default function Dashboard() {
 
     return (
         <div className="min-h-screen bg-gray-900 text-white">
-            <header className="w-full bg-gray-800 shadow-sm">
-                <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="text-xl font-bold">FuelStats</div>
-                        <nav className="hidden md:flex gap-2 items-center">
-                            <a href="/dashboard" className="btn btn-ghost btn-sm">
-                                Dashboard
-                            </a>
-                            <a href="/map" className="btn btn-ghost btn-sm">
-                                Mapa
-                            </a>
-                            <a href="/list" className="btn btn-ghost btn-sm">
-                                Lista
-                            </a>
-                        </nav>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        <div className="text-sm text-gray-300">{email ?? "Wczytywanie..."}</div>
-                        <button onClick={handleLogout} className="btn btn-error btn-sm">
-                            Wyloguj
-                        </button>
-                    </div>
-                </div>
-            </header>
+             <div className="min-h-screen bg-gray-900 text-white">
+    <header className="w-full bg-gray-800 shadow-sm"> ... </header>
 
             <main className="mx-auto max-w-6xl px-4 py-8">
                 <h1 className="text-2xl md:text-3xl font-bold mb-4">Witaj, jesteś zalogowany!</h1>
