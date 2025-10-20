@@ -51,7 +51,7 @@ builder.Services.AddCors(op =>
 {
     op.AddPolicy("AllowClient", p =>
     {
-        p.WithOrigins("https://localhost:4000")
+        p.WithOrigins("https://localhost:4000", "http://localhost:4000")
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials();
@@ -154,14 +154,8 @@ builder.Services.AddScoped<ITestServices, TestServices>();
 //register helpers
 builder.Services.AddScoped<IEmaliBody, EmailBodys>();
 
-builder.Services.AddControllers(op =>
-{
-    var policy = new AuthorizationPolicyBuilder()
-                    .RequireAuthenticatedUser()
-                    .Build();
+builder.Services.AddControllers();
 
-    op.Filters.Add(new AuthorizeFilter(policy));
-});
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -229,16 +223,16 @@ using (var scope = app.Services.CreateScope())
 }
 
 //middleware
-app.UseHttpsRedirection();
-
 app.UseRouting();
 
-app.UseCors();
+app.UseCors("AllowClient");
 
 app.UseAuthentication();
-
 app.UseAuthorization();
 
+app.UseHttpsRedirection();
+
 app.MapControllers();
+
 
 app.Run();
