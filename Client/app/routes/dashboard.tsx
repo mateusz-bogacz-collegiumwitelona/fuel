@@ -323,18 +323,33 @@ export default function Dashboard() {
 
                 {/* --- Karuzela (jak wcześniej) --- */}
                 <section className="mb-8">
-                    <div className="carousel w-full rounded-lg shadow-lg overflow-hidden">
-                        <div id="slide1" className="carousel-item relative w-full">
-                            <img src="/images/stacjaBp.png" alt="slide1" className="w-full" />
-                            <div className="absolute left-4 bottom-4 bg-black/50 p-2 rounded">BP</div>
+                    <div class="carousel w-full">
+                        <div id="slide1" class="carousel-item relative w-full">
+                            <img
+                            src="images/stacjaOrlen.png"
+                            class="w-full" />
+                            <div class="absolute left-5 right-5 top-1/2 flex -translate-y-1/2 transform justify-between">
+                            <a href="#slide4" class="btn btn-circle">❮</a>
+                            <a href="#slide2" class="btn btn-circle">❯</a>
+                            </div>
                         </div>
-                        <div id="slide2" className="carousel-item relative w-full">
-                            <img src="/images/stacjaMoya.png" alt="slide2" className="w-full" />
-                            <div className="absolute left-4 bottom-4 bg-black/50 p-2 rounded">Moya</div>
+                        <div id="slide2" class="carousel-item relative w-full">
+                            <img
+                            src="images/stacjaMoya.png"
+                            class="w-full" />
+                            <div class="absolute left-5 right-5 top-1/2 flex -translate-y-1/2 transform justify-between">
+                            <a href="#slide1" class="btn btn-circle">❮</a>
+                            <a href="#slide3" class="btn btn-circle">❯</a>
+                            </div>
                         </div>
-                        <div id="slide3" className="carousel-item relative w-full">
-                            <img src="/images/stacjaOrlen.png" alt="slide3" className="w-full" />
-                            <div className="absolute left-4 bottom-4 bg-black/50 p-2 rounded">Orlen</div>
+                        <div id="slide3" class="carousel-item relative w-full">
+                            <img
+                            src="images/stacjaBp.png"
+                            class="w-full" />
+                            <div class="absolute left-5 right-5 top-1/2 flex -translate-y-1/2 transform justify-between">
+                            <a href="#slide2" class="btn btn-circle">❮</a>
+                            <a href="#slide4" class="btn btn-circle">❯</a>
+                            </div>
                         </div>
                     </div>
                 </section>

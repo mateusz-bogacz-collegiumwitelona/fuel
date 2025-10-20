@@ -35,9 +35,9 @@ export default function Header() {
 
           {/* main nav (desktop) */}
           <nav className="hidden md:flex gap-2 items-center ml-4">
-            <a href="/dashboard" className="btn btn-ghost btn-sm">Dashboard</a>
-            <a href="/map" className="btn btn-ghost btn-sm">Mapa</a>
-            <a href="/list" className="btn btn-ghost btn-sm">Lista</a>
+            <a href="/dashboard" className="btn btn-outline">Dashboard</a>
+            <a href="/map" className="btn btn-outline">Mapa</a>
+            <a href="/list" className="btn btn-outline">Lista</a>
           </nav>
         </div>
 
@@ -73,9 +73,7 @@ export default function Header() {
             </svg>
           </label>
 
-          <button onClick={handleLogout} className="btn btn-error btn-sm">
-            Wyloguj
-          </button>
+          <button onClick={handleLogout} class="btn btn-dash btn-error">Wyloguj</button>
 
           {/* hamburger dropdown (mobile / extra menu) */}
           <div className="dropdown dropdown-end">
