@@ -95,12 +95,14 @@ if (data.token) {
   }, []);
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">
+  <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+    <Header />
+
+    <div className="flex-grow flex justify-center items-center">
       <form
         onSubmit={handleLogin}
         className="bg-gray-800 p-8 rounded-2xl shadow-lg flex flex-col gap-4 w-full max-w-sm"
       >
-      <header className="w-full bg-gray-800 shadow-sm"> ... </header>
         <h2 className="text-2xl font-bold text-center mb-2">Logowanie</h2>
 
         <input
@@ -132,7 +134,8 @@ if (data.token) {
           <p className="text-center text-sm text-gray-300 mt-2">{message}</p>
         )}
       </form>
-      <footer className="mt-12 py-6 text-center text-sm text-gray-400">© FuelStats</footer>
     </div>
-  );
-}
+
+    <Footer />
+  </div>
+);

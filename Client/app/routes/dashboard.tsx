@@ -315,159 +315,156 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white">
-             <div className="min-h-screen bg-gray-900 text-white">
-    <header className="w-full bg-gray-800 shadow-sm"> ... </header>
+  <div className="min-h-screen bg-gray-900 text-white">
+    <Header />
 
-            <main className="mx-auto max-w-6xl px-4 py-8">
-                <h1 className="text-2xl md:text-3xl font-bold mb-4">Witaj, jesteś zalogowany!</h1>
+    <main className="mx-auto max-w-6xl px-4 py-8">
+      <h1 className="text-2xl md:text-3xl font-bold mb-4">Witaj, jesteś zalogowany!</h1>
 
-                {/* --- Karuzela (jak wcześniej) --- */}
-                <section className="mb-8">
-                    <div className="carousel w-full rounded-lg shadow-lg overflow-hidden">
-                        <div id="slide1" className="carousel-item relative w-full">
-                            <img src="/images/stacjaBp.png" alt="slide1" className="w-full" />
-                            <div className="absolute left-4 bottom-4 bg-black/50 p-2 rounded">BP</div>
-                        </div>
-                        <div id="slide2" className="carousel-item relative w-full">
-                            <img src="/images/stacjaMoya.png" alt="slide2" className="w-full" />
-                            <div className="absolute left-4 bottom-4 bg-black/50 p-2 rounded">Moya</div>
-                        </div>
-                        <div id="slide3" className="carousel-item relative w-full">
-                            <img src="/images/stacjaOrlen.png" alt="slide3" className="w-full" />
-                            <div className="absolute left-4 bottom-4 bg-black/50 p-2 rounded">Orlen</div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* --- Kafle Map / List --- */}
-                <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <a href="/map" className="block rounded-xl overflow-hidden shadow-lg">
-                        <div className="relative h-56 md:h-72 bg-gray-700 flex items-center justify-center">
-                            <img src="/images/map-preview.png" alt="map" className="object-cover w-full h-full" />
-                            <div className="absolute inset-0 bg-black/30"></div>
-                            <div className="absolute z-10 text-2xl font-bold">Mapa stacji</div>
-                        </div>
-                    </a>
-
-                    <a href="/list" className="block rounded-xl overflow-hidden shadow-lg">
-                        <div className="relative h-56 md:h-72 bg-gray-700 flex items-center justify-center">
-                            <img src="/images/list-preview.png" alt="list" className="object-cover w-full h-full" />
-                            <div className="absolute inset-0 bg-black/30"></div>
-                            <div className="absolute z-10 text-2xl font-bold">Lista stacji</div>
-                        </div>
-                    </a>
-                </section>
-
-                {/* --- Najbliższe stacje --- */}
-                <section className="bg-gray-800 p-6 rounded-xl shadow-md mb-8">
-                    <h2 className="text-xl font-semibold mb-4">Najbliższe stacje</h2>
-
-                    {stationsLoading ? (
-                        <div>Ładowanie najbliższych stacji... (upewnij się, że zezwoliłeś na dostęp do lokalizacji)</div>
-                    ) : stationsError ? (
-                        <div className="text-red-400">{stationsError}</div>
-                    ) : stations && stations.length > 0 ? (
-                        <div className="grid md:grid-cols-2 gap-4">
-                            {stations.map((s, idx) => (
-                                <div key={s.id ?? `${s.name}-${idx}`} className="p-4 bg-gray-700 rounded flex items-center gap-4">
-                                    <div className="flex-1">
-                                        <div className="font-medium text-lg">{s.name}</div>
-                                        {s.address && <div className="text-sm text-gray-300">{s.address}</div>}
-                                        <div className="text-sm text-gray-400 mt-1">Odległość: {formatDistance(s.distanceMeters)}</div>
-                                        {s.fuelPrices && (
-                                            <div className="text-sm text-gray-300 mt-2">
-                                                Ceny:{" "}
-                                                {Object.entries(s.fuelPrices)
-                                                    .map(([t, p]) => `${t}: ${p}`)
-                                                    .join(" • ")}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col gap-2">
-                                        {/* link do mapy z query params (możesz zamienić na Link) */}
-                                        <a
-                                            href={`/map?lat=${s.latitude ?? ""}&lon=${s.longitude ?? ""}`}
-                                            className="btn btn-sm"
-                                        >
-                                            Pokaż na mapie
-                                        </a>
-                                        <a href={`/list#${s.id ?? ""}`} className="btn btn-ghost btn-sm">
-                                            Szczegóły
-                                        </a>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-gray-300">Brak dostępnych stacji.</div>
-                    )}
-                </section>
-
-                {/* --- Statystyki zgłoszeń użytkownika --- */}
-                <section className="bg-gray-800 p-6 rounded-xl shadow-md">
-                    <h2 className="text-xl font-semibold mb-4">Twoje statystyki zgłoszeń</h2>
-
-                    {statsLoading ? (
-                        <div>Ładowanie statystyk...</div>
-                    ) : statsError ? (
-                        <div className="text-red-400">{statsError}</div>
-                    ) : stats ? (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="p-4 bg-gray-700 rounded text-center">
-                                <div className="text-3xl font-bold">{stats.total ?? requests?.length ?? 0}</div>
-                                <div className="text-sm text-gray-300 mt-1">Wszystkie zgłoszenia</div>
-                            </div>
-                            <div className="p-4 bg-gray-700 rounded text-center">
-                                <div className="text-3xl font-bold">{stats.accepted ?? 0}</div>
-                                <div className="text-sm text-gray-300 mt-1">Zaakceptowane</div>
-                            </div>
-                            <div className="p-4 bg-gray-700 rounded text-center">
-                                <div className="text-3xl font-bold">{stats.pending ?? 0}</div>
-                                <div className="text-sm text-gray-300 mt-1">W oczekiwaniu</div>
-                            </div>
-                            <div className="p-4 bg-gray-700 rounded text-center">
-                                <div className="text-3xl font-bold">{stats.rejected ?? 0}</div>
-                                <div className="text-sm text-gray-300 mt-1">Odrzucone</div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="text-gray-300">Brak statystyk.</div>
-                    )}
-
-                    {/* opcjonalnie pokaż listę zgłoszeń (jak wcześniej) */}
-                    <div className="mt-6">
-                        <h3 className="font-semibold mb-3">Twoje zgłoszenia (lista)</h3>
-                        {requestsLoading ? (
-                            <div>Ładowanie...</div>
-                        ) : requests && requests.length > 0 ? (
-                            <div className="flex flex-col gap-3">
-                                {requests.map((r) => (
-                                    <div key={r.id} className="p-4 bg-gray-700 rounded flex items-center justify-between">
-                                        <div>
-                                            <div className="font-medium">{r.title}</div>
-                                            <div className="text-sm text-gray-300">{formatDate(r.createdAt)}</div>
-                                        </div>
-
-                                        <div className="text-sm">
-                                            <span
-                                                className={`badge ${r.status === "accepted" ? "badge-success" : r.status === "rejected" ? "badge-error" : "badge-ghost"
-                                                    }`}
-                                            >
-                                                {r.status}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-gray-300">Nie masz jeszcze zgłoszeń.</div>
-                        )}
-                    </div>
-                </section>
-            </main>
-
-            <footer className="mt-12 py-6 text-center text-sm text-gray-400">© FuelStats</footer>
+      {/* --- Karuzela (jak wcześniej) --- */}
+      <section className="mb-8">
+        <div className="carousel w-full rounded-lg shadow-lg overflow-hidden">
+          <div id="slide1" className="carousel-item relative w-full">
+            <img src="/images/stacjaBp.png" alt="slide1" className="w-full" />
+            <div className="absolute left-4 bottom-4 bg-black/50 p-2 rounded">BP</div>
+          </div>
+          <div id="slide2" className="carousel-item relative w-full">
+            <img src="/images/stacjaMoya.png" alt="slide2" className="w-full" />
+            <div className="absolute left-4 bottom-4 bg-black/50 p-2 rounded">Moya</div>
+          </div>
+          <div id="slide3" className="carousel-item relative w-full">
+            <img src="/images/stacjaOrlen.png" alt="slide3" className="w-full" />
+            <div className="absolute left-4 bottom-4 bg-black/50 p-2 rounded">Orlen</div>
+          </div>
         </div>
-    );
-}
+      </section>
+
+      {/* --- Kafle Map / List --- */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <a href="/map" className="block rounded-xl overflow-hidden shadow-lg">
+          <div className="relative h-56 md:h-72 bg-gray-700 flex items-center justify-center">
+            <img src="/images/map-preview.png" alt="map" className="object-cover w-full h-full" />
+            <div className="absolute inset-0 bg-black/30"></div>
+            <div className="absolute z-10 text-2xl font-bold">Mapa stacji</div>
+          </div>
+        </a>
+
+        <a href="/list" className="block rounded-xl overflow-hidden shadow-lg">
+          <div className="relative h-56 md:h-72 bg-gray-700 flex items-center justify-center">
+            <img src="/images/list-preview.png" alt="list" className="object-cover w-full h-full" />
+            <div className="absolute inset-0 bg-black/30"></div>
+            <div className="absolute z-10 text-2xl font-bold">Lista stacji</div>
+          </div>
+        </a>
+      </section>
+
+      {/* --- Najbliższe stacje --- */}
+      <section className="bg-gray-800 p-6 rounded-xl shadow-md mb-8">
+        <h2 className="text-xl font-semibold mb-4">Najbliższe stacje</h2>
+
+        {stationsLoading ? (
+          <div>Ładowanie najbliższych stacji... (upewnij się, że zezwoliłeś na dostęp do lokalizacji)</div>
+        ) : stationsError ? (
+          <div className="text-red-400">{stationsError}</div>
+        ) : stations && stations.length > 0 ? (
+          <div className="grid md:grid-cols-2 gap-4">
+            {stations.map((s, idx) => (
+              <div key={s.id ?? `${s.name}-${idx}`} className="p-4 bg-gray-700 rounded flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="font-medium text-lg">{s.name}</div>
+                  {s.address && <div className="text-sm text-gray-300">{s.address}</div>}
+                  <div className="text-sm text-gray-400 mt-1">Odległość: {formatDistance(s.distanceMeters)}</div>
+                  {s.fuelPrices && (
+                    <div className="text-sm text-gray-300 mt-2">
+                      Ceny:{" "}
+                      {Object.entries(s.fuelPrices)
+                        .map(([t, p]) => `${t}: ${p}`)
+                        .join(" • ")}
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <a
+                    href={`/map?lat=${s.latitude ?? ""}&lon=${s.longitude ?? ""}`}
+                    className="btn btn-sm"
+                  >
+                    Pokaż na mapie
+                  </a>
+                  <a href={`/list#${s.id ?? ""}`} className="btn btn-ghost btn-sm">
+                    Szczegóły
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-gray-300">Brak dostępnych stacji.</div>
+        )}
+      </section>
+
+      {/* --- Statystyki zgłoszeń użytkownika --- */}
+      <section className="bg-gray-800 p-6 rounded-xl shadow-md">
+        <h2 className="text-xl font-semibold mb-4">Twoje statystyki zgłoszeń</h2>
+
+        {statsLoading ? (
+          <div>Ładowanie statystyk...</div>
+        ) : statsError ? (
+          <div className="text-red-400">{statsError}</div>
+        ) : stats ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-4 bg-gray-700 rounded text-center">
+              <div className="text-3xl font-bold">{stats.total ?? requests?.length ?? 0}</div>
+              <div className="text-sm text-gray-300 mt-1">Wszystkie zgłoszenia</div>
+            </div>
+            <div className="p-4 bg-gray-700 rounded text-center">
+              <div className="text-3xl font-bold">{stats.accepted ?? 0}</div>
+              <div className="text-sm text-gray-300 mt-1">Zaakceptowane</div>
+            </div>
+            <div className="p-4 bg-gray-700 rounded text-center">
+              <div className="text-3xl font-bold">{stats.pending ?? 0}</div>
+              <div className="text-sm text-gray-300 mt-1">W oczekiwaniu</div>
+            </div>
+            <div className="p-4 bg-gray-700 rounded text-center">
+              <div className="text-3xl font-bold">{stats.rejected ?? 0}</div>
+              <div className="text-sm text-gray-300 mt-1">Odrzucone</div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-gray-300">Brak statystyk.</div>
+        )}
+
+        {/* lista zgłoszeń */}
+        <div className="mt-6">
+          <h3 className="font-semibold mb-3">Twoje zgłoszenia (lista)</h3>
+          {requestsLoading ? (
+            <div>Ładowanie...</div>
+          ) : requests && requests.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {requests.map((r) => (
+                <div key={r.id} className="p-4 bg-gray-700 rounded flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{r.title}</div>
+                    <div className="text-sm text-gray-300">{formatDate(r.createdAt)}</div>
+                  </div>
+
+                  <div className="text-sm">
+                    <span
+                      className={`badge ${r.status === "accepted" ? "badge-success" : r.status === "rejected" ? "badge-error" : "badge-ghost"
+                        }`}
+                    >
+                      {r.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-gray-300">Nie masz jeszcze zgłoszeń.</div>
+          )}
+        </div>
+      </section>
+    </main>
+
+    <Footer />
+  </div>
+);
