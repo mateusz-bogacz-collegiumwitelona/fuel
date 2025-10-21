@@ -367,3 +367,14 @@ FodyWeavers.xsd
 
 **/bin/
 **/obj/
+
+# Serilog log files
+logs/
+*.log
+
+# Environment files with sensitive data
+.env
+.env.*
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json

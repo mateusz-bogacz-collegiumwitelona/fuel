@@ -3,6 +3,7 @@ using System;
 using Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251010132321_typo_correction2")]
+    partial class typo_correction2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -264,17 +267,17 @@ namespace Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int?>("AcceptedRate")
+                    b.Property<int>("AcceptedRate")
                         .HasPrecision(5, 2)
                         .HasColumnType("integer");
 
-                    b.Property<int?>("ApprovedProposals")
+                    b.Property<int>("ApprovedProposals")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("RejectedProposals")
+                    b.Property<int>("RejectedProposals")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("TotalProposals")
+                    b.Property<int>("TotalProposals")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -297,8 +300,9 @@ namespace Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("AddressId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<Guid>("BrandId")
                         .HasColumnType("uuid");
@@ -306,47 +310,18 @@ namespace Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Point>("Location")
+                        .IsRequired()
+                        .HasColumnType("geometry(Point, 4326)");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AddressId");
-
                     b.HasIndex("BrandId");
 
                     b.ToTable("Stations");
-                });
-
-            modelBuilder.Entity("Data.Models.StationAddress", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("City")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("HouseNumber")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Point>("Location")
-                        .IsRequired()
-                        .HasColumnType("geometry(Point, 4326)");
-
-                    b.Property<string>("PostalCode")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Street")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("StationAddress");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
@@ -538,19 +513,11 @@ namespace Data.Migrations
 
             modelBuilder.Entity("Data.Models.Station", b =>
                 {
-                    b.HasOne("Data.Models.StationAddress", "Address")
-                        .WithMany("Stations")
-                        .HasForeignKey("AddressId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("Data.Models.Brand", "Brand")
                         .WithMany("Station")
                         .HasForeignKey("BrandId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Address");
 
                     b.Navigation("Brand");
                 });
@@ -631,11 +598,6 @@ namespace Data.Migrations
                     b.Navigation("FuelPrice");
 
                     b.Navigation("PriceProposal");
-                });
-
-            modelBuilder.Entity("Data.Models.StationAddress", b =>
-                {
-                    b.Navigation("Stations");
                 });
 #pragma warning restore 612, 618
         }
