@@ -10,19 +10,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using Data.Helpers;
+using Data.Models;
 namespace Data.Reopsitories
 {
-    public class StationRepository : IStationRepository
+    public class StationRepository : StationFilters, IStationRepository
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<StationRepository> _logger;
 
-        private const int SRID_VALUE = 4326;
-        private const double METERS_PER_DEGREE = 111320.0;
-
-        private double MetersToRadius(int distance)
-          => (distance * 1000) / 111320.0;
+        private StationFilters filters = new StationFilters();
 
         public StationRepository(
             ApplicationDbContext context,
@@ -46,16 +43,12 @@ namespace Data.Reopsitories
                 request.LocationLongitude.HasValue &&
                 request.Distance.HasValue)
             {
-                double lat = request.LocationLatitude.Value;
-                double lon = request.LocationLongitude.Value;
-
-                var userLocation = new Point(lon, lat) { SRID = SRID_VALUE };
-
-                query = query.Where(s =>
-                    s.Address.Location.Distance(userLocation) <= MetersToRadius(request.Distance.Value)
-                );
-
-                var sql = query.ToQueryString();
+                query = filters.FilterByDistance<Station>(
+                    query,
+                    (int)request.Distance.Value,
+                    (float)request.LocationLatitude,
+                    (float)request.LocationLongitude)
+                    .AsQueryable();
             }
 
             var result = await query
@@ -81,7 +74,7 @@ namespace Data.Reopsitories
             int? count
             )
         {
-            var userLocation = new Point(longitude, latitude) { SRID = SRID_VALUE };
+            var userLocation = new Point(longitude, latitude) { SRID = GeoConstants.SRID_VALUE };
 
             if (count == null || count <= 0) count = 3;
 
@@ -101,5 +94,74 @@ namespace Data.Reopsitories
                 })
                 .ToListAsync();
         }
+
+
+        public async Task<List<GetStationListResponse>> GetStationListAsync(GetStationListRequest request)
+        {
+            var stations = _context.Stations
+                .Include(s => s.Brand)
+                .Include(s => s.Address)
+                .Include(s => s.FuelPrice)
+                    .ThenInclude(fp => fp.FuelType)
+                .AsQueryable();
+
+            if (
+                request.LocationLongitude.HasValue &&
+                request.LocationLatitude.HasValue &&
+                request.Distance.HasValue)
+            {
+                stations = filters.FilterByDistance<Station>(
+                    stations,
+                    (int)request.Distance.Value,
+                    (float)request.LocationLatitude.Value,
+                    (float)request.LocationLongitude.Value
+                ).AsQueryable();
+            }
+
+            if (request.FuelType != null && request.FuelType.Any())
+                stations = filters.FilterByFuelType(
+                        stations,
+                        request.FuelType
+                    )
+                    .Where(s => s.FuelPrice.Any())
+                    .AsQueryable();
+
+            if (request.MinPrice.HasValue || request.MaxPrice.HasValue)
+                stations = filters.FilterByPrice(
+                    stations,
+                    request.MinPrice,
+                    request.MaxPrice
+                )
+                .Where(s => s.FuelPrice.Any())
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(request.BrandName))
+                stations = filters.FilterByBrand(
+                    stations,
+                    request.BrandName
+                    )
+                    .Where(s => s.FuelPrice.Any())
+                    .AsQueryable();
+
+            return stations.Select(s => new GetStationListResponse
+            {
+                BrandName = s.Brand.Name,
+                Street = s.Address.Street,
+                HouseNumber = s.Address.HouseNumber,
+                City = s.Address.City,
+                PostalCode = s.Address.PostalCode,
+                Latitude = s.Address.Location.Y,
+                Longitude = s.Address.Location.X,
+                FuelPrice = s.FuelPrice.Select(fp => new GetFuelPrivceAndCodeResponse
+                {
+                    FuelCode = fp.FuelType.Code,
+                    Price = fp.Price,
+                    ValidFrom = fp.ValidFrom
+                }).ToList()
+            }).ToList();
+        }
+
+        public async Task<bool> FindBrandAsync(string brandName)
+            => await _context.Brand.AnyAsync(b => b.Name.ToLower() == brandName.ToLower());
     }
 }

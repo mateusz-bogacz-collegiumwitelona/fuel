@@ -1,7 +1,9 @@
 ﻿using DTO.Requests;
+using DTO.Responses;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Services.Helpers;
 using Services.Interfaces;
 
 namespace Contlollers.Controllers.Client
@@ -124,6 +126,20 @@ namespace Contlollers.Controllers.Client
             )
         {
             var result = await _stationServices.GetNearestStationAsync(latitude, longitude, count);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        [HttpPost("list")]
+        public async Task<IActionResult> GetStationListAsync(GetStationListRequest request)
+        {
+            var result = await _stationServices.GetStationListAsync(request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

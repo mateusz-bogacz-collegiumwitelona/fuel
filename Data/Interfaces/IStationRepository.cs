@@ -12,5 +12,7 @@ namespace Data.Interfaces
     {
         Task<List<GetStationsResponse>> GetAllStationsForMapAsync(GetStationsRequest request);
         Task<List<GetStationsResponse>> GetNearestStationAsync(double latitude, double longitude, int? count);
+        Task<List<GetStationListResponse>> GetStationListAsync(GetStationListRequest request);
+        Task<bool> FindBrandAsync(string brandName);
     }
 }

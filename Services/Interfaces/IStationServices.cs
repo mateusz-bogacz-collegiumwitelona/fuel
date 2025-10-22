@@ -17,5 +17,6 @@ namespace Services.Interfaces
             double longitude,
             int? count
         );
+        Task<Result<List<GetStationListResponse>>> GetStationListAsync(GetStationListRequest request);
     }
 }
