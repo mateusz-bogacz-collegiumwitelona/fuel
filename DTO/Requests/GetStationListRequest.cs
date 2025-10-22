@@ -1,4 +1,5 @@
-﻿namespace DTO.Requests
+﻿
+namespace DTO.Requests
 {
     public class GetStationListRequest
     {
@@ -16,5 +17,11 @@
 
         //brand
         public string? BrandName { get; set; }
+
+        //sorting by
+        public bool? SortingByDisance { get; set; } = false;
+        public bool? SortingByPrice { get; set; } = false;
+        public string? SortingDirection { get; set; } = "asc";
+
     }
 }

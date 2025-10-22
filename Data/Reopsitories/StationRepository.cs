@@ -14,12 +14,12 @@ using Data.Helpers;
 using Data.Models;
 namespace Data.Reopsitories
 {
-    public class StationRepository : StationFilters, IStationRepository
+    public class StationRepository : StationFiltersSorting, IStationRepository
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<StationRepository> _logger;
 
-        private StationFilters filters = new StationFilters();
+        private StationFiltersSorting filters = new StationFiltersSorting();
 
         public StationRepository(
             ApplicationDbContext context,
@@ -39,17 +39,12 @@ namespace Data.Reopsitories
             if (request.BrandName != null && request.BrandName.Count > 0)
                 query = query.Where(s => request.BrandName.Contains(s.Brand.Name));
 
-            if (request.LocationLatitude.HasValue &&
-                request.LocationLongitude.HasValue &&
-                request.Distance.HasValue)
-            {
+            if (request.LocationLatitude.HasValue && request.LocationLongitude.HasValue && request.Distance.HasValue)
                 query = filters.FilterByDistance<Station>(
                     query,
                     (int)request.Distance.Value,
                     (float)request.LocationLatitude,
-                    (float)request.LocationLongitude)
-                    .AsQueryable();
-            }
+                    (float)request.LocationLongitude);
 
             var result = await query
                 .Select(s => new GetStationsResponse
@@ -105,8 +100,7 @@ namespace Data.Reopsitories
                     .ThenInclude(fp => fp.FuelType)
                 .AsQueryable();
 
-            if (
-                request.LocationLongitude.HasValue &&
+            if (request.LocationLongitude.HasValue &&
                 request.LocationLatitude.HasValue &&
                 request.Distance.HasValue)
             {
@@ -115,35 +109,37 @@ namespace Data.Reopsitories
                     (int)request.Distance.Value,
                     (float)request.LocationLatitude.Value,
                     (float)request.LocationLongitude.Value
-                ).AsQueryable();
+                );
             }
 
             if (request.FuelType != null && request.FuelType.Any())
-                stations = filters.FilterByFuelType(
-                        stations,
-                        request.FuelType
-                    )
-                    .Where(s => s.FuelPrice.Any())
-                    .AsQueryable();
+                stations = filters.FilterByFuelType(stations, request.FuelType);
 
             if (request.MinPrice.HasValue || request.MaxPrice.HasValue)
-                stations = filters.FilterByPrice(
-                    stations,
-                    request.MinPrice,
-                    request.MaxPrice
-                )
-                .Where(s => s.FuelPrice.Any())
-                .AsQueryable();
+                stations = filters.FilterByPrice(stations, request.MinPrice, request.MaxPrice);
 
             if (!string.IsNullOrEmpty(request.BrandName))
-                stations = filters.FilterByBrand(
-                    stations,
-                    request.BrandName
-                    )
-                    .Where(s => s.FuelPrice.Any())
-                    .AsQueryable();
+                stations = filters.FilterByBrand(stations, request.BrandName);
 
-            return stations.Select(s => new GetStationListResponse
+            if (request.SortingByDisance.HasValue)
+            {
+                stations = filters.SortingByDistance(
+                    stations,
+                    (float)request.LocationLongitude.Value,
+                    (float)request.LocationLatitude.Value,
+                    request.SortingDirection
+                );
+            }
+            else if (request.SortingByPrice.HasValue)
+            {
+                stations = stations.Where(s => s.FuelPrice.Any());
+                stations = filters.SortingByPrice(
+                    stations,
+                    request.SortingDirection
+                );
+            }
+
+            var result = stations.Select(s => new GetStationListResponse
             {
                 BrandName = s.Brand.Name,
                 Street = s.Address.Street,
@@ -152,13 +148,25 @@ namespace Data.Reopsitories
                 PostalCode = s.Address.PostalCode,
                 Latitude = s.Address.Location.Y,
                 Longitude = s.Address.Location.X,
-                FuelPrice = s.FuelPrice.Select(fp => new GetFuelPrivceAndCodeResponse
-                {
-                    FuelCode = fp.FuelType.Code,
-                    Price = fp.Price,
-                    ValidFrom = fp.ValidFrom
-                }).ToList()
-            }).ToList();
+                FuelPrice = s.FuelPrice
+                            .Where(fp =>
+                                (request.FuelType == null || !request.FuelType.Any() ||
+                                 request.FuelType.Contains(fp.FuelType.Name)) &&
+                                (!request.MinPrice.HasValue || fp.Price >= request.MinPrice.Value) &&
+                                (!request.MaxPrice.HasValue || fp.Price <= request.MaxPrice.Value)
+                            )
+                            .Select(fp => new GetFuelPrivceAndCodeResponse
+                            {
+                                FuelCode = fp.FuelType.Code,
+                                Price = fp.Price,
+                                ValidFrom = fp.ValidFrom
+                            })
+                            .ToList()
+            })
+            .Where(s => s.FuelPrice.Any())
+            .ToList();
+
+            return result;
         }
 
         public async Task<bool> FindBrandAsync(string brandName)

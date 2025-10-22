@@ -153,7 +153,6 @@ namespace Services.Services
                     }
                 }
 
-
                 if (request.MinPrice.HasValue)
                 {
                     if (request.MinPrice < 0)
@@ -190,6 +189,42 @@ namespace Services.Services
                             StatusCodes.Status400BadRequest,
                             new List<string> { $"Invalid brand name: {request.BrandName}" });
                     }
+                }
+
+                if (request.SortingByPrice.HasValue && request.SortingByDisance.HasValue)
+                {
+                    _logger.LogWarning("Conflicting sorting options: both SortingByPrice and SortingByDistance are set to true.");
+                    return Result<List<GetStationListResponse>>.Bad(
+                        "Conflicting sorting options.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Cannot sort by both price and distance simultaneously." });
+                }
+
+                if (request.SortingByDisance.HasValue && (!request.LocationLatitude.HasValue && !request.LocationLongitude.HasValue))
+                {
+                    _logger.LogWarning("Conflict: cannot sort by distance if Latitude and Longitude are null");
+                    return Result<List<GetStationListResponse>>.Bad(
+                        "Conflicting sorting options.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Cannot sort by distance if Latitude and Longitude are null." });
+                }
+
+                if (request.SortingByPrice.HasValue && !request.FuelType.Any())
+                {
+                    _logger.LogWarning("Conflict: cannot sort by price if FuelType is null or empty");
+                    return Result<List<GetStationListResponse>>.Bad(
+                        "Conflicting sorting options.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Cannot sort by price if FuelType is null or empty." });
+                }
+
+                if (!request.FuelType.Any() && (request.MinPrice.HasValue || request.MaxPrice.HasValue))
+                {
+                    _logger.LogWarning("Conflict: cannot filterd by price if FuelType is null or empty");
+                    return Result<List<GetStationListResponse>>.Bad(
+                        "Conflicting sorting options.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Cannot sort by price if FuelType is null or empty." });
                 }
 
                 var result = await _stationRepository.GetStationListAsync(request);
