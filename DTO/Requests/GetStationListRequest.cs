@@ -23,5 +23,6 @@ namespace DTO.Requests
         public bool? SortingByPrice { get; set; } = false;
         public string? SortingDirection { get; set; } = "asc";
 
+        public GetPaggedRequest? Pagging { get; set; }
     }
 }
