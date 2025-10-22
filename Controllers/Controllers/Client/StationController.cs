@@ -1,9 +1,6 @@
 ﻿using DTO.Requests;
-using DTO.Responses;
 using Microsoft.AspNetCore.Cors;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Services.Helpers;
 using Services.Interfaces;
 
 namespace Contlollers.Controllers.Client

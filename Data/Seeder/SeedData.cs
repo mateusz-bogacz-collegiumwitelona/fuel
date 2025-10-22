@@ -1,20 +1,10 @@
 ﻿using Data.Context;
 using Data.Enums;
 using Data.Models;
-using Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions;
-using NetTopologySuite.Algorithm;
-using Pipelines.Sockets.Unofficial.Arenas;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Data.Seeder
 {

@@ -1,12 +1,6 @@
-﻿using Data.Context;
-using Microsoft.AspNetCore.Cors;
+﻿using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Distributed;
-using NetTopologySuite.Geometries;
 using Services.Interfaces;
-using StackExchange.Redis;
-using System.Net.WebSockets;
 
 namespace contlollers.Controllers.Test
 {

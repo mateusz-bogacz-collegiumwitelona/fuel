@@ -1,6 +1,6 @@
-﻿using NetTopologySuite.Geometries;
+﻿using Data.Models;
 using Microsoft.EntityFrameworkCore;
-using Data.Models;
+using NetTopologySuite.Geometries;
 
 namespace Data.Helpers
 {

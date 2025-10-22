@@ -7,11 +7,11 @@ using Data.Seeder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
-using Serilog.Events;
 using Serilog.Sinks.PeriodicBatching;
 using Services.Helpers;
 using Services.Interfaces;
@@ -19,6 +19,7 @@ using Services.Services;
 using StackExchange.Redis;
 using System.Reflection;
 using System.Text;
+
 //log configuration
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -161,7 +162,29 @@ builder.Services.AddControllers(op =>
                     .Build();
 
     op.Filters.Add(new AuthorizeFilter(policy));
+})
+.ConfigureApiBehaviorOptions(op =>
+{
+    op.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+        .Where(e => e.Value.Errors.Count > 0)
+        .SelectMany(e => e.Value.Errors)
+        .Select(e => e.ErrorMessage)
+        .ToList();
+
+        var response = new
+        {
+            success = false,
+            message = "Validation error",
+            errors = errors
+        };
+
+        return new BadRequestObjectResult(response);
+    };
 });
+
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

@@ -4,11 +4,6 @@ using Data.Models;
 using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Data.Reopsitories
 {

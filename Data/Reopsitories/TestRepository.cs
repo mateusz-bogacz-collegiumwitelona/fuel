@@ -1,16 +1,10 @@
 ﻿using Data.Context;
 using Data.Interfaces;
 using DTO.Responses;
-using Microsoft.AspNetCore.Routing.Template;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Data.Reopsitories
 {
