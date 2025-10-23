@@ -252,5 +252,37 @@ namespace Services.Services
                         new List<string> {$"{ex.Message} | {ex.InnerException}" });
             }
         }
+
+        public async Task<Result<GetStationListResponse>> GetStationProfileAsync(GetStationProfileRequest request)
+        {
+            try
+            {
+                var result = await _stationRepository.GetStationProfileAsync(request);
+
+                if (request == null)
+                {
+                    _logger.LogWarning("Cannot find info about this station");
+                    return Result<GetStationListResponse>.Bad(
+                        "Server error",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "Cannot find info about this station" }
+                        );
+                }
+
+                return Result<GetStationListResponse>.Good(
+                    "Stations retrieved successfully",
+                    StatusCodes.Status200OK,
+                    result
+                    );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while retrieving station profile: {ex.Message} | {ex.InnerException}");
+                return Result<GetStationListResponse>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" });
+            }
+        }
     }
 }

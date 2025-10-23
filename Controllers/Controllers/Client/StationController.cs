@@ -311,10 +311,92 @@ namespace Contlollers.Controllers.Client
         /// <response code="200">Brands successfully retrieved</response>
         /// <response code="404">No brands found</response>
         /// <response code="500">An unexpected server error occurred</response>
-        [HttpGet("/all-brands")]
+        [HttpGet("all-brands")]
         public async Task<IActionResult> GetAllBrandsAsync()
         {
             var result = await _stationServices.GetAllBrandsAsync(); 
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Get detailed profile of a specific fuel station.
+        /// </summary>
+        /// <remarks>
+        /// Description  
+        /// Returns complete information about a specific fuel station, including address, coordinates, brand name, and current fuel prices.  
+        /// The station is identified based on the provided address (street, house number, city, postal code).  
+        ///
+        /// Example request body  
+        /// ```json
+        /// {
+        ///   "street": "Ignacego Domejki",
+        ///   "houseNumber": "1a",
+        ///   "city": "Legnica",
+        ///   "postalCode": "59-220"
+        /// }
+        /// ```
+        ///
+        /// Example response  
+        /// ```json
+        /// {
+        ///   "brandName": "Orlen",
+        ///   "street": "Ignacego Domejki",
+        ///   "houseNumber": "1a",
+        ///   "city": "Legnica",
+        ///   "postalCode": "59-220",
+        ///   "latitude": 51.2094953,
+        ///   "longitude": 16.1309152,
+        ///   "fuelPrice": [
+        ///     {
+        ///       "fuelCode": "PB95",
+        ///       "price": 4.56,
+        ///       "validFrom": "0001-01-01T00:00:00"
+        ///     },
+        ///     {
+        ///       "fuelCode": "PB98",
+        ///       "price": 6.8,
+        ///       "validFrom": "0001-01-01T00:00:00"
+        ///     },
+        ///     {
+        ///       "fuelCode": "LPG",
+        ///       "price": 6.08,
+        ///       "validFrom": "0001-01-01T00:00:00"
+        ///     },
+        ///     {
+        ///       "fuelCode": "ON",
+        ///       "price": 4.71,
+        ///       "validFrom": "0001-01-01T00:00:00"
+        ///     },
+        ///     {
+        ///       "fuelCode": "E85",
+        ///       "price": 5.52,
+        ///       "validFrom": "0001-01-01T00:00:00"
+        ///     }
+        ///   ]
+        /// }
+        /// ```
+        ///
+        /// Notes  
+        /// - All request parameters are **required** for the search (street, houseNumber, city, postalCode).  
+        /// - If no station matches the provided data, a `404` response is returned.  
+        /// - The coordinate system used is **WGS84** (latitude, longitude).  
+        /// - The `fuelPrice` list may contain multiple entries depending on the available fuel types.  
+        ///
+        /// </remarks>
+        /// <response code="200">Station profile successfully retrieved</response>
+        /// <response code="404">No matching station found</response>
+        /// <response code="500">Server error — something went wrong while processing the request</response>
+        [HttpPost("profile")]
+        public async Task<IActionResult> GetStationProfileAsync(GetStationProfileRequest request)
+        {
+            var result = await _stationServices.GetStationProfileAsync(request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

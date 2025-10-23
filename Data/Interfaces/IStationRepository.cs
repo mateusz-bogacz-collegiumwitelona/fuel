@@ -10,5 +10,6 @@ namespace Data.Interfaces
         Task<List<GetStationListResponse>> GetStationListAsync(GetStationListRequest request);
         Task<bool> FindBrandAsync(string brandName);
         Task<List<string>> GetAllBrandsAsync();
+        Task<GetStationListResponse> GetStationProfileAsync(GetStationProfileRequest request);
     }
 }
