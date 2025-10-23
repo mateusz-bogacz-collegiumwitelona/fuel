@@ -1,3 +1,5 @@
+## TO JEST BRANCH EXPERYMENTALNY NIE MERGOWAĆ Z NIM ~Mati
+
 zrobiony merge z better seeder
 
 co zrobiłem:
