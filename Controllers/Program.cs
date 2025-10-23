@@ -10,7 +10,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Minio;
 using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using Services.Helpers;
@@ -137,6 +139,25 @@ var options = new ConfigurationOptions
 
 var redis = ConnectionMultiplexer.Connect(options);
 builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+
+//minio configuration
+builder.Services.Configure<MinIOSettings>(
+    builder.Configuration.GetSection("MinIO")
+    );
+
+//register minio client
+builder.Services.AddSingleton<IMinioClient>(sp =>
+{
+    var settings = sp.GetRequiredService<IOptions<MinIOSettings>>().Value;
+
+    var client = new MinioClient()
+        .WithEndpoint(settings.Endpoint)
+        .WithCredentials(settings.AccessKey, settings.SecretKey);
+
+    if (settings.UseSSL) client = client.WithSSL();
+
+    return client.Build();
+});
 
 //regiser repo 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
