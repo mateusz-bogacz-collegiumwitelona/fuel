@@ -167,5 +167,8 @@ namespace Data.Reopsitories
 
         public async Task<bool> FindBrandAsync(string brandName)
             => await _context.Brand.AnyAsync(b => b.Name.ToLower() == brandName.ToLower());
+
+        public async Task<List<string>> GetAllBrandsAsync()
+            => await _context.Brand.Select(b => b.Name).ToListAsync();
     }
 }

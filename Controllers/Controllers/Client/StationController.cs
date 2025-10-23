@@ -1,6 +1,7 @@
 ﻿using DTO.Requests;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Services.Helpers;
 using Services.Interfaces;
 
 namespace Contlollers.Controllers.Client
@@ -273,6 +274,47 @@ namespace Contlollers.Controllers.Client
         public async Task<IActionResult> GetStationListAsync(GetStationListRequest request)
         {
             var result = await _stationServices.GetStationListAsync(request);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+
+        /// <summary>
+        /// Get all fuel station brands.
+        /// </summary>
+        /// <remarks>
+        /// Description  
+        /// Returns a list of all available fuel station brands in the database.  
+        /// Example response  
+        /// ```json
+        /// [
+        ///   "Orlen",
+        ///   "Shell",
+        ///   "BP",
+        ///   "Circle K",
+        ///   "Lotos",
+        ///   ...
+        /// ]
+        /// ```
+        ///
+        /// Notes  
+        /// - The response contains **unique brand names** only.  
+        /// - If no brands are found in the database, a `404` response is returned.  
+        ///
+        /// </remarks>
+        /// <response code="200">Brands successfully retrieved</response>
+        /// <response code="404">No brands found</response>
+        /// <response code="500">An unexpected server error occurred</response>
+        [HttpGet("/all-brands")]
+        public async Task<IActionResult> GetAllBrandsAsync()
+        {
+            var result = await _stationServices.GetAllBrandsAsync(); 
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

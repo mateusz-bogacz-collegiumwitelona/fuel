@@ -224,5 +224,33 @@ namespace Services.Services
 
             }
         }
+
+        public async Task<Result<List<string>>> GetAllBrandsAsync()
+        { 
+            try
+            {
+                var result = await _stationRepository.GetAllBrandsAsync();
+
+                if (result == null || result.Count == 0)
+                    return Result<List<string>>.Bad(
+                        "No brands found.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "No brands available in the database." });
+
+
+                return Result<List<string>>.Good(
+                    $"Succes: {result.Count} is listed",
+                    StatusCodes.Status200OK,
+                    result);
+            } 
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while retrieving station list: {ex.Message} | {ex.InnerException}");
+                return Result<List<string>>.Bad(
+                        "An error occurred while processing your request.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> {$"{ex.Message} | {ex.InnerException}" });
+            }
+        }
     }
 }
