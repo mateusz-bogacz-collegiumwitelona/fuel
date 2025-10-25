@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Tests.ProposalStatisticRepositoryTest
+namespace Tests.RepositoryTest
 {
     public class ProposalStatisticRepositoryTests
     {
