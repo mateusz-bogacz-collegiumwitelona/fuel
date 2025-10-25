@@ -1,4 +1,5 @@
-﻿using DTO.Requests;
+﻿using Data.Models;
+using DTO.Requests;
 using DTO.Responses;
 
 namespace Data.Interfaces
@@ -11,5 +12,6 @@ namespace Data.Interfaces
         Task<bool> FindBrandAsync(string brandName);
         Task<List<string>> GetAllBrandsAsync();
         Task<GetStationListResponse> GetStationProfileAsync(GetStationProfileRequest request);
+        Task<Station> FindStationByDataAsync(string brandName, string street, string houseNumber, string city);
     }
 }

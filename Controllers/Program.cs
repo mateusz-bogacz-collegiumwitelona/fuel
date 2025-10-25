@@ -1,8 +1,10 @@
 using Data.Config;
 using Data.Context;
+using Data.Helpers;
 using Data.Interfaces;
 using Data.Models;
 using Data.Reopsitories;
+using Data.Repositories;
 using Data.Seeder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -159,11 +161,14 @@ builder.Services.AddSingleton<IMinioClient>(sp =>
     return client.Build();
 });
 
-//regiser repo 
+//register repo 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IStationRepository, StationRepository>();
 builder.Services.AddScoped<IProposalStatisticRepository, ProposalStatisticRepository>();
 builder.Services.AddScoped<ITestRepository, TestRepository>();
+builder.Services.AddScoped<IProposalStatisticRepository, ProposalStatisticRepository>();
+builder.Services.AddScoped<IPriceProposalRepository, PriceProposalRepository>();
+builder.Services.AddScoped<Data.Interfaces.IFuelTypeRepository, FuelTypeRepository>();
 
 //register services 
 builder.Services.AddScoped<ILoginRegisterServices, LoginRegisterServices>();
@@ -172,9 +177,11 @@ builder.Services.AddScoped<IStationServices, StationServices>();
 builder.Services.AddScoped<IEmailServices, EmailServices>();
 builder.Services.AddScoped<IProposalStatisticServices, ProposalStatisticServices>();
 builder.Services.AddScoped<ITestServices, TestServices>();
+builder.Services.AddScoped<IPriceProposalServices, PriceProposalServices>();
 
 //register helpers
 builder.Services.AddScoped<IEmaliBody, EmailBodys>();
+builder.Services.AddScoped<S3ApiHelper>();
 
 builder.Services.AddControllers(op =>
 {

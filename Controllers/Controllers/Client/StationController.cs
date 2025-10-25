@@ -1,4 +1,5 @@
 ﻿using DTO.Requests;
+using DTO.Responses;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Helpers;
@@ -12,10 +13,13 @@ namespace Contlollers.Controllers.Client
     public class StationController : ControllerBase
     {
         private readonly IStationServices _stationServices;
-
-        public StationController(IStationServices stationServices)
+        private readonly IPriceProposalServices _priceProposalServices;
+        public StationController(
+            IStationServices stationServices,
+            IPriceProposalServices priceProposalServices)
         {
             _stationServices = stationServices;
+            _priceProposalServices = priceProposalServices;
         }
 
         /// <summary>
@@ -397,6 +401,20 @@ namespace Contlollers.Controllers.Client
         public async Task<IActionResult> GetStationProfileAsync(GetStationProfileRequest request)
         {
             var result = await _stationServices.GetStationProfileAsync(request);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        [HttpPost("price-proposal/add")]
+        public async Task<IActionResult> AddNewPriceProposalAsync([FromForm] AddNewPriceProposalRequest request)
+        {
+            var result = await _priceProposalServices.AddNewProposalAsync(request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

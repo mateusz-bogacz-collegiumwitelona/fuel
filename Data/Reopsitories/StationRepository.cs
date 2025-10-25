@@ -206,5 +206,17 @@ namespace Data.Reopsitories
                              .ToList()
             };
         }
+
+        public async Task<Station> FindStationByDataAsync(string brandName, string street, string houseNumber, string city)
+            => await _context.Stations
+                .Include(s => s.Brand)
+                .Include(s => s.Address)
+                .Include(s => s.FuelPrice)
+                .FirstOrDefaultAsync(s =>
+                    s.Brand.Name.ToLower() == brandName.ToLower() &&
+                    s.Address.Street.ToLower() == street.ToLower() &&
+                    s.Address.HouseNumber.ToLower() == houseNumber.ToLower() &&
+                    s.Address.City.ToLower() == city.ToLower()
+                );
     }
 }
