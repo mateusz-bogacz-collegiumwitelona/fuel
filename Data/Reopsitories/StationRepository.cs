@@ -151,7 +151,7 @@ namespace Data.Reopsitories
                                 (!request.MinPrice.HasValue || fp.Price >= request.MinPrice.Value) &&
                                 (!request.MaxPrice.HasValue || fp.Price <= request.MaxPrice.Value)
                             )
-                            .Select(fp => new GetFuelPrivceAndCodeResponse
+                            .Select(fp => new GetFuelPriceAndCodeResponse
                             {
                                 FuelCode = fp.FuelType.Code,
                                 Price = fp.Price,
@@ -197,7 +197,7 @@ namespace Data.Reopsitories
                 Latitude = station.Address.Location.Y,
                 Longitude = station.Address.Location.X,
                 FuelPrice = station.FuelPrice
-                             .Select(fp => new GetFuelPrivceAndCodeResponse
+                             .Select(fp => new GetFuelPriceAndCodeResponse
                              {
                                  FuelCode = fp.FuelType.Code,
                                  Price = fp.Price,

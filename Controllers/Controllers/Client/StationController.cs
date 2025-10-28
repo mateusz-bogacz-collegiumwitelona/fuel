@@ -1,5 +1,4 @@
 ﻿using DTO.Requests;
-using DTO.Responses;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Helpers;
@@ -411,6 +410,71 @@ namespace Contlollers.Controllers.Client
                 });
         }
 
+        /// <summary>
+        /// Submit a new fuel price proposal with verification photo.
+        /// </summary>
+        /// <remarks>
+        /// Description  
+        /// Allows authenticated users to submit a fuel price proposal for a specific gas station, including a verification photo.  
+        /// The photo is uploaded to MinIO storage and a unique proposal record is created in the database.  
+        /// The station is identified based on the provided data (brand name, street, house number, city).  
+        ///
+        /// Example request (multipart/form-data)  
+        /// ```
+        /// POST /api/price-proposal/add
+        /// Content-Type: multipart/form-data
+        ///
+        /// Email: user@example.pl
+        /// BrandName: Orlen
+        /// Street: Ignacego Domejki
+        /// HouseNumber: 1a
+        /// City: Legnica
+        /// FuelType: ON
+        /// ProposedPrice: 6.89
+        /// Photo: [binary file: image.jpg]
+        /// ```
+        ///
+        /// Example success response  
+        /// ```json
+        /// {
+        ///   "message": "Price proposal added successfully in 1234"
+        /// }
+        /// ```
+        ///
+        /// Example error response  
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Validation error",
+        ///   "errors": [
+        ///     "Invalid photo file type. Allowed types are: JPEG, JPG, PNG, WEBP."
+        ///   ]
+        /// }
+        /// ```
+        ///
+        /// Validation rules  
+        /// - **Email**: Required, must be a valid email format, user must exist in the system.
+        /// - **BrandName**: Gas station brand name (e.g., Orlen, Shell, BP). Required.
+        /// - **Street**: Street name where the station is located. Required.
+        /// - **HouseNumber**: Street number of the station. Required.
+        /// - **City**: City where the station is located. Required.
+        /// - **FuelType**: Must be one of: `PB95`, `PB98`, `ON`, `LPG`, `E85`. Required.
+        /// - **ProposedPrice**: Must be greater than 0, represents price in PLN per liter. Required.
+        /// - **Photo**: Required, max size **5 MB**, allowed formats: **JPEG, JPG, PNG, WEBP**.
+        ///
+        /// Notes  
+        /// - The station must exist in the database (matched by brand name, street, house number, and city).
+        /// - The user must be registered and authenticated in the system.
+        /// - The photo is stored in MinIO with a unique filename based on the proposal ID.
+        /// - All operations are executed within a database transaction with automatic rollback on failure.
+        /// - If the database save fails, the uploaded photo is automatically cleaned up from MinIO.
+        /// - The proposal is initially created with status **Pending** and requires admin approval.
+        ///
+        /// </remarks>
+        /// <param name="request">Multipart form data containing proposal details and verification photo</param>
+        /// <response code="200">Price proposal successfully added</response>
+        /// <response code="400">Validation error — invalid data format, file type, size, missing station or user</response>
+        /// <response code="500">Server error — something went wrong while processing the request</response>
         [HttpPost("price-proposal/add")]
         public async Task<IActionResult> AddNewPriceProposalAsync([FromForm] AddNewPriceProposalRequest request)
         {

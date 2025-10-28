@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.AspNetCore.Mvc.Razor.Internal;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Minio;
 using Minio.DataModel.Args;
@@ -47,10 +48,7 @@ namespace Data.Helpers
                     ? fileName
                     : $"{subPath.TrimEnd('/')}/{fileName}";
 
-                if (photo.CanSeek)
-                {
-                    photo.Position = 0;
-                }
+                if (photo.CanSeek) photo.Position = 0;
 
                 var putObjectArgs = new PutObjectArgs()
                     .WithBucket(targetBucket)
@@ -206,6 +204,71 @@ namespace Data.Helpers
             {
                 _logger.LogError(ex, "MinIO error while ensuring bucket exists: {BucketName}. ServerMessage: {ServerMessage}",
                     bucketName, ex.ServerMessage ?? ex.Message);
+                throw;
+            }
+        }
+
+        public async Task<string> GetPresignedUrlAsync(
+            string objectPath,
+            string bucketName
+            )
+        {
+            var stopwatch = Stopwatch.StartNew();
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(objectPath))
+                {
+                    throw new ArgumentException("Object path must be provided", nameof(objectPath));
+                }
+
+                int expiryInSeconds = 3600;
+                var targetBucket = bucketName ?? _config["MinIO:BucketName"];
+
+                if (string.IsNullOrWhiteSpace(targetBucket))
+                {
+                    throw new ArgumentException("Bucket name must be provided", nameof(targetBucket));
+                }
+
+                var presignedGetObjectArgs = new PresignedGetObjectArgs()
+                    .WithBucket(targetBucket)
+                    .WithObject(objectPath)
+                    .WithExpiry(expiryInSeconds);
+
+                var url = await _minioClient.PresignedGetObjectAsync(presignedGetObjectArgs);
+
+                stopwatch.Stop();
+
+                _logger.LogInformation(
+                    "Generated presigned URL. Path: {ObjectPath}, Bucket: {BucketName}, Expiry: {Expiry}s, Time: {Time}ms",
+                    objectPath,
+                    targetBucket,
+                    expiryInSeconds,
+                    stopwatch.ElapsedMilliseconds);
+
+                return url;
+            }
+            catch (ArgumentException)
+            {
+                stopwatch.Stop();
+                throw;
+            }
+            catch (MinioException mex)
+            {
+                stopwatch.Stop();
+                _logger.LogError(
+                    mex,
+                    "MinIO error while generating presigned URL. Time: {Time}ms",
+                    stopwatch.ElapsedMilliseconds);
+                throw new InvalidOperationException($"Failed to generate presigned URL from MinIO: {mex.Message}", mex);
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                _logger.LogError(
+                    ex,
+                    "Unexpected error while generating presigned URL. Time: {Time}ms",
+                    stopwatch.ElapsedMilliseconds);
                 throw;
             }
         }

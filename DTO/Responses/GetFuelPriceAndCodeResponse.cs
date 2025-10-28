@@ -1,6 +1,6 @@
 ﻿namespace DTO.Responses
 {
-    public class GetFuelPrivceAndCodeResponse
+    public class GetFuelPriceAndCodeResponse
     {
         public string FuelCode { get; set; } = string.Empty;
         public decimal Price { get; set; }

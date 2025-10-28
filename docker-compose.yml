@@ -154,6 +154,8 @@ services:
    environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_SERVER_URL: "http://localhost:9000" #jak zmienicie port dla api to tu też trzeba
+      MINIO_BROWSER_REDIRECT_URL: "http://localhost:9001" #jak zmienicie port dla ui to tu też trzeba
    volumes:
      - minio_data:/data
    command: server /data --console-address ":9001" #jak zmienicie port dla ui to tu też trzeba

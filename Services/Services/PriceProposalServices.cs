@@ -2,6 +2,7 @@
 using Data.Helpers;
 using Data.Interfaces;
 using Data.Models;
+using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -133,6 +134,48 @@ namespace Services.Services
             {
                 _logger.LogError(ex, $"An error occurred while add new price proposal: {ex.Message} | {ex.InnerException}");
                 return Result<string>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" });
+            }
+        }
+
+        public async Task<Result<GetPriceProposalResponse>> GetPriceProposal(string photoToken)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(photoToken))
+                {
+                    _logger.LogWarning("Photo token is null or empty.");
+                    return Result<GetPriceProposalResponse>.Bad(
+                        "Validation error",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Photo token cannot be null or empty." }
+                        );
+                }
+
+                var response = await _priceProposalRepository.GetPriceProposal(photoToken);
+
+                if (response == null)
+                {
+                    _logger.LogWarning("Price proposal with photo token {PhotoToken} not found.", photoToken);
+                    return Result<GetPriceProposalResponse>.Bad(
+                        "Not found",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "Price proposal not found with the provided photo token." }
+                        );
+                }
+
+                return Result<GetPriceProposalResponse>.Good(
+                    "Price proposal retrieved successfully",
+                    StatusCodes.Status200OK,
+                    response
+                    );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while retrieving price proposal with photo token {photoToken}: {ex.Message} | {ex.InnerException}");
+                return Result<GetPriceProposalResponse>.Bad(
                     "An error occurred while processing your request.",
                     StatusCodes.Status500InternalServerError,
                     new List<string> { $"{ex.Message} | {ex.InnerException}" });

@@ -2,12 +2,14 @@
 using Data.Helpers;
 using Data.Interfaces;
 using Data.Models;
+using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
-
+using System.Security.Cryptography.X509Certificates;
+using System.Security.Cryptography;
 namespace Data.Repositories
 {
     public class PriceProposalRepository : IPriceProposalRepository
@@ -44,6 +46,8 @@ namespace Data.Repositories
 
             try
             {
+                string photoToken = GeneratePhotoToken();
+
                 var proposal = new PriceProposal
                 {
                     Id = Guid.NewGuid(),
@@ -55,7 +59,8 @@ namespace Data.Repositories
                     FuelTypeId = fuelType.Id,
                     FuelType = fuelType,
                     CreatedAt = DateTime.UtcNow,
-                    Status = Data.Enums.PriceProposalStatus.Pending
+                    Status = Data.Enums.PriceProposalStatus.Pending,
+                    PhotoToken = photoToken
                 };
 
                 var contentType = extension.ToLower() switch
@@ -131,6 +136,53 @@ namespace Data.Repositories
 
                 throw;
             }
+        }
+
+        private string GeneratePhotoToken()
+        {
+            byte[] tokenBytes = RandomNumberGenerator.GetBytes(32);
+
+            return Convert.ToBase64String(tokenBytes)
+                .Replace("+", "-")
+                .Replace("/", "_")
+                .Replace("=", "");
+        }
+
+        public async Task<GetPriceProposalResponse> GetPriceProposal(string photoToken)
+        {
+            var proposal = await _context.PriceProposals
+                .Include(pp => pp.User)
+                .Include(pp => pp.Station)
+                    .ThenInclude(s => s.Brand)
+                .Include(b => b.Station)
+                    .ThenInclude(s => s.Address)
+                .Include(pp => pp.FuelType)
+                .FirstOrDefaultAsync(pp => pp.PhotoToken == photoToken);
+
+            if (proposal == null)
+            {
+                _logger.LogWarning("Price proposal with photo token {PhotoToken} not found.", photoToken);
+                return null;
+            }
+
+            string bucketName = _config["MinIO:BucketName"] ?? "fuel-prices";
+            string path = proposal.PhotoUrl;
+
+            string photoUrl = await _s3ApiHelper.GetPresignedUrlAsync(path, bucketName);
+
+            return new GetPriceProposalResponse
+            {
+                Email = proposal.User.Email,
+                BrandName = proposal.Station.Brand.Name,
+                Street = proposal.Station.Address.Street,
+                HouseNumber = proposal.Station.Address.HouseNumber,
+                City = proposal.Station.Address.City,
+                PostalCode = proposal.Station.Address.PostalCode,
+                FuelType = proposal.FuelType.Name,
+                ProposedPrice = proposal.ProposedPrice,
+                PhotoUrl = photoUrl,
+                CreatedAt = proposal.CreatedAt
+            };
         }
     }
 }

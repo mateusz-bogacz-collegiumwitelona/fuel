@@ -12,6 +12,6 @@
         public double Longitude { get; set; }
 
 
-        public List<GetFuelPrivceAndCodeResponse> FuelPrice { get; set; } = new List<GetFuelPrivceAndCodeResponse>();
+        public List<GetFuelPriceAndCodeResponse> FuelPrice { get; set; } = new List<GetFuelPriceAndCodeResponse>();
     }
 }

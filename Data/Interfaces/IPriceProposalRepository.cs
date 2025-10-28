@@ -1,4 +1,5 @@
 ﻿using Data.Models;
+using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 
 namespace Data.Interfaces
@@ -12,5 +13,6 @@ namespace Data.Interfaces
             decimal priceProposal,
             IFormFile photo,
             string extension);
+        Task<GetPriceProposalResponse> GetPriceProposal(string photoToken);
     }
 }
