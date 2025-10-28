@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
 
-namespace contlollers.Controllers.Test
+namespace Controllers.Controllers.Admin
 {
     [ApiController]
     [Route("api/test")]
@@ -11,9 +11,7 @@ namespace contlollers.Controllers.Test
     {
         private readonly ITestServices _test;
 
-        public TestContloller(
-            ITestServices test
-            )
+        public TestContloller(ITestServices test)
         {
             _test = test;
         }
