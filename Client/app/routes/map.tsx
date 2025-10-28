@@ -89,7 +89,7 @@ export default function MapView() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-base-200 text-base-content">
 
       <Header />
 
@@ -100,7 +100,7 @@ export default function MapView() {
             Mapa stacji benzynowych
           </h1>
             <a href="/dashboard"
-            className="btn bg-blue-600 hover:bg-blue-500 text-white font-semibold text-base px-5 py-2 rounded-l shadow-lg transition-all duration-200">
+            className="btn btn-soft btn-info">
             ← Powrót do dashboardu
             </a>
         </div>

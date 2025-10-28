@@ -2,9 +2,10 @@ import * as React from "react";
 
 export default function Footer() {
   return (
-    <footer className="w-full bg-gray-900 text-gray-300 py-10">
+    <footer className="w-full bg-base-300 text-base-content py-10">
       <div className="mx-auto max-w-6xl px-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
           {/* Left: Twórcy */}
           <div className="card p-4 bg-transparent border-none">
             <div className="card-body p-0">

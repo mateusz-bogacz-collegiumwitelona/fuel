@@ -32,7 +32,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body>
+      <body data-theme="black">
         {children}
         <ScrollRestoration />
         <Scripts />
@@ -40,6 +40,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     </html>
   );
 }
+//black corporate
 
 export default function App() {
   return <Outlet />;

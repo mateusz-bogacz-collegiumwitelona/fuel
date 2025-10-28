@@ -93,13 +93,13 @@ if (data.token) {
   }, []);
 
   return (
-  <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+  <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
     <Header />
 
     <div className="flex-grow flex justify-center items-center">
       <form
         onSubmit={handleLogin}
-        className="bg-gray-800 p-8 rounded-2xl shadow-lg flex flex-col gap-4 w-full max-w-sm"
+        className="bg-base-300 p-8 rounded-2xl shadow-lg flex flex-col gap-4 w-full max-w-sm"
       >
         <h2 className="text-2xl font-bold text-center mb-2">Logowanie</h2>
 
@@ -109,7 +109,7 @@ if (data.token) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="p-3 rounded-md bg-gray-700 border border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-400 outline-none"
+          className="p-3 rounded-md bg-base-100 border border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-400 outline-none"
         />
 
         <input
@@ -118,12 +118,12 @@ if (data.token) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          className="p-3 rounded-md bg-gray-700 border border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-400 outline-none"
+          className="p-3 rounded-md bg-base-100 border border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-400 outline-none"
         />
         
         <button
           type="submit"
-          className="mt-2 bg-blue-600 hover:bg-blue-500 transition-colors text-white font-semibold py-2 rounded-md"
+          className="btn btn-info"
         >
           Zaloguj
         </button>
