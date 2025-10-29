@@ -138,64 +138,174 @@ namespace Contlollers.Controllers.Client
         /// Retrieve a paginated list of fuel stations based on filters and sorting options.
         /// </summary>
         /// <remarks>
-        /// Description
         /// Returns a list of fuel stations that match the specified criteria.
         /// You can filter by location (latitude, longitude, distance), fuel type, price range, and brand name.
         /// Results can be sorted by distance or price, and are returned with pagination support.
         /// 
-        /// Example request body - Basic pagination
+        /// Example request body - No filters, no sorting, automatic pagination
         /// ```json
         /// {
-        ///   "pagging": {
-        ///     "pageNumber": 1,
-        ///     "pageSize": 10
-        ///   }
-        /// }
+        ///  "sortingByDisance": null,
+        ///  "sortingByPrice": null,
+        ///  "sortingDirection": null,
+        ///  "pagging": {
+        ///    "pageNumber": null,
+        ///    "pageSize": null
+        ///  }
+        ///}
         /// ```
         ///
-        /// Example request body - Filter by location and distance
+        /// Example request body - Filter by distance with page navigation
         /// ```json
         /// {
-        ///   "locationLatitude": 51.21006,
-        ///   "locationLongitude": 16.1619,
-        ///   "distance": 10,
-        ///   "fuelType": ["PB95", "ON"],
-        ///   "sortingByDisance": true,
-        ///   "sortingDirection": "asc",
-        ///   "pagging": {
-        ///     "pageNumber": 1,
-        ///     "pageSize": 20
-        ///   }
-        /// }
+        ///  "locationLatitude": 51.21006,
+        ///  "locationLongitude": 16.1619,
+        ///  "distance": 200,
+        ///  "sortingByDisance": null,
+        ///  "sortingByPrice": null,
+        ///  "sortingDirection": null,
+        ///  "pagging": {
+        ///    "pageNumber": 2,
+        ///    "pageSize": 10
+        ///  }
+        ///}
+        /// ```
+        ///
+        /// Example request body - Filter by fuel type only
+        /// ```json
+        ///{
+        ///  "fuelType": ["LPG"],
+        ///  "sortingByDisance": null,
+        ///  "sortingByPrice": null,
+        ///  "sortingDirection": null,
+        ///  "pagging": {
+        ///    "pageNumber": 1,
+        ///    "pageSize": null
+        ///  }
+        ///}
         /// ```
         ///
         /// Example request body - Filter by fuel type and price range
         /// ```json
-        /// {
-        ///   "fuelType": ["PB95"],
-        ///   "minPrice": 5.50,
-        ///   "maxPrice": 6.50,
-        ///   "sortingByPrice": true,
-        ///   "sortingDirection": "asc",
-        ///   "pagging": {
-        ///     "pageNumber": 1,
-        ///     "pageSize": 10
-        ///   }
-        /// }
+        ///{
+        ///  "fuelType": ["LPG"],
+        ///  "minPrice": 3.50,
+        ///  "maxPrice": 5.00,
+        ///  "sortingByDisance": null,
+        ///  "sortingByPrice": null,
+        ///  "sortingDirection": null,
+        ///  "pagging": {
+        ///    "pageNumber": 1,
+        ///    "pageSize": null
+        ///  }
+        ///}
         /// ```
         ///
-        /// Example request body - Filter by brand
+        /// Example request body - Filter by brand name only
+        /// ```json
+        ///{
+        ///  "brandName": "Orlen",
+        ///  "sortingByDisance": null,
+        ///  "sortingByPrice": null,
+        ///  "sortingDirection": null,
+        ///  "pagging": {
+        ///    "pageNumber": 2,
+        ///    "pageSize": 7
+        ///  }
+        ///}
+        /// ```
+        ///
+        /// Example request body - Filter by location and fuel type
+        /// ```json
+        ///{
+        ///  "locationLatitude": 51.21006,
+        ///  "locationLongitude": 16.1619,
+        ///  "distance": 10,
+        ///  "fuelType": ["LPG"],
+        ///  "sortingByDisance": null,
+        ///  "sortingByPrice": null,
+        ///  "sortingDirection": null,
+        ///  "pagging": {
+        ///    "pageNumber": null,
+        ///    "pageSize": null
+        ///  }
+        ///}
+        /// ```
+        ///
+        /// Example request body - Filter by location, fuel type, and minimum price
         /// ```json
         /// {
-        ///   "brandName": "Orlen",
-        ///   "fuelType": ["PB95"],
+        ///   "locationLatitude": 51.21006,
+        ///   "locationLongitude": 16.1619,
+        ///   "distance": 100,
+        ///   "fuelType": ["LPG"],
+        ///   "minPrice": 5,
+        ///   "sortingByDisance": null,
+        ///   "sortingByPrice": null,
+        ///   "sortingDirection": null,
         ///   "pagging": {
-        ///     "pageNumber": 1,
-        ///     "pageSize": 10
+        ///     "pageNumber": null,
+        ///     "pageSize": null
         ///   }
         /// }
         /// ```
         ///
+        /// Example request body - Filter by location, fuel types, maximum price, and brand
+        /// ```json
+        /// {
+        ///   "locationLatitude": 51.21006,
+        ///   "locationLongitude": 16.1619,
+        ///   "distance": 100,
+        ///   "fuelType": ["LPG", "E85"],
+        ///   "minPrice": null,
+        ///   "maxPrice": 5,
+        ///   "brandName": "Orlen",
+        ///   "sortingByDisance": null,
+        ///   "sortingByPrice": null,
+        ///   "sortingDirection": null,
+        ///   "pagging": {
+        ///     "pageNumber": null,
+        ///     "pageSize": null
+        ///   }
+        /// }
+        /// ```
+        ///
+        /// Example request body - Full filters with sorting by distance (descending)
+        /// ```json
+        /// {
+        ///   "locationLatitude": 51.21006,
+        ///   "locationLongitude": 16.1619,
+        ///   "distance": 100,
+        ///   "fuelType": ["LPG", "E85"],
+        ///   "maxPrice": 5,
+        ///   "brandName": "Orlen",
+        ///   "sortingByDisance": true,
+        ///   "sortingByPrice": null,
+        ///   "sortingDirection": "desc",
+        ///   "pagging": {
+        ///     "pageNumber": null,
+        ///     "pageSize": null
+        ///   }
+        /// }
+        /// ```
+        /// Example request body - Full filters with sorting by distance (asceding) (basic sort direction)
+        /// ```json
+        /// {
+        ///   "locationLatitude": 51.21006,
+        ///   "locationLongitude": 16.1619,
+        ///   "distance": 100,
+        ///   "fuelType": ["LPG", "E85"],
+        ///   "maxPrice": 5,
+        ///   "brandName": "Orlen",
+        ///   "sortingByDisance": true,
+        ///   "sortingByPrice": null,
+        ///   "sortingDirection": "asc",
+        ///   "pagging": {
+        ///     "pageNumber": null,
+        ///     "pageSize": null
+        ///   }
+        /// }
+        /// ```
         /// Example response
         /// ```json
         /// {
