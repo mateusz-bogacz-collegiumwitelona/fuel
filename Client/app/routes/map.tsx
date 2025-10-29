@@ -18,7 +18,17 @@ export default function MapView() {
   }>({});
   const [L, setL] = useState<any>(null);
 
+  // 🔹 Filtry wyszukiwania
+  const [filters, setFilters] = useState({
+    brandName: [] as string[],
+    locationLatitude: null as number | null,
+    locationLongitude: null as number | null,
+    distance: null as number | null,
+  });
+
+  // 🎨 Kolory dla poszczególnych marek
   const brandColors: Record<string, string> = {
+    Default:"black",
     Orlen: "red",
     BP: "green",
     Shell: "yellow",
@@ -27,7 +37,7 @@ export default function MapView() {
     Lotos: "gold",
   };
 
-
+  // 1️⃣ Dynamiczny import react-leaflet + leaflet tylko w przeglądarce
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -47,34 +57,51 @@ export default function MapView() {
     })();
   }, []);
 
+  // 2️⃣ Funkcja pobierająca stacje (wywoływana przy starcie i filtrach)
+  const fetchStations = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+          if (filters.brandName.length > 0) {
+      const normalized =
+        filters.brandName[0].charAt(0).toUpperCase() +
+        filters.brandName[0].slice(1).toLowerCase();
+      filters.brandName = [normalized];
+    }
+
+      const response = await fetch("http://localhost:5111/api/station/map/all", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify(filters),
+      });
+
+      if (!response.ok) throw new Error(`Błąd serwera: ${response.status}`);
+
+      const data = await response.json();
+      console.log("Odebrano dane:", data);
+      setStations(data);
+    } catch (e) {
+      console.error("Błąd pobierania stacji:", e);
+    }
+  };
+
+  // 3️⃣ Pierwsze pobranie danych
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const token = localStorage.getItem("token");
-
-    fetch("http://localhost:5111/api/station/map/all", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      credentials: "include",
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error(`Błąd serwera: ${r.status}`);
-        return r.json();
-      })
-      .then((data: Station[]) => setStations(data))
-      .catch((e) => console.error("Błąd pobierania stacji:", e));
+    fetchStations();
   }, []);
 
   const { MapContainer, TileLayer, Marker, Popup } = MapComponents;
-  if (!MapContainer || !L) return null; 
+  if (!MapContainer || !L) return null;
 
-
-  const getMarkerIcon = (brand: string) => {
-    const color = brandColors[brand] || "gray";
+  // 4️⃣ Generowanie ikony dla marki
+const getMarkerIcon = (brand: string) => { 
+const normalizedBrand = Object.keys(brandColors).find( (key) => key.toLowerCase() === brand.toLowerCase() ); 
+const color = normalizedBrand ? brandColors[normalizedBrand] : brandColors.Default;
     return new L.Icon({
       iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
       shadowUrl:
@@ -113,6 +140,30 @@ export default function MapView() {
             ← Powrót do dashboardu
             </a>
         </div>
+
+<div className="bg-gray-800 p-4 rounded-xl shadow-md mb-6 flex flex-wrap gap-3 items-center">
+  <input
+    type="text"
+    placeholder="Wpisz nazwę stacji (np. Orlen)"
+    className="input input-bordered bg-gray-700 text-white w-64 placeholder-gray-400"
+    onChange={(e) =>
+      setFilters((f) => ({
+        ...f,
+        brandName: e.target.value
+          ? [e.target.value.trim().toLowerCase()]
+          : [],
+      }))
+    }
+  />
+
+  <button
+    className="btn bg-blue-600 hover:bg-blue-500 text-white font-medium"
+    onClick={fetchStations}
+  >
+    🔍 Szukaj
+  </button>
+</div>
+
         <div className="bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-700">
           <div className="h-[70vh] w-full">
             <MapContainer
