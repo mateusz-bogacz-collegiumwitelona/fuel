@@ -100,7 +100,7 @@ export default function MapView() {
             Mapa stacji benzynowych
           </h1>
             <a href="/dashboard"
-            className="btn btn-soft btn-info">
+            className="btn btn-active btn-info">
             ← Powrót do dashboardu
             </a>
         </div>
