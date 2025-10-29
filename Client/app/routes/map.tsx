@@ -18,7 +18,6 @@ export default function MapView() {
   }>({});
   const [L, setL] = useState<any>(null);
 
-  // 🔹 Filtry wyszukiwania
   const [filters, setFilters] = useState({
     brandName: [] as string[],
     locationLatitude: null as number | null,
@@ -26,7 +25,6 @@ export default function MapView() {
     distance: null as number | null,
   });
 
-  // 🎨 Kolory dla poszczególnych marek
   const brandColors: Record<string, string> = {
     Default:"black",
     Orlen: "red",
@@ -37,7 +35,6 @@ export default function MapView() {
     Lotos: "gold",
   };
 
-  // 1️⃣ Dynamiczny import react-leaflet + leaflet tylko w przeglądarce
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -57,7 +54,6 @@ export default function MapView() {
     })();
   }, []);
 
-  // 2️⃣ Funkcja pobierająca stacje (wywoływana przy starcie i filtrach)
   const fetchStations = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -90,7 +86,6 @@ export default function MapView() {
     }
   };
 
-  // 3️⃣ Pierwsze pobranie danych
   useEffect(() => {
     fetchStations();
   }, []);
@@ -98,7 +93,6 @@ export default function MapView() {
   const { MapContainer, TileLayer, Marker, Popup } = MapComponents;
   if (!MapContainer || !L) return null;
 
-  // 4️⃣ Generowanie ikony dla marki
 const getMarkerIcon = (brand: string) => { 
 const normalizedBrand = Object.keys(brandColors).find( (key) => key.toLowerCase() === brand.toLowerCase() ); 
 const color = normalizedBrand ? brandColors[normalizedBrand] : brandColors.Default;
@@ -160,7 +154,7 @@ const color = normalizedBrand ? brandColors[normalizedBrand] : brandColors.Defau
     className="btn bg-blue-600 hover:bg-blue-500 text-white font-medium"
     onClick={fetchStations}
   >
-    🔍 Szukaj
+  Szukaj
   </button>
 </div>
 
