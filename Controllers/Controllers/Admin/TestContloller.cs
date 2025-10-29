@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Cors;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
 
@@ -7,6 +8,7 @@ namespace Controllers.Controllers.Admin
     [ApiController]
     [Route("api/test")]
     [EnableCors("AllowClient")]
+    [Authorize(Roles = "Admin")]
     public class TestContloller : ControllerBase
     {
         private readonly ITestServices _test;

@@ -26,11 +26,19 @@ namespace contlollers.Controllers.Client
         /// Authenticates a user using their email and password.
         /// If the credentials are valid, a JWT token is generated and returned.
         /// 
-        /// Example request body
+        /// Example request body for user
         /// ```json
         /// {
         ///   "email": "user@example.pl",
         ///   "password": "User123!"
+        /// }
+        /// ```
+        /// 
+        /// Example request body for admin
+        /// ```json
+        /// {
+        ///   "email": "admin@example.pl",
+        ///   "password": "Admin123!"
         /// }
         /// ```
         ///
