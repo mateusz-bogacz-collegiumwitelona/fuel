@@ -1,8 +1,10 @@
 using Data.Config;
 using Data.Context;
+using Data.Helpers;
 using Data.Interfaces;
 using Data.Models;
 using Data.Reopsitories;
+using Data.Repositories;
 using Data.Seeder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +12,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Minio;
 using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using Services.Helpers;
@@ -138,11 +142,33 @@ var options = new ConfigurationOptions
 var redis = ConnectionMultiplexer.Connect(options);
 builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
 
-//regiser repo 
+//minio configuration
+builder.Services.Configure<MinIOSettings>(
+    builder.Configuration.GetSection("MinIO")
+    );
+
+//register minio client
+builder.Services.AddSingleton<IMinioClient>(sp =>
+{
+    var settings = sp.GetRequiredService<IOptions<MinIOSettings>>().Value;
+
+    var client = new MinioClient()
+        .WithEndpoint(settings.Endpoint)
+        .WithCredentials(settings.AccessKey, settings.SecretKey);
+
+    if (settings.UseSSL) client = client.WithSSL();
+
+    return client.Build();
+});
+
+//register repo 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IStationRepository, StationRepository>();
 builder.Services.AddScoped<IProposalStatisticRepository, ProposalStatisticRepository>();
 builder.Services.AddScoped<ITestRepository, TestRepository>();
+builder.Services.AddScoped<IProposalStatisticRepository, ProposalStatisticRepository>();
+builder.Services.AddScoped<IPriceProposalRepository, PriceProposalRepository>();
+builder.Services.AddScoped<Data.Interfaces.IFuelTypeRepository, FuelTypeRepository>();
 
 //register services 
 builder.Services.AddScoped<ILoginRegisterServices, LoginRegisterServices>();
@@ -151,9 +177,11 @@ builder.Services.AddScoped<IStationServices, StationServices>();
 builder.Services.AddScoped<IEmailServices, EmailServices>();
 builder.Services.AddScoped<IProposalStatisticServices, ProposalStatisticServices>();
 builder.Services.AddScoped<ITestServices, TestServices>();
+builder.Services.AddScoped<IPriceProposalServices, PriceProposalServices>();
 
 //register helpers
 builder.Services.AddScoped<IEmaliBody, EmailBodys>();
+builder.Services.AddScoped<S3ApiHelper>();
 
 builder.Services.AddControllers(op =>
 {
