@@ -3,11 +3,6 @@ using Data.Interfaces;
 using Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Data.Reopsitories
 {
@@ -25,7 +20,9 @@ namespace Data.Reopsitories
         }
 
         public async Task<FuelType> FindFuelTypeByNameAsync(string fuelType)
-            => await _context.FuelTypes
-                .FirstOrDefaultAsync(ft => ft.Name == fuelType);
+            => await _context.FuelTypes.FirstOrDefaultAsync(ft => ft.Name == fuelType);
+
+        public async Task<List<string>> GetAllFuelTypeCodesAsync()
+            => await _context.FuelTypes.Select(ft => ft.Code).ToListAsync();
     }
 }

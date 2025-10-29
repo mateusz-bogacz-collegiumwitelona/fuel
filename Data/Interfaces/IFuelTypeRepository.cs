@@ -10,5 +10,6 @@ namespace Data.Interfaces
     public interface IFuelTypeRepository
     {
         Task<FuelType> FindFuelTypeByNameAsync(string fuelType);
+        Task<List<string>> GetAllFuelTypeCodesAsync();
     }
 }

@@ -13,12 +13,16 @@ namespace Contlollers.Controllers.Client
     {
         private readonly IStationServices _stationServices;
         private readonly IPriceProposalServices _priceProposalServices;
+        private readonly IFuelTypeServices _fuelTypeServices;
+
         public StationController(
             IStationServices stationServices,
-            IPriceProposalServices priceProposalServices)
+            IPriceProposalServices priceProposalServices,
+            IFuelTypeServices fuelTypeServices)
         {
             _stationServices = stationServices;
             _priceProposalServices = priceProposalServices;
+            _fuelTypeServices = fuelTypeServices;
         }
 
         /// <summary>
@@ -589,6 +593,46 @@ namespace Contlollers.Controllers.Client
         public async Task<IActionResult> AddNewPriceProposalAsync([FromForm] AddNewPriceProposalRequest request)
         {
             var result = await _priceProposalServices.AddNewProposalAsync(request);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Get all available fuel type codes.
+        /// </summary>
+        /// <remarks>
+        /// Description  
+        /// Returns a list of all fuel type codes (identifiers) available in the system.  
+        /// These codes can be used for filtering stations by fuel type in other endpoints.  
+        ///
+        /// Example response  
+        /// ```json
+        /// [
+        ///   "PB95",
+        ///   "PB98",
+        ///   "ON",
+        ///   "LPG",
+        ///   "E85"
+        /// ]
+        /// ```
+        ///
+        /// Notes  
+        /// - The response contains **unique fuel type codes** only.  
+        /// - If no fuel types are found in the database, a `404` response is returned.  
+        /// </remarks>
+        /// <response code="200">Fuel type codes successfully retrieved</response>
+        /// <response code="404">No fuel type codes found in the database</response>
+        /// <response code="500">An unexpected server error occurred</response>
+        [HttpGet("fuel-codes")]
+        public async Task<IActionResult> GetAllFuelTypeCodesAsync()
+        {
+            var result = await _fuelTypeServices.GetAllFuelTypeCodesAsync();
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

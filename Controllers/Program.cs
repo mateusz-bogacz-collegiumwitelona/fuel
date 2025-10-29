@@ -178,6 +178,7 @@ builder.Services.AddScoped<IEmailServices, EmailServices>();
 builder.Services.AddScoped<IProposalStatisticServices, ProposalStatisticServices>();
 builder.Services.AddScoped<ITestServices, TestServices>();
 builder.Services.AddScoped<IPriceProposalServices, PriceProposalServices>();
+builder.Services.AddScoped<IFuelTypeServices, FuelTypeServices>();
 
 //register helpers
 builder.Services.AddScoped<IEmaliBody, EmailBodys>();
