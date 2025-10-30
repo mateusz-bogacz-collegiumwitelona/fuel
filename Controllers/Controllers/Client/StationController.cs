@@ -508,7 +508,7 @@ namespace Contlollers.Controllers.Client
         ///
         /// </remarks>
         /// <response code="200">Station profile successfully retrieved</response>
-        /// <response code="404">No matching station found</response>
+        /// <response code="404">No matching station found or validation error</response>
         /// <response code="500">Server error — something went wrong while processing the request</response>
         [HttpPost("profile")]
         public async Task<IActionResult> GetStationProfileAsync(GetStationProfileRequest request)
