@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Internal;
 using Services.Interfaces;
 
 namespace contlollers.Controllers.Client
@@ -12,8 +13,9 @@ namespace contlollers.Controllers.Client
     public class LoginRegisterContloller : ControllerBase
     {
         private readonly ILoginRegisterServices _login;
-
-        public LoginRegisterContloller(ILoginRegisterServices login)
+        public LoginRegisterContloller(
+            ILoginRegisterServices login
+            )
         {
             _login = login;
         }
@@ -100,7 +102,7 @@ namespace contlollers.Controllers.Client
         [HttpPost("register")]
         public async Task<IActionResult> RegisterNewUserAsync([FromBody] RegisterNewUserRequest request)
         {
-            var result = await _login.RegisterNewUser(request);
+            var result = await _login.RegisterNewUserAsync(request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new
@@ -111,12 +113,6 @@ namespace contlollers.Controllers.Client
                 });
         }
 
-        /// <summary>
-        /// Make email confirmation for user
-        /// </summary>
-        /// <param name="email"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
         [AllowAnonymous]
         [HttpPost("confirm-email")]
         public async Task<IActionResult> ConfirmEmailAsync([FromBody] ConfirmEmailRequest request)

@@ -174,14 +174,14 @@ builder.Services.AddScoped<Data.Interfaces.IFuelTypeRepository, FuelTypeReposito
 builder.Services.AddScoped<ILoginRegisterServices, LoginRegisterServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
 builder.Services.AddScoped<IStationServices, StationServices>();
-builder.Services.AddScoped<IEmailServices, EmailServices>();
 builder.Services.AddScoped<IProposalStatisticServices, ProposalStatisticServices>();
 builder.Services.AddScoped<ITestServices, TestServices>();
 builder.Services.AddScoped<IPriceProposalServices, PriceProposalServices>();
 builder.Services.AddScoped<IFuelTypeServices, FuelTypeServices>();
 
 //register helpers
-builder.Services.AddScoped<IEmaliBody, EmailBodys>();
+builder.Services.AddScoped<EmailSender>();
+builder.Services.AddScoped<IEmailBody,EmailBodys>();
 builder.Services.AddScoped<S3ApiHelper>();
 
 builder.Services.AddControllers(op =>

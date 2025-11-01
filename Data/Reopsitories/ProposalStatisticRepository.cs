@@ -53,7 +53,7 @@ namespace Data.Reopsitories
             };
         }
 
-        public async Task<bool> AddProposalStatisticRecordAsunc(string email)
+        public async Task<bool> AddProposalStatisticRecordAsync(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
 

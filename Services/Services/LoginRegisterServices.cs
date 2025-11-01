@@ -22,8 +22,8 @@ namespace Services.Services
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private readonly IConfiguration _configuration;
         private readonly IUserRepository _userRepository;
-        private readonly IEmailServices _emailServices;
         private readonly ILogger<LoginRegisterServices> _logger;
+        private EmailSender _email;
 
         public LoginRegisterServices(
             UserManager<ApplicationUser> userManager,
@@ -31,8 +31,8 @@ namespace Services.Services
             RoleManager<IdentityRole<Guid>> roleManager,
             IConfiguration configuration,
             IUserRepository userRepository,
-            IEmailServices emailServices,
-            ILogger<LoginRegisterServices> logger
+            ILogger<LoginRegisterServices> logger,
+            EmailSender email
             )
         {
             _userManager = userManager;
@@ -40,8 +40,8 @@ namespace Services.Services
             _roleManager = roleManager;
             _configuration = configuration;
             _userRepository = userRepository;
-            _emailServices = emailServices;
             _logger = logger;
+            _email = email;
         }
 
 
@@ -173,103 +173,70 @@ namespace Services.Services
             }
         }
 
-        public async Task<Result<ConfirmEmailRequest>> RegisterNewUser(RegisterNewUserRequest request)
+        public async Task<Result<IdentityResult>> RegisterNewUserAsync(RegisterNewUserRequest request)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(request.UserName))
-                    return Result<ConfirmEmailRequest>.Bad(
-                        "Validation Error",
-                        StatusCodes.Status400BadRequest,
-                        new List<string> { "UserName is required." });
+                var isEmailExist = await _userManager.FindByEmailAsync(request.Email);
 
-                if (string.IsNullOrWhiteSpace(request.Email))
-                    return Result<ConfirmEmailRequest>.Bad(
-                        "Validation Error",
-                        StatusCodes.Status400BadRequest,
-                        new List<string> { "Email is required." });
-
-                if (string.IsNullOrWhiteSpace(request.Password))
-                    return Result<ConfirmEmailRequest>.Bad(
-                        "Validation Error",
-                        StatusCodes.Status400BadRequest,
-                        new List<string> { "Password is required." });
-
-                if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
-                    return Result<ConfirmEmailRequest>.Bad(
-                        "Validation Error",
-                        StatusCodes.Status400BadRequest,
-                        new List<string> { "ConfirmPassword is required." });
-
-                if (request.Password != request.ConfirmPassword)
+                if (isEmailExist != null)
                 {
-                    return Result<ConfirmEmailRequest>.Bad(
-                        "Validation Error",
-                        StatusCodes.Status400BadRequest,
-                        new List<string> { "Password and Confirm Password do not match." }
+                    _logger.LogWarning("Attempt to register with existing email: {Email}", request.Email);
+                    return Result<IdentityResult>.Bad(
+                        $"User with this email: {request.Email} already exists",
+                        StatusCodes.Status400BadRequest
                         );
                 }
 
-                var result = await _userRepository.RegisterNewUser(request);
+                var isUserNameExist = await _userManager.FindByNameAsync(request.UserName);
 
-                if (!result.Succeeded)
+                if (isUserNameExist != null)
                 {
-                    var errors = result.Errors.Select(e => e.Description).ToList();
-                    return Result<ConfirmEmailRequest>.Bad(
-                        "User registration failed",
-                        StatusCodes.Status400BadRequest,
-                        errors
+                    _logger.LogWarning("Attempt to register with existing username: {UserName}", request.UserName);
+                    return Result<IdentityResult>.Bad(
+                        $"User with this username: {request.UserName} already exists",
+                        StatusCodes.Status400BadRequest
                         );
                 }
 
-                string token = await _userRepository.GenerateConfirEmailTokenAsync(request.Email);
+                var regiserUser = await _userRepository.RegisterNewUserAsync(request);
 
-                if (string.IsNullOrWhiteSpace(token)) return Result<ConfirmEmailRequest>.Bad(
-                        "Failed to generate email confirmation token.",
-                        StatusCodes.Status500InternalServerError,
-                        new List<string> { "Token generation returned null or empty." }
-                        );
-
-                string encodedToken = Uri.EscapeDataString(token);
-
-                if (string.IsNullOrWhiteSpace(encodedToken)) return Result<ConfirmEmailRequest>.Bad(
-                        "Failed to encode email confirmation token.",
-                        StatusCodes.Status500InternalServerError,
-                        new List<string> { "Encoded token is null or empty." }
-                        );
-
-                string confirmUrl = $"http://localhost:5000/api/auth/confirm-email?email={Uri.EscapeDataString(request.Email)}&token={encodedToken}";
-
-                var sendEmail = await _emailServices.SendEmailConfirmationAsync(
-                    request.Email,
-                    request.UserName,
-                    confirmUrl,
-                    encodedToken
-                    );
-
-                if (!sendEmail.IsSuccess) return Result<ConfirmEmailRequest>.Bad(
-                        "Failed to send email.",
+                if (string.IsNullOrEmpty(regiserUser))
+                {
+                    _logger.LogError("User registration failed for email: {Email}", request.Email);
+                    return Result<IdentityResult>.Bad(
+                        "User registration failed due to internal error",
                         StatusCodes.Status500InternalServerError
                         );
+                }
 
-                var confirmEmailRequest = new ConfirmEmailRequest
+                var sendEmailConfirmation = _email.SendRegisterConfirmEmailAsync(
+                    request.Email,
+                    request.UserName,
+                    regiserUser
+                    );
+
+                if (!await sendEmailConfirmation)
                 {
-                    Email = request.Email,
-                    Token = encodedToken
-                };
+                    _logger.LogError("Failed to send confirmation email to: {Email}", request.Email);
+                    return Result<IdentityResult>.Bad(
+                        "User registered but failed to send confirmation email",
+                        StatusCodes.Status500InternalServerError
+                        );
+                }
 
-                return Result<ConfirmEmailRequest>.Good(
-                    "User registered successfully",
-                    StatusCodes.Status201Created,
-                    confirmEmailRequest
+                _logger.LogInformation("User registered successfully: {Email}", request.Email);
+                return Result<IdentityResult>.Good(
+                    "User registered successfully. Please check your email to confirm your account.",
+                    StatusCodes.Status201Created
                     );
             }
             catch (Exception ex)
             {
-                return Result<ConfirmEmailRequest>.Bad(
-                    "An error occurred while registering the user.",
-                    StatusCodes.Status500InternalServerError,
-                    new List<string> { ex.Message }
+                _logger.LogError(ex, "Exception occurred during user registration for email: {Email}", request.Email);
+                return Result<IdentityResult>.Bad(
+                    "An error occurred during registration",
+                    StatusCodes.Status500InternalServerError
                     );
             }
         }
@@ -278,41 +245,36 @@ namespace Services.Services
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(request.Email)) return Result<IdentityResult>.Bad(
-                        "Validation Error",
-                        StatusCodes.Status400BadRequest,
-                        new List<string> { "Email is required." });
-
-                if (string.IsNullOrWhiteSpace(request.Token)) return Result<IdentityResult>.Bad(
-                        "Validation Error",
-                        StatusCodes.Status400BadRequest,
-                        new List<string> { "Token is required." });
-
                 var result = await _userRepository.ConfirmEmailAsync(request);
 
                 if (!result.Succeeded)
                 {
                     var errors = result.Errors.Select(e => e.Description).ToList();
+                    _logger.LogWarning("Email confirmation failed for {Email}", request.Email);
+
                     return Result<IdentityResult>.Bad(
                         "Email confirmation failed",
                         StatusCodes.Status400BadRequest,
                         errors
-                        );
+                    );
                 }
 
+                _logger.LogInformation("Email successfully confirmed for user: {Email}", request.Email);
+
                 return Result<IdentityResult>.Good(
-                    "Email confirmed successfully",
+                    "Email confirmed successfully. You can now log in.",
                     StatusCodes.Status200OK,
                     result
-                    );
+                );
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Exception occurred during email confirmation for: {Email}", request.Email);
                 return Result<IdentityResult>.Bad(
-                    "An error occurred while confirming the email.",
+                    "An error occurred during email confirmation",
                     StatusCodes.Status500InternalServerError,
                     new List<string> { ex.Message }
-                    );
+                );
             }
         }
     }

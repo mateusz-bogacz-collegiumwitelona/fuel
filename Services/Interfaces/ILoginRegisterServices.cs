@@ -8,7 +8,8 @@ namespace Services.Interfaces
     public interface ILoginRegisterServices
     {
         Task<Result<LoginResponse>> HandleLoginAsync(DTO.Requests.LoginRequest request);
-        Task<Result<ConfirmEmailRequest>> RegisterNewUser(RegisterNewUserRequest request);
+        Task<Result<IdentityResult>> RegisterNewUserAsync(RegisterNewUserRequest request);
         Task<Result<IdentityResult>> ConfirmEmailAsync(ConfirmEmailRequest request);
+
     }
 }

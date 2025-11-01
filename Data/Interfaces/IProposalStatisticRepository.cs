@@ -6,6 +6,6 @@ namespace Data.Interfaces
     {
         Task<GetProposalStatisticResponse> GetUserProposalStatisticAsync(string email);
         Task<bool> UpdateTotalProposalsAsync(bool proposial, string email);
-        Task<bool> AddProposalStatisticRecordAsunc(string email);
+        Task<bool> AddProposalStatisticRecordAsync(string email);
     }
 }
