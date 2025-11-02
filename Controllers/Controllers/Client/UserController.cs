@@ -1,8 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using DTO.Requests;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Services.Helpers;
 using Services.Interfaces;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
@@ -223,6 +222,93 @@ namespace Controllers.Controllers.Client
             }
 
             var result = await _userServices.ChangeUserEmailAsync(oldEmail, newEmail);
+
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Change the password for the currently authenticated user.
+        /// </summary>
+        /// <remarks>
+        /// Description: Updates the password for the authenticated user. The user's email is automatically extracted from the JWT token. User must provide their current password for verification.
+        ///
+        /// Example request:
+        /// ```http
+        /// POST /api/user/change-password
+        /// Content-Type: application/json
+        ///
+        /// {
+        ///   "currentPassword": "OldPass123!",
+        ///   "newPassword": "NewPass456!",
+        ///   "confirmNewPassword": "NewPass456!"
+        /// }
+        /// ```
+        ///
+        /// Example response (success):
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "Password changed successfully."
+        /// }
+        /// ```
+        ///
+        /// Example response (error - incorrect current password):
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Current password is incorrect",
+        ///   "errors": ["IncorrectCurrentPassword"]
+        /// }
+        /// ```
+        ///
+        /// Example response (error - passwords do not match):
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Validation error",
+        ///   "errors": ["Passwords do not match"]
+        /// }
+        /// ```
+        ///
+        /// Notes:
+        /// - User's email is automatically retrieved from JWT token claims.
+        /// - Current password must be correct for verification.
+        /// - New password must be at least 6 characters long.
+        /// - New password must contain at least one uppercase letter, one number, and one special character.
+        /// - New password and confirm password must match.
+        /// </remarks>
+        /// <param name="request">Password change request containing current password, new password, and confirmation</param>
+        /// <response code="200">Password successfully changed</response>
+        /// <response code="400">Validation error - passwords don't match, incorrect current password, or password requirements not met</response>
+        /// <response code="401">User not authenticated or email not found in token</response>
+        /// <response code="404">User with the email doesn't exist</response>
+        /// <response code="500">Failed to change password or unexpected server error</response>
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangeUserPasswordAsync(ChangePasswordRequest request)
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            if (string.IsNullOrEmpty(email))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User not authenticated"
+                });
+            }
+
+            var result = await _userServices.ChangeUserPasswordAsync(email, request);
 
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, new

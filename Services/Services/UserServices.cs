@@ -1,5 +1,6 @@
 ﻿using Data.Interfaces;
 using Data.Models;
+using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -240,6 +241,83 @@ namespace Services.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while changing email for user with email {Email}.", oldEmail);
+                return Result<IdentityResult>.Bad(
+                    "An unexpected error occurred.",
+                    StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        public async Task<Result<IdentityResult>> ChangeUserPasswordAsync(string email, ChangePasswordRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(email) || string.IsNullOrWhiteSpace(email))
+                {
+                    _logger.LogWarning("Unauthorize: email is null or empty.");
+                    return Result<IdentityResult>.Bad(
+                        "Unauthorize.",
+                        StatusCodes.Status401Unauthorized,
+                        new List<string> { "Email is null or empty" }
+                        );
+                }
+
+                if (request.NewPassword != request.ConfirmNewPassword)
+                {
+                    _logger.LogWarning("New password and confirm new password do not match for user with email {Email}", email);
+                    return Result<IdentityResult>.Bad(
+                        "New password and confirm new password do not match",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "PasswordMismatch" }
+                        );
+                }
+
+                var user = await _userManager.FindByEmailAsync(email);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("User with this email {Email} dosn't exist", email);
+                    return Result<IdentityResult>.Bad(
+                        $"User with this email {email} dosn't exist",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "UserDoNotExist" }
+                        );
+                }
+
+                if (!await _userManager.CheckPasswordAsync(user, request.CurrentPassword))
+                {
+                    _logger.LogWarning("Current password is incorrect for user with email {Email}", email);
+                    return Result<IdentityResult>.Bad(
+                        "Current password is incorrect",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "IncorrectCurrentPassword" }
+                        );
+                }
+
+                var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+
+                if (!result.Succeeded)
+                {
+                    var error = string
+                        .Join(", ", result.Errors.Select(e => e.Description));
+
+                    _logger.LogError("Failed to change password for user with email {Email}. Errors: {Errors}", email, error);
+
+                    error = error.ToList().Count > 0 ? error : "Failed to change password for unknown reasons.";
+                    return Result<IdentityResult>.Bad(
+                        error,
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { error }
+                        );
+                }
+
+                return Result<IdentityResult>.Good(
+                    "Password changed successfully.",
+                    StatusCodes.Status200OK,
+                    result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while changing password for user with email {Email}.", email);
                 return Result<IdentityResult>.Bad(
                     "An unexpected error occurred.",
                     StatusCodes.Status500InternalServerError);
