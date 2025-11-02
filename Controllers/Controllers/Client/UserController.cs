@@ -192,7 +192,6 @@ namespace Controllers.Controllers.Client
         ///
         /// Notes:
         /// - User's current email is automatically retrieved from JWT token claims.
-        /// - Both User and Admin roles have access to this endpoint.
         /// - New email must be in valid email format.
         /// - New email must be different from the current email.
         /// - The normalized email (uppercase) is also updated automatically.

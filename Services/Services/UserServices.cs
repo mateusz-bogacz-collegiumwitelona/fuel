@@ -66,48 +66,92 @@ namespace Services.Services
             }
         }
 
-        public async Task<Result<bool>> ChangeUserNameAsync(string email, string userName) 
+        public async Task<Result<IdentityResult>> ChangeUserNameAsync(string email, string userName) 
         {
             try
             {
-                if (string.IsNullOrEmpty(email))
+                if (string.IsNullOrEmpty(email) || string.IsNullOrWhiteSpace(email))
                 {
                     _logger.LogWarning("Unauthorize: email is null or empty.");
-                    return Result<bool>.Bad(
+                    return Result<IdentityResult>.Bad(
                         "Unauthorize.",
                         StatusCodes.Status401Unauthorized,
                         new List<string> { "Email is null or empty" }
                         );
                 }
 
-                if (string.IsNullOrWhiteSpace(userName))
+                if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(userName))
                 {
                     _logger.LogWarning("Invalid input: userName is null or empty.");
-                    return Result<bool>.Bad(
+                    return Result<IdentityResult>.Bad(
                         "Validatin error.", 
                         StatusCodes.Status400BadRequest,
                         new List<string> { "User name is null or empty" });
                 }
 
-                var isChanged = await _userRepository.ChangeUserNameAsync(email, userName);
-
-                if (!isChanged)
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user == null)
                 {
-                    _logger.LogWarning("Failed to change UserName for user with email {Email}.", email);
-                    return Result<bool>.Bad(
-                        "Failed to change UserName.", 
-                        StatusCodes.Status500InternalServerError);
+                    _logger.LogWarning("User with this email {Email} dosn't exist", email);
+                    return Result<IdentityResult>.Bad(
+                        $"User with this email {email} dosn't exist", 
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "UserDoNotExist" }
+                        );
                 }
 
-                return Result<bool>.Good(
+                var isUserNameExist = await _userManager.FindByNameAsync(userName);
+
+                if (isUserNameExist != null)
+                { 
+                    _logger.LogWarning("User with this userName {UserName} already exist", userName);
+
+                    return Result<IdentityResult>.Bad(
+                        $"User with this userName {userName} already exist", 
+                        StatusCodes.Status409Conflict,
+                        new List<string> { "UserNameAlreadyExist" }
+                        );
+                }
+
+                var userNameChangeResult = await _userManager.SetUserNameAsync(user, userName);
+                if (!userNameChangeResult.Succeeded)
+                { 
+                    _logger.LogError("Cannot set new userName");
+                    return Result<IdentityResult>.Bad(
+                        "Cannot set new userName", 
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { "CannotSetNewUserName" }
+                        );
+                }
+
+                user.NormalizedUserName = _userManager.NormalizeName(userName);
+
+                var result = await _userManager.UpdateAsync(user);
+
+                if (!result.Succeeded)
+                {
+                    var error = string
+                        .Join(", ", result.Errors.Select(e => e.Description));
+                    
+                    _logger.LogError("Failed to change UserName for user with email {Email}. Errors: {Errors}", email, error);
+                    
+                    error = error.ToList().Count > 0 ? error : "Failed to change UserName for unknown reasons.";
+                    return Result<IdentityResult>.Bad(
+                        error, 
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { error }
+                        );
+                }
+
+                return Result<IdentityResult>.Good(
                     "UserName changed successfully.", 
-                    StatusCodes.Status200OK, 
-                    isChanged);
+                    StatusCodes.Status200OK,
+                    userNameChangeResult);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while changing UserName for user with email {Email}.", email);
-                return Result<bool>.Bad(
+                return Result<IdentityResult>.Bad(
                     "An unexpected error occurred.", 
                     StatusCodes.Status500InternalServerError);
             }

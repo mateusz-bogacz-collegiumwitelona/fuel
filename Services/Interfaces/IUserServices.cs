@@ -6,7 +6,7 @@ namespace Services.Interfaces
 {
     public interface IUserServices
     {
-        Task<Result<bool>> ChangeUserNameAsync(string email, string userName);
+        Task<Result<IdentityResult>> ChangeUserNameAsync(string email, string userName);
         Task<Result<GetUserInfoResponse>> GetUserInfoAsync(string email);
         Task<Result<IdentityResult>> ChangeUserEmailAsync(string oldEmail, string newEmail);
     }

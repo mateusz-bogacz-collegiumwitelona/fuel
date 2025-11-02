@@ -21,7 +21,6 @@ namespace Services.Services
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private readonly IConfiguration _configuration;
-        private readonly IUserRepository _userRepository;
         private readonly ILogger<LoginRegisterServices> _logger;
         private EmailSender _email;
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
@@ -32,7 +31,6 @@ namespace Services.Services
             SignInManager<ApplicationUser> signInManager,
             RoleManager<IdentityRole<Guid>> roleManager,
             IConfiguration configuration,
-            IUserRepository userRepository,
             ILogger<LoginRegisterServices> logger,
             EmailSender email,
             IProposalStatisticRepository proposalStatisticRepository
@@ -42,7 +40,6 @@ namespace Services.Services
             _signInManager = signInManager;
             _roleManager = roleManager;
             _configuration = configuration;
-            _userRepository = userRepository;
             _logger = logger;
             _email = email;
             _proposalStatisticRepository = proposalStatisticRepository;
