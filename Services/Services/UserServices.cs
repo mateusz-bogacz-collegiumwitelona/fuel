@@ -67,7 +67,7 @@ namespace Services.Services
             }
         }
 
-        public async Task<Result<IdentityResult>> ChangeUserNameAsync(string email, string userName) 
+        public async Task<Result<IdentityResult>> ChangeUserNameAsync(string email, string userName)
         {
             try
             {
@@ -85,7 +85,7 @@ namespace Services.Services
                 {
                     _logger.LogWarning("Invalid input: userName is null or empty.");
                     return Result<IdentityResult>.Bad(
-                        "Validatin error.", 
+                        "Validatin error.",
                         StatusCodes.Status400BadRequest,
                         new List<string> { "User name is null or empty" });
                 }
@@ -95,7 +95,7 @@ namespace Services.Services
                 {
                     _logger.LogWarning("User with this email {Email} dosn't exist", email);
                     return Result<IdentityResult>.Bad(
-                        $"User with this email {email} dosn't exist", 
+                        $"User with this email {email} dosn't exist",
                         StatusCodes.Status404NotFound,
                         new List<string> { "UserDoNotExist" }
                         );
@@ -104,11 +104,11 @@ namespace Services.Services
                 var isUserNameExist = await _userManager.FindByNameAsync(userName);
 
                 if (isUserNameExist != null)
-                { 
+                {
                     _logger.LogWarning("User with this userName {UserName} already exist", userName);
 
                     return Result<IdentityResult>.Bad(
-                        $"User with this userName {userName} already exist", 
+                        $"User with this userName {userName} already exist",
                         StatusCodes.Status409Conflict,
                         new List<string> { "UserNameAlreadyExist" }
                         );
@@ -116,10 +116,10 @@ namespace Services.Services
 
                 var userNameChangeResult = await _userManager.SetUserNameAsync(user, userName);
                 if (!userNameChangeResult.Succeeded)
-                { 
+                {
                     _logger.LogError("Cannot set new userName");
                     return Result<IdentityResult>.Bad(
-                        "Cannot set new userName", 
+                        "Cannot set new userName",
                         StatusCodes.Status500InternalServerError,
                         new List<string> { "CannotSetNewUserName" }
                         );
@@ -133,19 +133,19 @@ namespace Services.Services
                 {
                     var error = string
                         .Join(", ", result.Errors.Select(e => e.Description));
-                    
+
                     _logger.LogError("Failed to change UserName for user with email {Email}. Errors: {Errors}", email, error);
-                    
+
                     error = error.ToList().Count > 0 ? error : "Failed to change UserName for unknown reasons.";
                     return Result<IdentityResult>.Bad(
-                        error, 
+                        error,
                         StatusCodes.Status500InternalServerError,
                         new List<string> { error }
                         );
                 }
 
                 return Result<IdentityResult>.Good(
-                    "UserName changed successfully.", 
+                    "UserName changed successfully.",
                     StatusCodes.Status200OK,
                     userNameChangeResult);
             }
@@ -153,7 +153,7 @@ namespace Services.Services
             {
                 _logger.LogError(ex, "An error occurred while changing UserName for user with email {Email}.", email);
                 return Result<IdentityResult>.Bad(
-                    "An unexpected error occurred.", 
+                    "An unexpected error occurred.",
                     StatusCodes.Status500InternalServerError);
             }
         }
@@ -222,9 +222,9 @@ namespace Services.Services
                 {
                     var error = string
                         .Join(", ", result.Errors.Select(e => e.Description));
-                    
+
                     _logger.LogError("Failed to change email for user with email {oldEmail}. Errors: {Errors}", oldEmail, error);
-                    
+
                     error = error.ToList().Count > 0 ? error : "Failed to change email for unknown reasons.";
                     return Result<IdentityResult>.Bad(
                         error,
@@ -318,6 +318,83 @@ namespace Services.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while changing password for user with email {Email}.", email);
+                return Result<IdentityResult>.Bad(
+                    "An unexpected error occurred.",
+                    StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        public async Task<Result<IdentityResult>> DeleteUserAsyc(string email, DeleteAccountRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(email) || string.IsNullOrWhiteSpace(email))
+                {
+                    _logger.LogWarning("Unauthorize: email is null or empty.");
+                    return Result<IdentityResult>.Bad(
+                        "Unauthorize.",
+                        StatusCodes.Status401Unauthorized,
+                        new List<string> { "Email is null or empty" }
+                        );
+                }
+
+                var user = await _userManager.FindByEmailAsync(email);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("User with this email {Email} dosn't exist", email);
+                    return Result<IdentityResult>.Bad(
+                        $"User with this email {email} dosn't exist",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "UserDoNotExist" }
+                        );
+                }
+
+                if (request.Password != request.ConfirmPassword)
+                {
+                    _logger.LogWarning("Password and confirm password do not match for user with email {Email}", email);
+                    return Result<IdentityResult>.Bad(
+                        "Password and confirm password do not match",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "PasswordMismatch" }
+                        );
+                }
+
+                if (!await _userManager.CheckPasswordAsync(user, request.Password))
+                {
+                    _logger.LogWarning("Current password is incorrect for user with email {Email}", email);
+                    return Result<IdentityResult>.Bad(
+                        "Current password is incorrect",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "IncorrectCurrentPassword" }
+                        );
+                }
+
+                var result = await _userManager.DeleteAsync(user);
+
+                if (!result.Succeeded)
+                {
+                    var error = string
+                        .Join(", ", result.Errors.Select(e => e.Description));
+
+                    _logger.LogError("Failed to delete account for user {Email}. Errors: {Errors}", email, error);
+
+                    error = error.ToList().Count > 0 ? error : "Failed to change password for unknown reasons.";
+                    return Result<IdentityResult>.Bad(
+                        error,
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { error }
+                        );
+                }
+
+                return Result<IdentityResult>.Good(
+                    "User deleted successfully.",
+                    StatusCodes.Status200OK,
+                    result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while deleting user with email {Email}.", email);
                 return Result<IdentityResult>.Bad(
                     "An unexpected error occurred.",
                     StatusCodes.Status500InternalServerError);

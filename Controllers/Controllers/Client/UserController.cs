@@ -1,7 +1,9 @@
 ﻿using DTO.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Services.Helpers;
 using Services.Interfaces;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
@@ -309,6 +311,102 @@ namespace Controllers.Controllers.Client
             }
 
             var result = await _userServices.ChangeUserPasswordAsync(email, request);
+
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Delete the currently authenticated user's account.
+        /// </summary>
+        /// <remarks>
+        /// Description: Permanently deletes the authenticated user's account. This action cannot be undone. User must provide and confirm their password for verification.
+        ///
+        /// Example request:
+        /// ```http
+        /// DELETE /api/user/delete
+        /// Content-Type: application/json
+        ///
+        /// {
+        ///   "password": "MyPassword123!",
+        ///   "confirmPassword": "MyPassword123!"
+        /// }
+        /// ```
+        ///
+        /// Example response (success):
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "User deleted successfully."
+        /// }
+        /// ```
+        ///
+        /// Example response (error - passwords don't match):
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Password and confirm password do not match",
+        ///   "errors": ["PasswordMismatch"]
+        /// }
+        /// ```
+        ///
+        /// Example response (error - incorrect password):
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Current password is incorrect",
+        ///   "errors": ["IncorrectCurrentPassword"]
+        /// }
+        /// ```
+        ///
+        /// Example response (error - user not found):
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "User with this email user@example.com doesn't exist",
+        ///   "errors": ["UserDoNotExist"]
+        /// }
+        /// ```
+        ///
+        /// Notes:
+        /// - User's email is automatically retrieved from JWT token claims.
+        /// - Both User and Admin roles have access to this endpoint.
+        /// - Password and confirm password must match.
+        /// - Password verification is required for security.
+        /// - This action is permanent and cannot be undone.
+        /// - All user data will be removed from the system.
+        /// </remarks>
+        /// <param name="request">Delete account request containing password and confirmation</param>
+        /// <response code="200">Account successfully deleted</response>
+        /// <response code="400">Validation error - passwords don't match, incorrect password, or confirm password required</response>
+        /// <response code="401">User not authenticated or email not found in token</response>
+        /// <response code="404">User with the email doesn't exist</response>
+        /// <response code="500">Failed to delete account or unexpected server error</response>
+        [HttpDelete("delete")]
+        public async Task<IActionResult> DeleteUserAsyc([FromBody] DeleteAccountRequest request)
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            if (string.IsNullOrEmpty(email))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User not authenticated"
+                });
+            }
+
+            var result = await _userServices.DeleteUserAsyc(email, request);
 
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, new
