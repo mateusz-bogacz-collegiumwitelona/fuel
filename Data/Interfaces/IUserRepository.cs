@@ -5,6 +5,6 @@ namespace Data.Interfaces
 {
     public interface IUserRepository
     {
-        //
+        Task<bool> ChangeUserNameAsync(string email, string userName);
     }
 }

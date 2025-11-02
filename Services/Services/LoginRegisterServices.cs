@@ -217,6 +217,7 @@ namespace Services.Services
                     SecurityStamp = Guid.NewGuid().ToString(),
                     ConcurrencyStamp = Guid.NewGuid().ToString(),
                     Points = 0,
+                    CreatedAt = DateTime.UtcNow
                 };
 
                 var createUser = await _userManager.CreateAsync(user, request.Password);
