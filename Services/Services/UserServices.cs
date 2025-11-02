@@ -67,12 +67,23 @@ namespace Services.Services
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(userName))
+                if (string.IsNullOrEmpty(email))
                 {
-                    _logger.LogWarning("Invalid input: email or userName is null or empty.");
+                    _logger.LogWarning("Unauthorize: email is null or empty.");
                     return Result<bool>.Bad(
-                        "Email and UserName must be provided.", 
-                        StatusCodes.Status400BadRequest);
+                        "Unauthorize.",
+                        StatusCodes.Status401Unauthorized,
+                        new List<string> { "Email is null or empty" }
+                        );
+                }
+
+                if (string.IsNullOrWhiteSpace(userName))
+                {
+                    _logger.LogWarning("Invalid input: userName is null or empty.");
+                    return Result<bool>.Bad(
+                        "Validatin error.", 
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "User name is null or empty" });
                 }
 
                 var isChanged = await _userRepository.ChangeUserNameAsync(email, userName);

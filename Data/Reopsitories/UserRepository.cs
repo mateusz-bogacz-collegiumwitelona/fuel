@@ -1,12 +1,10 @@
 ﻿using Data.Context;
 using Data.Interfaces;
 using Data.Models;
-using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using NetTopologySuite.IO;
 
 namespace Data.Reopsitories
 {

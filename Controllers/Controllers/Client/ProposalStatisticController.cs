@@ -23,11 +23,12 @@ namespace Contlollers.Controllers.Client
         /// Retrieve proposal statistics for a user by their email address.
         /// </summary>
         /// <remarks>
-        /// Description: Returns summarized statistics about all proposals submitted by the user with the given email.
+        /// Returns summarized statistics about all proposals submitted by the user with the given email.
+        /// The user's email is automatically extracted from the JWT token, ensuring users can only access their own statistics.
         ///
         /// Example request
         /// ```http
-        /// GET /api/proposals/statistics?email=user@example.pl
+        /// GET /api/proposals/statistics
         /// ```
         ///
         /// Example response
@@ -41,14 +42,16 @@ namespace Contlollers.Controllers.Client
         /// }
         /// ```
         ///
-        /// Notes
+        /// Notes:
         /// - `acceptedRate` is calculated as the percentage of approved proposals out of the total.
         /// - `updatedAt` is the timestamp (UTC) of the last statistics update.
-        /// - The request requires a valid existing user email.
+        /// - User email is automatically retrieved from JWT token claims.
+        /// - No email parameter is required - the endpoint always returns data for the authenticated user.
         /// </remarks>
         /// <param name="email">User's email address used to look up their proposal statistics.</param>
         /// <response code="200">Statistics successfully retrieved</response>
-        /// <response code="400">Validation error or internal repository issue</response>
+        /// <response code="400">Internal repository issue</response>
+        /// <response code="401">Unauthorize</response>
         /// <response code="404">User or statistics not found</response>
         /// <response code="500">Unexpected server error</response>
         [HttpGet]
