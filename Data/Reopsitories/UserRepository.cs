@@ -2,8 +2,11 @@
 using Data.Interfaces;
 using Data.Models;
 using DTO.Requests;
+using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using NetTopologySuite.IO;
 
 namespace Data.Reopsitories
 {
@@ -22,6 +25,25 @@ namespace Data.Reopsitories
             _logger = logger;
             _userManager = userManager;
         }
+
+        public async Task<GetUserInfoResponse> GetUserInfoAsync(string email)
+            => await _context.Users
+            .Where(u => u.Email == email)
+            .Select(u => new GetUserInfoResponse
+            {
+                UserName = u.UserName,
+                Email = u.Email,
+                CreatedAt = u.CreatedAt,
+                ProposalStatistics = new GetProposalStatisticResponse
+                {
+                    TotalProposals = (int)u.ProposalStatistic.TotalProposals,
+                    ApprovedProposals = (int)u.ProposalStatistic.ApprovedProposals,
+                    RejectedProposals = (int)u.ProposalStatistic.RejectedProposals,
+                    AcceptedRate = (int)u.ProposalStatistic.AcceptedRate,
+                    UpdatedAt = u.ProposalStatistic.UpdatedAt
+                }
+            })
+            .FirstOrDefaultAsync();
 
         public async Task<bool> ChangeUserNameAsync(string email, string userName)
         {

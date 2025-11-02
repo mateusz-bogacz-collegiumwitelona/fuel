@@ -30,13 +30,13 @@ namespace Data.Seeder
         {
             if (!await _roleManager.Roles.AnyAsync()) await SeedRolesAsync();
             if (!await _userManager.Users.AnyAsync()) await SeedUsersAsync();
+            if (!await _context.ProposalStatistics.AnyAsync()) await SeedProposalStatisticsAsync();
             if (!await _context.Brand.AnyAsync()) await SeedBrandsAsync();
             if (!await _context.Stations.AnyAsync()) await SeedStationsAsync();
             if (!await _context.FuelTypes.AnyAsync()) await SeedFuelTypesAsync();
             if (!await _context.FuelPrices.AnyAsync()) await SeedFuelPriceAsync();
             if (!await _context.PriceProposals.AnyAsync()) await SeedPriceProposials();
-            if (!await _context.ProposalStatisicts.AnyAsync()) await SeedPriceProposial();
-
+            
             Console.WriteLine("Database seeding completed.");
         }
 
@@ -422,7 +422,7 @@ namespace Data.Seeder
             }
         }
 
-        public async Task SeedPriceProposial()
+        public async Task SeedProposalStatisticsAsync()
         {
             try
             {
@@ -430,7 +430,7 @@ namespace Data.Seeder
 
                 foreach (var user in users)
                 {
-                    if (!await _context.ProposalStatisicts.AnyAsync(ps => ps.UserId == user.Id))
+                    if (!await _context.ProposalStatistics.AnyAsync(ps => ps.UserId == user.Id))
                     {
                         int total = _random.Next(1, 20);
                         int approved = _random.Next(1, total);
@@ -449,7 +449,7 @@ namespace Data.Seeder
                             UpdatedAt = DateTime.UtcNow
                         };
 
-                        await _context.ProposalStatisicts.AddAsync(poposal);
+                        await _context.ProposalStatistics.AddAsync(poposal);
                     }
                 }
 

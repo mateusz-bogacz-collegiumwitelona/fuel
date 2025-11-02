@@ -1,4 +1,5 @@
 ﻿using Data.Interfaces;
+using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +20,47 @@ namespace Services.Services
         {
             _userRepository = userRepository;
             _logger = logger;
+        }
+
+        public async Task<Result<GetUserInfoResponse>> GetUserInfoAsync(string email)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(email))
+                {
+                    _logger.LogError("Error. Email is required");
+                    return Result<GetUserInfoResponse>.Bad(
+                        "Validation error",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "Email is required" }
+                        );
+
+                }
+
+                var result = await _userRepository.GetUserInfoAsync(email);
+
+                if (result == null)
+                {
+                    _logger.LogError("Error. Cannto find user");
+                    return Result<GetUserInfoResponse>.Bad(
+                        "Error",
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { "Cannto find user" }
+                        );
+                }
+
+                return Result<GetUserInfoResponse>.Good(
+                    "UserName changed successfully.",
+                    StatusCodes.Status200OK,
+                    result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while get info for user with email {Email}.", email);
+                return Result<GetUserInfoResponse>.Bad(
+                    "An unexpected error occurred.",
+                    StatusCodes.Status500InternalServerError);
+            }
         }
 
         public async Task<Result<bool>> ChangeUserNameAsync(string email, string userName) 
@@ -45,12 +87,15 @@ namespace Services.Services
 
                 return Result<bool>.Good(
                     "UserName changed successfully.", 
-                    StatusCodes.Status200OK, isChanged);
+                    StatusCodes.Status200OK, 
+                    isChanged);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while changing UserName for user with email {Email}.", email);
-                return Result<bool>.Bad("An unexpected error occurred.", StatusCodes.Status500InternalServerError);
+                return Result<bool>.Bad(
+                    "An unexpected error occurred.", 
+                    StatusCodes.Status500InternalServerError);
             }
         }
     }

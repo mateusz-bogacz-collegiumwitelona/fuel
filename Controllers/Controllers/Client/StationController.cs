@@ -1,4 +1,5 @@
 ﻿using DTO.Requests;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Helpers;
@@ -9,6 +10,7 @@ namespace Contlollers.Controllers.Client
     [Route("api/station")]
     [ApiController]
     [EnableCors("AllowClient")]
+    [Authorize(Roles = "User,Admin")]
     public class StationController : ControllerBase
     {
         private readonly IStationServices _stationServices;

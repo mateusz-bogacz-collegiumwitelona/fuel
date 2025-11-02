@@ -34,7 +34,7 @@ namespace Data.Reopsitories
                 return null;
             }
 
-            var proposals = _context.ProposalStatisicts
+            var proposals = _context.ProposalStatistics
                 .FirstOrDefault(ps => ps.UserId == user.Id);
 
             if (proposals == null)
@@ -75,7 +75,7 @@ namespace Data.Reopsitories
                 UpdatedAt = DateTime.UtcNow
             };
 
-            await _context.ProposalStatisicts.AddAsync(proposal);
+            await _context.ProposalStatistics.AddAsync(proposal);
             int isSaved = await _context.SaveChangesAsync();
 
             if (isSaved <= 0)
@@ -99,7 +99,7 @@ namespace Data.Reopsitories
                     return false;
                 }
 
-                var userProposialStats = _context.ProposalStatisicts
+                var userProposialStats = _context.ProposalStatistics
                     .FirstOrDefault(ps => ps.UserId == user.Id);
 
                 if (userProposialStats == null)
