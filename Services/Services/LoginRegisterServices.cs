@@ -2,6 +2,7 @@
 using Data.Models;
 using DTO.Requests;
 using DTO.Responses;
+using FluentEmail.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Services.Helpers;
 using Services.Interfaces;
+using StackExchange.Redis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -24,6 +26,8 @@ namespace Services.Services
         private readonly IUserRepository _userRepository;
         private readonly ILogger<LoginRegisterServices> _logger;
         private EmailSender _email;
+        private readonly IProposalStatisticRepository _proposalStatisticRepository;
+
 
         public LoginRegisterServices(
             UserManager<ApplicationUser> userManager,
@@ -32,7 +36,8 @@ namespace Services.Services
             IConfiguration configuration,
             IUserRepository userRepository,
             ILogger<LoginRegisterServices> logger,
-            EmailSender email
+            EmailSender email,
+            IProposalStatisticRepository proposalStatisticRepository
             )
         {
             _userManager = userManager;
@@ -42,6 +47,7 @@ namespace Services.Services
             _userRepository = userRepository;
             _logger = logger;
             _email = email;
+            _proposalStatisticRepository = proposalStatisticRepository;
         }
 
 
@@ -185,7 +191,7 @@ namespace Services.Services
                     return Result<IdentityResult>.Bad(
                         $"User with this email: {request.Email} already exists",
                         StatusCodes.Status400BadRequest
-                        );
+                    );
                 }
 
                 var isUserNameExist = await _userManager.FindByNameAsync(request.UserName);
@@ -196,48 +202,114 @@ namespace Services.Services
                     return Result<IdentityResult>.Bad(
                         $"User with this username: {request.UserName} already exists",
                         StatusCodes.Status400BadRequest
-                        );
+                    );
                 }
 
-                var regiserUser = await _userRepository.RegisterNewUserAsync(request);
-
-                if (string.IsNullOrEmpty(regiserUser))
+                var user = new ApplicationUser
                 {
-                    _logger.LogError("User registration failed for email: {Email}", request.Email);
+                    Id = Guid.NewGuid(),
+                    UserName = request.UserName,
+                    NormalizedUserName = request.UserName.ToUpper(),
+                    Email = request.Email,
+                    NormalizedEmail = request.Email.ToUpper(),
+                    EmailConfirmed = false,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    ConcurrencyStamp = Guid.NewGuid().ToString(),
+                    Points = 0,
+                };
+
+                var createUser = await _userManager.CreateAsync(user, request.Password);
+                if (!createUser.Succeeded)
+                {
+                    var errors = createUser.Errors.Select(e => e.Description).ToList();
+                    var errorMessage = string.Join(", ", errors);
+                    _logger.LogError("Error occurred while creating user {UserName}: {Errors}", request.UserName, errorMessage);
+
                     return Result<IdentityResult>.Bad(
-                        "User registration failed due to internal error",
-                        StatusCodes.Status500InternalServerError
-                        );
+                        "Error occurred while creating user",
+                        StatusCodes.Status500InternalServerError,
+                        errors
+                    );
                 }
 
-                var sendEmailConfirmation = _email.SendRegisterConfirmEmailAsync(
+                string defaultRole = "User";
+
+                if (!await _roleManager.RoleExistsAsync(defaultRole))
+                {
+                    _logger.LogError("Default role {Role} does not exist.", defaultRole);
+                    return Result<IdentityResult>.Bad(
+                        $"Default role '{defaultRole}' does not exist.",
+                        StatusCodes.Status500InternalServerError
+                    );
+                }
+
+                var addToRole = await _userManager.AddToRoleAsync(user, defaultRole);
+
+                if (!addToRole.Succeeded)
+                {
+                    var errors = addToRole.Errors.Select(e => e.Description).ToList();
+                    var errorMessage = string.Join(", ", errors);
+                    _logger.LogError("Failed to assign role '{Role}' to user {Email}. Errors: {Errors}",
+                        defaultRole, request.Email, errorMessage);
+
+                    return Result<IdentityResult>.Bad(
+                        $"Failed to assign role '{defaultRole}' to user",
+                        StatusCodes.Status500InternalServerError,
+                        errors
+                    );
+                }
+
+                var isProposalStatAdded = await _proposalStatisticRepository.AddProposalStatisticRecordAsync(request.Email);
+
+                if (!isProposalStatAdded)
+                {
+                    _logger.LogError("Failed to create proposal statistics record for user {Email}.", request.Email);
+                    return Result<IdentityResult>.Bad(
+                        "Failed to create proposal statistics record for user.",
+                        StatusCodes.Status500InternalServerError
+                    );
+                }
+
+                var confirmToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+                if (string.IsNullOrEmpty(confirmToken))
+                {
+                    _logger.LogError("Failed to generate email confirmation token for user {Email}.", request.Email);
+                    return Result<IdentityResult>.Bad(
+                        "Failed to generate email confirmation token.",
+                        StatusCodes.Status500InternalServerError
+                    );
+                }
+
+                var sendEmailConfirmation = await _email.SendRegisterConfirmEmailAsync(
                     request.Email,
                     request.UserName,
-                    regiserUser
-                    );
+                    confirmToken
+                );
 
-                if (!await sendEmailConfirmation)
+                if (!sendEmailConfirmation)
                 {
                     _logger.LogError("Failed to send confirmation email to: {Email}", request.Email);
                     return Result<IdentityResult>.Bad(
                         "User registered but failed to send confirmation email",
                         StatusCodes.Status500InternalServerError
-                        );
+                    );
                 }
 
                 _logger.LogInformation("User registered successfully: {Email}", request.Email);
                 return Result<IdentityResult>.Good(
                     "User registered successfully. Please check your email to confirm your account.",
                     StatusCodes.Status201Created
-                    );
+                );
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Exception occurred during user registration for email: {Email}", request.Email);
                 return Result<IdentityResult>.Bad(
                     "An error occurred during registration",
-                    StatusCodes.Status500InternalServerError
-                    );
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message }
+                );
             }
         }
 
@@ -245,15 +317,36 @@ namespace Services.Services
         {
             try
             {
-                var result = await _userRepository.ConfirmEmailAsync(request);
+                var user = await _userManager.FindByEmailAsync(request.Email);
+                if (user == null)
+                {
+                    _logger.LogWarning("Email confirmation attempt for non-existent email: {Email}", request.Email);
+                    return Result<IdentityResult>.Bad(
+                        "User not found",
+                        StatusCodes.Status404NotFound
+                    );
+                }
+
+                if (user.EmailConfirmed)
+                {
+                    _logger.LogInformation("Email already confirmed for user: {Email}", request.Email);
+                    return Result<IdentityResult>.Bad(
+                        "Email is already confirmed",
+                        StatusCodes.Status400BadRequest
+                    );
+                }
+
+                var result = await _userManager.ConfirmEmailAsync(user, request.Token);
 
                 if (!result.Succeeded)
                 {
                     var errors = result.Errors.Select(e => e.Description).ToList();
-                    _logger.LogWarning("Email confirmation failed for {Email}", request.Email);
+                    var errorMessage = string.Join(", ", errors);
+                    _logger.LogWarning("Email confirmation failed for {Email}. Errors: {Errors}",
+                        request.Email, errorMessage);
 
                     return Result<IdentityResult>.Bad(
-                        "Email confirmation failed",
+                        "Invalid or expired confirmation token",
                         StatusCodes.Status400BadRequest,
                         errors
                     );

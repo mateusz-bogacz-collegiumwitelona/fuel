@@ -80,31 +80,64 @@ namespace contlollers.Controllers.Client
         }
 
         /// <summary>
-        /// Register new user
+        /// Register a new user account.
         /// </summary>
-        /// <param name="request">
-        /// DTO with UserName, Email, Password and ConfirmPassword 
-        /// <br/><br/>
-        /// <b>Example request:</b>
-        /// <br/>
+        /// <remarks>
+        /// Description
+        /// Creates a new user account with the provided username, email, and password.
+        /// After successful registration, a confirmation email is sent to the user's email address.
+        /// 
+        /// Example request body
+        /// ```json
         /// {
-        /// "userName": "JohnDope",
-        /// "email": "john.dope@example.com",
-        /// "password": "John!23",
-        /// "confirmPassword": "John!23"
+        ///   "userName": "JohnDope",
+        ///   "email": "john.dope@example.com",
+        ///   "password": "John!23",
+        ///   "confirmPassword": "John!23"
         /// }
-        /// </param>
-        /// <returns>IdentityResult with messages</returns>
-        /// <response code="400">Validation Errors or Error with repo</response>
-        /// <response code="201">Success</response>
-        /// <response code="500">Something bad in backend. Call priest or Dev</response>
+        /// ```
+        ///
+        /// Example response (success)
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "User registered successfully. Please check your email to confirm your account."
+        /// }
+        /// ```
+        ///
+        /// Example response (error)
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "User with this email: john.dope@example.com already exists",
+        ///   "errors": []
+        /// }
+        /// ```
+        ///
+        /// Notes
+        /// - Password must be at least 6 characters long and contain:
+        ///   - At least one uppercase letter
+        ///   - At least one number
+        ///   - At least one special character
+        /// - A confirmation email will be sent to the provided email address
+        /// - The user must confirm their email before they can log in
+        /// - Username and email must be unique
+        /// </remarks>
+        /// <response code="201">User registered successfully — confirmation email sent</response>
+        /// <response code="400">Validation errors — email/username already exists or invalid input</response>
+        /// <response code="500">Server error — something went wrong in the backend</response>
         [AllowAnonymous]
         [HttpPost("register")]
         public async Task<IActionResult> RegisterNewUserAsync([FromBody] RegisterNewUserRequest request)
         {
             var result = await _login.RegisterNewUserAsync(request);
+
             return result.IsSuccess
-                ? StatusCode(result.StatusCode, result.Data)
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message
+                })
                 : StatusCode(result.StatusCode, new
                 {
                     success = false,
@@ -113,13 +146,61 @@ namespace contlollers.Controllers.Client
                 });
         }
 
+        /// <summary>
+        /// Confirm user email address
+        /// </summary>
+        /// <remarks>
+        /// Description:
+        /// Confirms a user's email address using the token sent via email during registration.
+        /// 
+        /// Example request:
+        /// ```json
+        /// {
+        ///   "email": "john.dope@example.com",
+        ///   "token": "CfDJ8Abc123..."
+        /// }
+        /// ```
+        ///
+        /// Example response (success):
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "Email confirmed successfully. You can now log in."
+        /// }
+        /// ```
+        ///
+        /// Example response (error):
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Invalid or expired confirmation token",
+        ///   "errors": ["Invalid token"]
+        /// }
+        /// ```
+        ///
+        /// Notes:
+        /// - The token is sent to the user's email during registration
+        /// - Tokens typically expire after 24 hours
+        /// - Once confirmed, the user can log in to the application
+        /// - If email is already confirmed, a 400 error will be returned
+        /// </remarks>
+        /// <response code="200">Email confirmed successfully</response>
+        /// <response code="400">Invalid or expired token, or email already confirmed</response>
+        /// <response code="404">User not found</response>
+        /// <response code="500">Server error</response>
         [AllowAnonymous]
         [HttpPost("confirm-email")]
         public async Task<IActionResult> ConfirmEmailAsync([FromBody] ConfirmEmailRequest request)
         {
             var result = await _login.ConfirmEmailAsync(request);
+
+            // ✅ POPRAWIONE - zawsze zwracaj obiekt z message
             return result.IsSuccess
-                ? StatusCode(result.StatusCode, result.Data)
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message
+                })
                 : StatusCode(result.StatusCode, new
                 {
                     success = false,
