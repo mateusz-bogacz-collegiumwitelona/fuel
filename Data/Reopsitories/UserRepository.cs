@@ -5,6 +5,7 @@ using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Data.Reopsitories
 {
@@ -69,5 +70,6 @@ namespace Data.Reopsitories
             }
         }
 
+        
     }
 }

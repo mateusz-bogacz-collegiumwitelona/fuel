@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Services.Helpers;
 using Services.Interfaces;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
 namespace Controllers.Controllers.Client
@@ -131,17 +134,103 @@ namespace Controllers.Controllers.Client
 
             if (string.IsNullOrEmpty(email))
             {
+
                 return Unauthorized(new
                 {
                     success = false,
                     message = "User not authenticated"
                 });
-
             }
 
             var result = await _userServices.ChangeUserNameAsync(email, userName);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Change the email address for the currently authenticated user.
+        /// </summary>
+        /// <remarks>
+        /// Description: Updates the email address for the authenticated user. The user's current email is automatically extracted from the JWT token.
+        ///
+        /// Example request:
+        /// ```http
+        /// POST /api/user/change-email?newEmail=newemail@example.com
+        /// ```
+        ///
+        /// Example response (success):
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "Email changed successfully."
+        /// }
+        /// ```
+        ///
+        /// Example response (error - email already exists):
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "User with this email newemail@example.com already exists",
+        ///   "errors": ["UserAlreadyExist"]
+        /// }
+        /// ```
+        ///
+        /// Example response (error - user not found):
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "User with this email user@example.com doesn't exist",
+        ///   "errors": ["UserDoNotExist"]
+        /// }
+        /// ```
+        ///
+        /// Notes:
+        /// - User's current email is automatically retrieved from JWT token claims.
+        /// - Both User and Admin roles have access to this endpoint.
+        /// - New email must be in valid email format.
+        /// - New email must be different from the current email.
+        /// - The normalized email (uppercase) is also updated automatically.
+        /// - Email must not be already registered by another user.
+        /// </remarks>
+        /// <param name="newEmail">New email address to set for the authenticated user</param>
+        /// <response code="200">Email successfully changed</response>
+        /// <response code="400">Validation error - email format is invalid or required</response>
+        /// <response code="401">User not authenticated or email not found in token</response>
+        /// <response code="404">User with the current email doesn't exist</response>
+        /// <response code="409">Email already in use by another user</response>
+        /// <response code="500">Failed to change email or unexpected server error</response>
+        [HttpPost("change-email")]
+        public async Task<IActionResult> ChangeUserEmailAsync(
+            [Required(ErrorMessage = "Email is required")]
+            [EmailAddress(ErrorMessage = "Invalid email format")]
+            string newEmail
+            )
+        {
+            var oldEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            if (string.IsNullOrEmpty(oldEmail))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User not authenticated"
+                });
+            }
+
+            var result = await _userServices.ChangeUserEmailAsync(oldEmail, newEmail);
+
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message
+                })
                 : StatusCode(result.StatusCode, new
                 {
                     success = false,

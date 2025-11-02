@@ -2,16 +2,13 @@
 using Data.Models;
 using DTO.Requests;
 using DTO.Responses;
-using FluentEmail.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
-using NetTopologySuite.Operation.Valid;
 using Services.Helpers;
 using Services.Interfaces;
-using StackExchange.Redis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
