@@ -10,6 +10,8 @@ namespace Services.Interfaces
         Task<Result<LoginResponse>> HandleLoginAsync(DTO.Requests.LoginRequest request);
         Task<Result<IdentityResult>> RegisterNewUserAsync(RegisterNewUserRequest request);
         Task<Result<IdentityResult>> ConfirmEmailAsync(ConfirmEmailRequest request);
+        Task<Result<IdentityResult>> ForgotPasswordAsync(string email);
+        Task<Result<IdentityResult>> SetNewPassowrdAsync(ResetPasswordRequest request);
 
     }
 }

@@ -194,7 +194,92 @@ namespace contlollers.Controllers.Client
         {
             var result = await _login.ConfirmEmailAsync(request);
 
-            // ✅ POPRAWIONE - zawsze zwracaj obiekt z message
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Request password reset - sends an email with reset token
+        /// </summary>
+        /// <param name="email">User's email address</param>
+        /// <returns>Result indicating if password reset email was sent successfully</returns>
+        /// <remarks>
+        /// Sample request:
+        /// 
+        ///     POST /api/reset-password?email=user@example.com
+        ///     
+        /// This endpoint:
+        /// - Validates if the user exists
+        /// - Checks if email is confirmed
+        /// - Generates a password reset token
+        /// - Sends an email with reset instructions
+        /// 
+        /// The token expires after 24 hours.
+        /// </remarks>
+        /// <response code="200">Password reset email sent successfully</response>
+        /// <response code="400">Email is not confirmed</response>
+        /// <response code="404">User not found</response>
+        /// <response code="500">Internal server error</response>
+        [AllowAnonymous]
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ForgotPasswordAsync(string email)
+        {
+            var result = await _login.ForgotPasswordAsync(email);
+
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Set a new password using reset token
+        /// </summary>
+        /// <param name="request">Password reset details including email, token, and new password</param>
+        /// <returns>Result indicating if password was reset successfully</returns>
+        /// <remarks>
+        /// Sample request:
+        /// 
+        ///     POST /api/set-new-password
+        ///     {
+        ///         "email": "user@example.com",
+        ///         "token": "CfDJ8IdAXN6s0V1Cl4t834jHBx...",
+        ///         "password": "NewSecure123!",
+        ///         "confirmPassword": "NewSecure123!"
+        ///     }
+        ///     
+        /// Password requirements:
+        /// - Minimum 6 characters
+        /// - At least one uppercase letter (A-Z)
+        /// - At least one number (0-9)
+        /// - At least one special character (!@#$%^&amp;*(),.?":{}|&lt;&gt;)
+        /// 
+        /// The token must be the one received via email from the reset-password endpoint.
+        /// Token expires after 24 hours.
+        /// </remarks>
+        [AllowAnonymous]
+        [HttpPost("set-new-password")]
+        public async Task<IActionResult> SetNewPassowrdAsync([FromBody] ResetPasswordRequest request)
+        {
+            var result = await _login.SetNewPassowrdAsync(request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, new
                 {

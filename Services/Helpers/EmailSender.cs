@@ -106,5 +106,30 @@ namespace Services.Helpers
                 return false;
             }
         }
+
+        public async Task<bool> SendResetPasswordEmailAsync(
+            string email,
+            string userName,
+            string token
+            )
+        {
+            try
+            {
+                string encodedToken = Uri.EscapeDataString(token);
+                string encodedEmail = Uri.EscapeDataString(email);
+                string confirmLink = $"{_frontendUrl}/confirm-email?email={encodedEmail}&token={encodedToken}";
+
+                var emailBody = _emailBody.GenerateResetPasswordBody(userName, confirmLink, token);
+                string subject = "Fuel App - Confirm Reset Passowrd";
+
+                return await SendEmailAsync(email, subject, emailBody);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in SendRegisterConfirmEmailAsync for {Email}: {Message}",
+                    email, ex.Message);
+                return false;
+            }
+        }
     }
 }

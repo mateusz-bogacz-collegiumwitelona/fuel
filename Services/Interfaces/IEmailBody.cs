@@ -3,5 +3,6 @@
     public interface IEmailBody
     {
         string GenerateRegisterConfirmEmailBody(string userName, string confirmationLink, string token);
+        string GenerateResetPasswordBody(string userName, string confirmationLink, string token);
     }
 }

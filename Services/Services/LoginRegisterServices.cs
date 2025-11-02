@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using NetTopologySuite.Operation.Valid;
 using Services.Helpers;
 using Services.Interfaces;
 using StackExchange.Redis;
@@ -365,6 +366,140 @@ namespace Services.Services
                 _logger.LogError(ex, "Exception occurred during email confirmation for: {Email}", request.Email);
                 return Result<IdentityResult>.Bad(
                     "An error occurred during email confirmation",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message }
+                );
+            }
+        }
+
+        public async Task<Result<IdentityResult>> ForgotPasswordAsync(string email)
+        {
+            try
+            {
+                var user = await _userManager.FindByEmailAsync(email);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("Login attempt failed. User with email {Email} not found.", email);
+
+                    return Result<IdentityResult>.Bad(
+                        "User not found",
+                        StatusCodes.Status404NotFound
+                        );
+                }
+
+                if (!user.EmailConfirmed)
+                {
+                    _logger.LogInformation("Email cannot confirmed for user: {Email}", email);
+                    return Result<IdentityResult>.Bad(
+                        "Email cannot confirmed",
+                        StatusCodes.Status400BadRequest
+                    );
+                }
+
+                string token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+                if (string.IsNullOrEmpty(token))
+                {
+                    _logger.LogError("Failed to generate password reset token for user {Email}.", email);
+                    return Result<IdentityResult>.Bad(
+                        "Failed to generate password reset token.",
+                        StatusCodes.Status500InternalServerError
+                    );
+                }
+
+                var sendEmailResetPassword = await _email.SendResetPasswordEmailAsync(
+                    email,
+                    user.UserName,
+                    token
+                );
+
+                if (!sendEmailResetPassword)
+                {
+                    _logger.LogError("Failed to send reset password email to: {Email}", email);
+                    return Result<IdentityResult>.Bad(
+                        "Failed to send reset password email",
+                        StatusCodes.Status500InternalServerError
+                    );
+                }
+
+                _logger.LogInformation("Password reset email sent successfully to: {Email}", email);
+                return Result<IdentityResult>.Good(
+                    "Password reset email sent successfully. Please check your email.",
+                    StatusCodes.Status200OK
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception occurred during forgot password process for email: {Email}", email);
+                return Result<IdentityResult>.Bad(
+                    "An error occurred during the forgot password process",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message }
+                );
+            }
+        }
+
+        public async Task<Result<IdentityResult>> SetNewPassowrdAsync(ResetPasswordRequest request)
+        {
+            try
+            {
+                var user = await _userManager.FindByEmailAsync(request.Email);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("Login attempt failed. User with email {Email} not found.", request.Email);
+
+                    return Result<IdentityResult>.Bad(
+                        "User not found",
+                        StatusCodes.Status404NotFound
+                        );
+                }
+
+                if (!user.EmailConfirmed)
+                {
+                    _logger.LogInformation("Email cannot confirmed for user: {Email}", request.Email);
+                    return Result<IdentityResult>.Bad(
+                        "Email cannot confirmed",
+                        StatusCodes.Status400BadRequest
+                    );
+                }
+
+                var decodedToken = Uri.UnescapeDataString(request.Token);
+                var result = await _userManager.ResetPasswordAsync(
+                    user,
+                    decodedToken,
+                    request.Password
+                    );
+
+                if (!result.Succeeded)
+                {
+                    var errors = result.Errors.Select(e => e.Description).ToList();
+                    var errorMessage = string.Join(", ", errors);
+
+                    _logger.LogWarning("Password reset failed for {Email}. Errors: {Errors}",
+                        request.Email, errorMessage);
+
+                    return Result<IdentityResult>.Bad(
+                        "Invalid or expired password reset token",
+                        StatusCodes.Status400BadRequest,
+                        errors
+                    );
+                }
+
+                _logger.LogInformation("Password reset successfully for {Email}", request.Email);
+
+                return Result<IdentityResult>.Good(
+                    "Password reset successfully. You can now log in with your new password.",
+                    StatusCodes.Status200OK,
+                    result
+                    );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception occurred during password reset for: {Email}", request.Email);
+                return Result<IdentityResult>.Bad(
+                    "An error occurred during password reset",
                     StatusCodes.Status500InternalServerError,
                     new List<string> { ex.Message }
                 );

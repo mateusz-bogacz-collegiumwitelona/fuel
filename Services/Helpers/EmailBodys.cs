@@ -12,6 +12,11 @@ namespace Services.Helpers
             return sb.ToString();
         }
 
-       
+        public string GenerateResetPasswordBody(string userName, string confirmationLink, string token)
+        {
+            var sb = new StringBuilder();
+            sb.Append(token);
+            return sb.ToString();
+        }
     }
 }
