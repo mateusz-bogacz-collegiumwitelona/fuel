@@ -104,7 +104,6 @@ export default function ListPage() {
   setLoading(true);
   setError(null);
 
-  // podstawowe body - bazowane na swaggerze (wersja "standard")
   const baseBody = {
     brandName: null,
     locationLatitude: null,
@@ -122,21 +121,17 @@ export default function ListPage() {
     },
   };
 
-  // warianty kompatybilności (jeśli backend oczekuje innych nazw)
   const altBodies = [
-    // poprawne spellingi
     {
       ...baseBody,
       sortingByDistance: baseBody.sortingByDisance,
       pagging: undefined,
       paging: { pageNumber: pageNum, pageSize: pageSz },
     },
-    // podajemy zarówno pagging i paging na wypadek
     {
       ...baseBody,
       paging: { pageNumber: pageNum, pageSize: pageSz },
     },
-    // wersja minimalna (czasami walidator nie lubi nullów)
     {
       fuelType: [],
       pagging: { pageNumber: pageNum, pageSize: pageSz },
@@ -157,13 +152,10 @@ export default function ListPage() {
   }
 
   try {
-    // 1) Spróbuj podstawowego body
     let res = await tryPost(baseBody);
 
-    // 2) Jeśli 400/422/404 -> spróbuj alternatyw
     if (!res.ok && (res.status === 400 || res.status === 422 || res.status === 404)) {
       console.warn("Primary POST failed, trying alternative bodies, status:", res.status);
-      // pokaż też treść odpowiedzi (jeśli serwer zwraca json/text)
       try {
         const txt = await res.text();
         console.warn("Primary body response text:", txt);
@@ -185,7 +177,6 @@ export default function ListPage() {
         }
       }
       if (!ok && !res.ok) {
-        // spróbuj GET jako ostatnia opcja
         try {
           const fallback = await fetch(`${API_BASE}/api/station/list`, {
             headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
@@ -205,7 +196,6 @@ export default function ListPage() {
     }
 
     if (!res.ok) {
-      // jeśli tu dotarliśmy, to mamy res nie-ok i nie udał się fallback - wypisz szczegóły
       const text = await res.text().catch(() => "<brak treści>");
       console.error("fetchStations: non-ok response:", res.status, text);
       setError(`Serwer zwrócił błąd: ${res.status}. Sprawdź konsolę network / logs backendu.`);
@@ -215,12 +205,10 @@ export default function ListPage() {
       return;
     }
 
-    // OK
     const data = await res.json();
     applyListResponse(data);
   } catch (err: any) {
     console.error("Błąd pobierania stacji:", err);
-    // pokaż szczegół jeśli to fetch/CORS – CORS zwykle blokuje dostęp do odpowiedzi i rzuca TypeError
     if (err instanceof TypeError) {
       setError("Błąd sieci / CORS: sprawdź konsolę network (może brakuje Access-Control-Allow-Origin na backendzie).");
     } else {
