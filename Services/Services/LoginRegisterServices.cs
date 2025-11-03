@@ -2,9 +2,12 @@
 using Data.Models;
 using DTO.Requests;
 using DTO.Responses;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Services.Helpers;
@@ -24,7 +27,7 @@ namespace Services.Services
         private readonly ILogger<LoginRegisterServices> _logger;
         private EmailSender _email;
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
-
+        private readonly IHttpContextAccessor _httpContext;
 
         public LoginRegisterServices(
             UserManager<ApplicationUser> userManager,
@@ -33,7 +36,8 @@ namespace Services.Services
             IConfiguration configuration,
             ILogger<LoginRegisterServices> logger,
             EmailSender email,
-            IProposalStatisticRepository proposalStatisticRepository
+            IProposalStatisticRepository proposalStatisticRepository,
+            IHttpContextAccessor httpContext
             )
         {
             _userManager = userManager;
@@ -43,10 +47,10 @@ namespace Services.Services
             _logger = logger;
             _email = email;
             _proposalStatisticRepository = proposalStatisticRepository;
+            _httpContext = httpContext;
         }
 
-
-        public async Task<Result<LoginResponse>> HandleLoginAsync(DTO.Requests.LoginRequest request)
+        public async Task<Result<IdentityResult>> HandleLoginAsync(DTO.Requests.LoginRequest request)
         {
             try
             {
@@ -56,7 +60,7 @@ namespace Services.Services
                 {
                     _logger.LogWarning("Login attempt failed. User with email {Email} not found.", request.Email);
 
-                    return Result<LoginResponse>.Bad(
+                    return Result<IdentityResult>.Bad(
                         $"Can't find user with this email: {request.Email}",
                         StatusCodes.Status404NotFound
                         );
@@ -65,14 +69,14 @@ namespace Services.Services
                 var result = await _signInManager.PasswordSignInAsync(
                     user,
                     request.Password,
-                    true,
-                    false
+                    false,
+                    true
                     );
 
                 if (!result.Succeeded)
                 {
                     _logger.LogWarning("Invalid login attempt for user with email {Email}.", request.Email);
-                    return Result<LoginResponse>.Bad(
+                    return Result<IdentityResult>.Bad(
                         "Invalid login attempt.",
                         StatusCodes.Status401Unauthorized
                         );
@@ -83,7 +87,7 @@ namespace Services.Services
                 if (roles == null || !roles.Any())
                 {
                     _logger.LogWarning("User with email {Email} has no roles assigned.", request.Email);
-                    return Result<LoginResponse>.Bad(
+                    return Result<IdentityResult>.Bad(
                         "User has no roles assigned.",
                         StatusCodes.Status403Forbidden
                         );
@@ -110,7 +114,7 @@ namespace Services.Services
                     string.IsNullOrWhiteSpace(audience))
                 {
                     _logger.LogError("JWT configuration is missing or invalid.");
-                    return Result<LoginResponse>.Bad(
+                    return Result<IdentityResult>.Bad(
                         "Internal server error.",
                         StatusCodes.Status500InternalServerError,
                         new List<string> { "JWT configuration is missing or invalid." }
@@ -120,7 +124,7 @@ namespace Services.Services
                 if (keyString.Length < 32)
                 {
                     _logger.LogError("JWT key length is insufficient. It must be at least 16 characters long.");
-                    return Result<LoginResponse>.Bad(
+                    return Result<IdentityResult>.Bad(
                         "Internal server error.",
                         StatusCodes.Status500InternalServerError,
                         new List<string> { "JWT key length is insufficient. It must be at least 16 characters long." }
@@ -129,6 +133,7 @@ namespace Services.Services
 
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+                var tokenExpiration = DateTime.UtcNow.AddHours(3);
 
                 JwtSecurityToken token;
 
@@ -138,36 +143,77 @@ namespace Services.Services
                                 issuer: issuer,
                                 audience: audience,
                                 claims: claims,
-                                expires: DateTime.UtcNow.AddHours(3),
+                                expires: tokenExpiration,
                                 signingCredentials: creds
                             );
-                } catch (Exception tokenEx)
+                }
+                catch (Exception tokenEx)
                 {
                     _logger.LogError(tokenEx, "Error creating JWT token for user {Email}.", request.Email);
-                    return Result<LoginResponse>.Bad(
+                    return Result<IdentityResult>.Bad(
                         "Internal server error.",
                         StatusCodes.Status500InternalServerError,
                         new List<string> { $"{tokenEx.Message} | {tokenEx.InnerException}" }
                         );
                 }
 
-                var auth = new LoginResponse
+                var context = _httpContext.HttpContext;
+                var isDevelopment = context.RequestServices
+                    .GetRequiredService<IWebHostEnvironment>()
+                    .IsDevelopment();
+
+                context.Response.Cookies.Append("jwt", new JwtSecurityTokenHandler().WriteToken(token), new CookieOptions
                 {
-                    Token = new JwtSecurityTokenHandler().WriteToken(token),
-                    Expiration = token.ValidTo
-                };
+                    HttpOnly = true,
+                    Secure = !isDevelopment,
+                    SameSite = SameSiteMode.None,
+                    Expires = tokenExpiration,
+                    Path = "/"
+                });
+
                 _logger.LogInformation("JWT token successfully generated for user {Email}, expires at {Expiration}.", request.Email, token.ValidTo);
 
-                return Result<LoginResponse>.Good(
+                return Result<IdentityResult>.Good(
                     "Login successful.",
                     StatusCodes.Status200OK,
-                    auth
-                    );
+                    IdentityResult.Success
+                );
+
             }
             catch (Exception ex)
             {
-                return Result<LoginResponse>.Bad(
+                return Result<IdentityResult>.Bad(
                     "An error occurred during login.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message }
+                    );
+            }
+        }
+        public async Task<Result<IdentityResult>> LogoutAsync()
+        {
+            try
+            {
+                await _signInManager.SignOutAsync();
+
+                var context = _httpContext.HttpContext;
+
+                context.Response.Cookies.Delete("jwt", new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.None,
+                    Path = "/"
+                });
+
+                _logger.LogInformation("User logged out successfully.");
+
+                return Result<IdentityResult>.Good("Logout successful.", StatusCodes.Status200OK);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred during logout.");
+                return Result<IdentityResult>.Bad(
+                    "An error occurred during logout.",
                     StatusCodes.Status500InternalServerError,
                     new List<string> { ex.Message }
                     );
