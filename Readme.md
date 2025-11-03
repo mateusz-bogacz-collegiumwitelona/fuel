@@ -1,6 +1,15 @@
-zrobiony merge z better seeder
+merge z stationProfile
 
 co zrobiłem:
 
-- enpoint api na liste marek stacji paliwowych
-- enpoint zwracający profl statcji
+- endpoint do wyśiwtlenia danych użytkownika
+- endpoint do zmiany nazwy użytkownika
+- edpoint do rejstracji (zwraca token)
+- endpoint weryfikujący rejstracje
+- endpoint do przypomninia hasła
+- endpoint weryfikujący przypomnienie hasła
+- endpoint do zmiany maila
+- endpoint do zmiany hasła
+- dodanie endpoint usunięcia konta
+
+# Ważne: ze względów bezpieczeństwa funkcje wymagające emaila użytkownika zostały zmienione, teraz email jest brany z tokena JWT

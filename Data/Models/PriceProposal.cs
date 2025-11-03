@@ -1,4 +1,5 @@
 ﻿using Data.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace Data.Models
 {
@@ -18,10 +19,13 @@ namespace Data.Models
         public decimal ProposedPrice { get; set; }
         public string PhotoUrl { get; set; }
         public PriceProposalStatus Status { get; set; }
-        public string? AdminComment { get; set; }
-        public Guid ReviewedBy { get; set; }
-        public DateTime CreatedAt { get; set; }
 
+        [MaxLength(64)]
+        public string PhotoToken { get; set; }
+
+        public string? AdminComment { get; set; }
+        public Guid? ReviewedBy { get; set; }
+        public DateTime CreatedAt { get; set; }
         
     }
 }

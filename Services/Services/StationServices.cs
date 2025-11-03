@@ -257,6 +257,46 @@ namespace Services.Services
         {
             try
             {
+                if (string.IsNullOrEmpty(request.Street))
+                {
+                    _logger.LogWarning("Street cannot be empty");
+                    return Result<GetStationListResponse>.Bad(
+                        "Validation error",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Street cannot be empty" }
+                        );
+                }
+
+                if (string.IsNullOrEmpty(request.HouseNumber))
+                {
+                    _logger.LogWarning("House number cannot be empty");
+                    return Result<GetStationListResponse>.Bad(
+                        "Validation error",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "House Number cannot be empty" }
+                        );
+                }
+
+                if (string.IsNullOrEmpty(request.City))
+                {
+                    _logger.LogWarning("City cannot be empty");
+                    return Result<GetStationListResponse>.Bad(
+                        "Validation error",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "City cannot be empty" }
+                        );
+                }
+
+                if (string.IsNullOrEmpty(request.PostalCode))
+                {
+                    _logger.LogWarning("Postal code cannot be empty");
+                    return Result<GetStationListResponse>.Bad(
+                        "Validation error",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Postal code cannot be empty" }
+                        );
+                }
+
                 var result = await _stationRepository.GetStationProfileAsync(request);
 
                 if (request == null)

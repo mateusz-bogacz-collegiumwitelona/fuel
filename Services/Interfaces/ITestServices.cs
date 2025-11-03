@@ -7,5 +7,6 @@ namespace Services.Interfaces
     {
         Task<Result<TestRedisResponse>> GetIsRedisConnectAsync();
         Task<Result<TestPostgresResponse>> GetIsPostgresConnectAsync();
+        Task<Result<TestMinioResponse>> GetIsMinioConnectAsync();
     }
 }

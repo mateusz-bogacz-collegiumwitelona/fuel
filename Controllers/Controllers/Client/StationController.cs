@@ -1,4 +1,5 @@
 ﻿using DTO.Requests;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Helpers;
@@ -9,13 +10,21 @@ namespace Contlollers.Controllers.Client
     [Route("api/station")]
     [ApiController]
     [EnableCors("AllowClient")]
+    [Authorize(Roles = "User,Admin")]
     public class StationController : ControllerBase
     {
         private readonly IStationServices _stationServices;
+        private readonly IPriceProposalServices _priceProposalServices;
+        private readonly IFuelTypeServices _fuelTypeServices;
 
-        public StationController(IStationServices stationServices)
+        public StationController(
+            IStationServices stationServices,
+            IPriceProposalServices priceProposalServices,
+            IFuelTypeServices fuelTypeServices)
         {
             _stationServices = stationServices;
+            _priceProposalServices = priceProposalServices;
+            _fuelTypeServices = fuelTypeServices;
         }
 
         /// <summary>
@@ -138,64 +147,174 @@ namespace Contlollers.Controllers.Client
         /// Retrieve a paginated list of fuel stations based on filters and sorting options.
         /// </summary>
         /// <remarks>
-        /// Description
         /// Returns a list of fuel stations that match the specified criteria.
         /// You can filter by location (latitude, longitude, distance), fuel type, price range, and brand name.
         /// Results can be sorted by distance or price, and are returned with pagination support.
         /// 
-        /// Example request body - Basic pagination
+        /// Example request body - No filters, no sorting, automatic pagination
         /// ```json
         /// {
-        ///   "pagging": {
-        ///     "pageNumber": 1,
-        ///     "pageSize": 10
-        ///   }
-        /// }
+        ///  "sortingByDisance": null,
+        ///  "sortingByPrice": null,
+        ///  "sortingDirection": null,
+        ///  "pagging": {
+        ///    "pageNumber": null,
+        ///    "pageSize": null
+        ///  }
+        ///}
         /// ```
         ///
-        /// Example request body - Filter by location and distance
+        /// Example request body - Filter by distance with page navigation
         /// ```json
         /// {
-        ///   "locationLatitude": 51.21006,
-        ///   "locationLongitude": 16.1619,
-        ///   "distance": 10,
-        ///   "fuelType": ["PB95", "ON"],
-        ///   "sortingByDisance": true,
-        ///   "sortingDirection": "asc",
-        ///   "pagging": {
-        ///     "pageNumber": 1,
-        ///     "pageSize": 20
-        ///   }
-        /// }
+        ///  "locationLatitude": 51.21006,
+        ///  "locationLongitude": 16.1619,
+        ///  "distance": 200,
+        ///  "sortingByDisance": null,
+        ///  "sortingByPrice": null,
+        ///  "sortingDirection": null,
+        ///  "pagging": {
+        ///    "pageNumber": 2,
+        ///    "pageSize": 10
+        ///  }
+        ///}
+        /// ```
+        ///
+        /// Example request body - Filter by fuel type only
+        /// ```json
+        ///{
+        ///  "fuelType": ["LPG"],
+        ///  "sortingByDisance": null,
+        ///  "sortingByPrice": null,
+        ///  "sortingDirection": null,
+        ///  "pagging": {
+        ///    "pageNumber": 1,
+        ///    "pageSize": null
+        ///  }
+        ///}
         /// ```
         ///
         /// Example request body - Filter by fuel type and price range
         /// ```json
-        /// {
-        ///   "fuelType": ["PB95"],
-        ///   "minPrice": 5.50,
-        ///   "maxPrice": 6.50,
-        ///   "sortingByPrice": true,
-        ///   "sortingDirection": "asc",
-        ///   "pagging": {
-        ///     "pageNumber": 1,
-        ///     "pageSize": 10
-        ///   }
-        /// }
+        ///{
+        ///  "fuelType": ["LPG"],
+        ///  "minPrice": 3.50,
+        ///  "maxPrice": 5.00,
+        ///  "sortingByDisance": null,
+        ///  "sortingByPrice": null,
+        ///  "sortingDirection": null,
+        ///  "pagging": {
+        ///    "pageNumber": 1,
+        ///    "pageSize": null
+        ///  }
+        ///}
         /// ```
         ///
-        /// Example request body - Filter by brand
+        /// Example request body - Filter by brand name only
+        /// ```json
+        ///{
+        ///  "brandName": "Orlen",
+        ///  "sortingByDisance": null,
+        ///  "sortingByPrice": null,
+        ///  "sortingDirection": null,
+        ///  "pagging": {
+        ///    "pageNumber": 2,
+        ///    "pageSize": 7
+        ///  }
+        ///}
+        /// ```
+        ///
+        /// Example request body - Filter by location and fuel type
+        /// ```json
+        ///{
+        ///  "locationLatitude": 51.21006,
+        ///  "locationLongitude": 16.1619,
+        ///  "distance": 10,
+        ///  "fuelType": ["LPG"],
+        ///  "sortingByDisance": null,
+        ///  "sortingByPrice": null,
+        ///  "sortingDirection": null,
+        ///  "pagging": {
+        ///    "pageNumber": null,
+        ///    "pageSize": null
+        ///  }
+        ///}
+        /// ```
+        ///
+        /// Example request body - Filter by location, fuel type, and minimum price
         /// ```json
         /// {
-        ///   "brandName": "Orlen",
-        ///   "fuelType": ["PB95"],
+        ///   "locationLatitude": 51.21006,
+        ///   "locationLongitude": 16.1619,
+        ///   "distance": 100,
+        ///   "fuelType": ["LPG"],
+        ///   "minPrice": 5,
+        ///   "sortingByDisance": null,
+        ///   "sortingByPrice": null,
+        ///   "sortingDirection": null,
         ///   "pagging": {
-        ///     "pageNumber": 1,
-        ///     "pageSize": 10
+        ///     "pageNumber": null,
+        ///     "pageSize": null
         ///   }
         /// }
         /// ```
         ///
+        /// Example request body - Filter by location, fuel types, maximum price, and brand
+        /// ```json
+        /// {
+        ///   "locationLatitude": 51.21006,
+        ///   "locationLongitude": 16.1619,
+        ///   "distance": 100,
+        ///   "fuelType": ["LPG", "E85"],
+        ///   "minPrice": null,
+        ///   "maxPrice": 5,
+        ///   "brandName": "Orlen",
+        ///   "sortingByDisance": null,
+        ///   "sortingByPrice": null,
+        ///   "sortingDirection": null,
+        ///   "pagging": {
+        ///     "pageNumber": null,
+        ///     "pageSize": null
+        ///   }
+        /// }
+        /// ```
+        ///
+        /// Example request body - Full filters with sorting by distance (descending)
+        /// ```json
+        /// {
+        ///   "locationLatitude": 51.21006,
+        ///   "locationLongitude": 16.1619,
+        ///   "distance": 100,
+        ///   "fuelType": ["LPG", "E85"],
+        ///   "maxPrice": 5,
+        ///   "brandName": "Orlen",
+        ///   "sortingByDisance": true,
+        ///   "sortingByPrice": null,
+        ///   "sortingDirection": "desc",
+        ///   "pagging": {
+        ///     "pageNumber": null,
+        ///     "pageSize": null
+        ///   }
+        /// }
+        /// ```
+        /// Example request body - Full filters with sorting by distance (asceding) (basic sort direction)
+        /// ```json
+        /// {
+        ///   "locationLatitude": 51.21006,
+        ///   "locationLongitude": 16.1619,
+        ///   "distance": 100,
+        ///   "fuelType": ["LPG", "E85"],
+        ///   "maxPrice": 5,
+        ///   "brandName": "Orlen",
+        ///   "sortingByDisance": true,
+        ///   "sortingByPrice": null,
+        ///   "sortingDirection": "asc",
+        ///   "pagging": {
+        ///     "pageNumber": null,
+        ///     "pageSize": null
+        ///   }
+        /// }
+        /// ```
         /// Example response
         /// ```json
         /// {
@@ -391,12 +510,131 @@ namespace Contlollers.Controllers.Client
         ///
         /// </remarks>
         /// <response code="200">Station profile successfully retrieved</response>
-        /// <response code="404">No matching station found</response>
+        /// <response code="404">No matching station found or validation error</response>
         /// <response code="500">Server error — something went wrong while processing the request</response>
         [HttpPost("profile")]
         public async Task<IActionResult> GetStationProfileAsync(GetStationProfileRequest request)
         {
             var result = await _stationServices.GetStationProfileAsync(request);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Submit a new fuel price proposal with verification photo.
+        /// </summary>
+        /// <remarks>
+        /// Description  
+        /// Allows authenticated users to submit a fuel price proposal for a specific gas station, including a verification photo.  
+        /// The photo is uploaded to MinIO storage and a unique proposal record is created in the database.  
+        /// The station is identified based on the provided data (brand name, street, house number, city).  
+        ///
+        /// Example request (multipart/form-data)  
+        /// ```
+        /// POST /api/price-proposal/add
+        /// Content-Type: multipart/form-data
+        ///
+        /// Email: user@example.pl
+        /// BrandName: Orlen
+        /// Street: Ignacego Domejki
+        /// HouseNumber: 1a
+        /// City: Legnica
+        /// FuelType: ON
+        /// ProposedPrice: 6.89
+        /// Photo: [binary file: image.jpg]
+        /// ```
+        ///
+        /// Example success response  
+        /// ```json
+        /// {
+        ///   "message": "Price proposal added successfully in 1234"
+        /// }
+        /// ```
+        ///
+        /// Example error response  
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Validation error",
+        ///   "errors": [
+        ///     "Invalid photo file type. Allowed types are: JPEG, JPG, PNG, WEBP."
+        ///   ]
+        /// }
+        /// ```
+        ///
+        /// Validation rules  
+        /// - **Email**: Required, must be a valid email format, user must exist in the system.
+        /// - **BrandName**: Gas station brand name (e.g., Orlen, Shell, BP). Required.
+        /// - **Street**: Street name where the station is located. Required.
+        /// - **HouseNumber**: Street number of the station. Required.
+        /// - **City**: City where the station is located. Required.
+        /// - **FuelType**: Must be one of: `PB95`, `PB98`, `ON`, `LPG`, `E85`. Required.
+        /// - **ProposedPrice**: Must be greater than 0, represents price in PLN per liter. Required.
+        /// - **Photo**: Required, max size **5 MB**, allowed formats: **JPEG, JPG, PNG, WEBP**.
+        ///
+        /// Notes  
+        /// - The station must exist in the database (matched by brand name, street, house number, and city).
+        /// - The user must be registered and authenticated in the system.
+        /// - The photo is stored in MinIO with a unique filename based on the proposal ID.
+        /// - All operations are executed within a database transaction with automatic rollback on failure.
+        /// - If the database save fails, the uploaded photo is automatically cleaned up from MinIO.
+        /// - The proposal is initially created with status **Pending** and requires admin approval.
+        ///
+        /// </remarks>
+        /// <param name="request">Multipart form data containing proposal details and verification photo</param>
+        /// <response code="200">Price proposal successfully added</response>
+        /// <response code="400">Validation error — invalid data format, file type, size, missing station or user</response>
+        /// <response code="500">Server error — something went wrong while processing the request</response>
+        [HttpPost("price-proposal/add")]
+        public async Task<IActionResult> AddNewPriceProposalAsync([FromForm] AddNewPriceProposalRequest request)
+        {
+            var result = await _priceProposalServices.AddNewProposalAsync(request);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Get all available fuel type codes.
+        /// </summary>
+        /// <remarks>
+        /// Description  
+        /// Returns a list of all fuel type codes (identifiers) available in the system.  
+        /// These codes can be used for filtering stations by fuel type in other endpoints.  
+        ///
+        /// Example response  
+        /// ```json
+        /// [
+        ///   "PB95",
+        ///   "PB98",
+        ///   "ON",
+        ///   "LPG",
+        ///   "E85"
+        /// ]
+        /// ```
+        ///
+        /// Notes  
+        /// - The response contains **unique fuel type codes** only.  
+        /// - If no fuel types are found in the database, a `404` response is returned.  
+        /// </remarks>
+        /// <response code="200">Fuel type codes successfully retrieved</response>
+        /// <response code="404">No fuel type codes found in the database</response>
+        /// <response code="500">An unexpected server error occurred</response>
+        [HttpGet("fuel-codes")]
+        public async Task<IActionResult> GetAllFuelTypeCodesAsync()
+        {
+            var result = await _fuelTypeServices.GetAllFuelTypeCodesAsync();
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

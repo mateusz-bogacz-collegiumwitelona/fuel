@@ -1,19 +1,19 @@
-﻿using Microsoft.AspNetCore.Cors;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
 
-namespace contlollers.Controllers.Test
+namespace Controllers.Controllers.Admin
 {
     [ApiController]
     [Route("api/test")]
     [EnableCors("AllowClient")]
+    [Authorize(Roles = "Admin")]
     public class TestContloller : ControllerBase
     {
         private readonly ITestServices _test;
 
-        public TestContloller(
-            ITestServices test
-            )
+        public TestContloller(ITestServices test)
         {
             _test = test;
         }
@@ -121,6 +121,117 @@ namespace contlollers.Controllers.Test
         public async Task<IActionResult> GetIsPostgresConnectAsync()
         {
             var result = await _test.GetIsPostgresConnectAsync();
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    Data = result.Data
+                });
+        }
+
+        /// <summary>
+        /// Test the connection to the MinIO storage server.
+        /// </summary>
+        /// <remarks>
+        /// Description: Checks if the application can successfully connect to the configured MinIO instance.
+        /// Returns a JSON object describing the connection result, response time, available buckets, and bucket existence status.
+        ///
+        /// Example response — Successful connection with existing bucket
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "MinIO connected successfully. Bucket 'fuel-prices' exists.",
+        ///   "errors": null,
+        ///   "data": {
+        ///     "status": 200,
+        ///     "message": "MinIO connected successfully. Bucket 'fuel-prices' exists.",
+        ///     "responseTime": "45ms",
+        ///     "canConnect": true,
+        ///     "endpoint": "minio:9000",
+        ///     "isBucketExist": true,
+        ///     "bucketName": "fuel-prices",
+        ///     "avalableBuckets": ["fuel-prices", "avatars"]
+        ///   }
+        /// }
+        /// ```
+        ///
+        /// Example response — Connection successful but bucket missing
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "MinIO connected successfully. Bucket 'fuel-prices' does not exist.",
+        ///   "errors": null,
+        ///   "data": {
+        ///     "status": 200,
+        ///     "message": "MinIO connected successfully. Bucket 'fuel-prices' does not exist.",
+        ///     "responseTime": "52ms",
+        ///     "canConnect": true,
+        ///     "endpoint": "minio:9000",
+        ///     "isBucketExist": false,
+        ///     "bucketName": "fuel-prices",
+        ///     "avalableBuckets": []
+        ///   }
+        /// }
+        /// ```
+        ///
+        /// Example response — Failed connection
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "MinIO connection failed",
+        ///   "errors": ["MinIO connection refused"],
+        ///   "data": {
+        ///     "status": 503,
+        ///     "message": "MinIO connection refused",
+        ///     "responseTime": "2034ms",
+        ///     "canConnect": false,
+        ///     "endpoint": "minio:9000",
+        ///     "isBucketExist": false,
+        ///     "bucketName": "fuel-prices",
+        ///     "avalableBuckets": null
+        ///   }
+        /// }
+        /// ```
+        ///
+        /// Example response — Authentication failed
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "MinIO connection failed",
+        ///   "errors": ["MinIO auth failed - check credentials"],
+        ///   "data": {
+        ///     "status": 401,
+        ///     "message": "MinIO auth failed - check credentials",
+        ///     "responseTime": "156ms",
+        ///     "canConnect": false,
+        ///     "endpoint": "minio:9000",
+        ///     "isBucketExist": false,
+        ///     "bucketName": null,
+        ///     "avalableBuckets": null
+        ///   }
+        /// }
+        /// ```
+        ///
+        /// Notes
+        /// - `canConnect` — indicates if the MinIO server is reachable.
+        /// - `isBucketExist` — indicates if the configured bucket exists on the server.
+        /// - `responseTime` — total time measured for the connection attempt.
+        /// - `endpoint` — configured MinIO endpoint.
+        /// - `avalableBuckets` — list of all buckets discovered on the MinIO server.
+        /// - `bucketName` — name of the configured primary bucket.
+        /// </remarks>
+        /// <response code="200">MinIO connected successfully (bucket may or may not exist)</response>
+        /// <response code="401">Authentication failed - invalid credentials</response>
+        /// <response code="404">Bucket not found</response>
+        /// <response code="500">Invalid endpoint configuration or unexpected error</response>
+        /// <response code="503">Cannot connect to MinIO server</response>
+        [HttpGet("minio")]
+        public async Task<IActionResult> GetIsMinioConnectAsync()
+        {
+            var result = await _test.GetIsMinioConnectAsync();
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

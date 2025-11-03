@@ -17,7 +17,7 @@ namespace Data.Context
         public DbSet<Logging> Logging { get; set; }
         public DbSet<PriceProposal> PriceProposals { get; set; }
         public DbSet<Station> Stations { get; set; }
-        public DbSet<ProposalStatistic> ProposalStatisicts { get; set; }
+        public DbSet<ProposalStatistic> ProposalStatistics { get; set; } 
         public DbSet<StationAddress> StationAddress { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)

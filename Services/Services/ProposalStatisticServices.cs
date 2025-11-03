@@ -28,7 +28,7 @@ namespace Services.Services
                     _logger.LogWarning("Email is required to fetch user proposal statistics.");
                     return Result<GetProposalStatisticResponse>.Bad(
                         "Validation Error",
-                        StatusCodes.Status400BadRequest,
+                        StatusCodes.Status401Unauthorized,
                         new List<string> { "Email is required" }
                     );
                 }

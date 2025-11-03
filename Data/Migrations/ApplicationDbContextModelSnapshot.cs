@@ -227,6 +227,11 @@ namespace Data.Migrations
                     b.Property<Guid>("FuelTypeId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("PhotoToken")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("PhotoUrl")
                         .IsRequired()
                         .HasColumnType("text");
@@ -235,7 +240,7 @@ namespace Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<Guid>("ReviewedBy")
+                    b.Property<Guid?>("ReviewedBy")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("StationId")
@@ -288,7 +293,7 @@ namespace Data.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("ProposalStatisicts");
+                    b.ToTable("ProposalStatistics");
                 });
 
             modelBuilder.Entity("Data.Models.Station", b =>

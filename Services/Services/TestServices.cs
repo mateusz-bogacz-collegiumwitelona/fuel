@@ -97,5 +97,41 @@ namespace Services.Services
                     new List<string> { $"{ex.Message} | {ex.InnerException}" });
             }
         }
+
+        public async Task<Result<TestMinioResponse>> GetIsMinioConnectAsync()
+        {
+            try
+            {
+                var result = await _test.GetIsMinioConnectAsync();
+
+                if (result.Status != 200)
+                {
+                    var logErrors = result.Message != null ? new List<string> { result.Message } : new List<string> { "Unknown MinIO Error" };
+
+                    var statusCode = GetStatusCodeHelper.MapStatusCode(result.Status);
+
+                    return Result<TestMinioResponse>.Bad(
+                        "MinIO connection failed",
+                        statusCode,
+                        logErrors,
+                        result
+                    );
+                }
+
+                return Result<TestMinioResponse>.Good(
+                    "Postgres is reachable",
+                    StatusCodes.Status200OK,
+                    result
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while retrieving stations: {ex.Message} | {ex.InnerException}");
+                return Result<TestMinioResponse>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" });
+            }
+        }
     }
 }

@@ -6,5 +6,6 @@ namespace Data.Interfaces
     {
         Task<TestRedisResponse> GetIsRedisConnectAsync();
         Task<TestPostgresResponse> GetIsPostgresConnectAsync();
+        Task<TestMinioResponse> GetIsMinioConnectAsync();
     }
 }
