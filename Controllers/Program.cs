@@ -174,8 +174,8 @@ builder.Services.AddScoped<IProposalStatisticRepository, ProposalStatisticReposi
 builder.Services.AddScoped<ITestRepository, TestRepository>();
 builder.Services.AddScoped<IProposalStatisticRepository, ProposalStatisticRepository>();
 builder.Services.AddScoped<IPriceProposalRepository, PriceProposalRepository>();
-builder.Services.AddScoped<Data.Interfaces.IFuelTypeRepository, FuelTypeRepository>();
-
+builder.Services.AddScoped<IFuelTypeRepository, FuelTypeRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 //register services 
 builder.Services.AddScoped<ILoginRegisterServices, LoginRegisterServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
@@ -190,6 +190,7 @@ builder.Services.AddScoped<EmailSender>();
 builder.Services.AddScoped<IEmailBody,EmailBodys>();
 builder.Services.AddScoped<S3ApiHelper>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITokenFactory, TokenFactory>();
 
 builder.Services.AddControllers(op =>
 {

@@ -13,5 +13,6 @@ namespace Services.Interfaces
         Task<Result<IdentityResult>> ConfirmEmailAsync(ConfirmEmailRequest request);
         Task<Result<IdentityResult>> ForgotPasswordAsync(string email);
         Task<Result<IdentityResult>> SetNewPassowrdAsync(ResetPasswordRequest request);
+        Task<Result<IdentityResult>> HandleRefreshAsync();
     }
 }

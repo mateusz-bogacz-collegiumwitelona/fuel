@@ -130,6 +130,20 @@ namespace contlollers.Controllers.Client
                 });
         }
 
+        [HttpPost("refresh")]
+        public async Task<IActionResult> RefreshTokenAsync()
+        {
+            var result = await _login.HandleRefreshAsync();
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
         /// <summary>
         /// Register a new user account.
         /// </summary>

@@ -19,6 +19,7 @@ namespace Data.Context
         public DbSet<Station> Stations { get; set; }
         public DbSet<ProposalStatistic> ProposalStatistics { get; set; } 
         public DbSet<StationAddress> StationAddress { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -96,6 +97,18 @@ namespace Data.Context
                 .WithMany(a => a.Stations)
                 .HasForeignKey(s => s.AddressId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<RefreshToken>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Token).IsUnique();
+                entity.HasIndex(e => e.UserId);
+
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
 
            builder.Entity<StationAddress>()
                 .Property(sa => sa.Location)
