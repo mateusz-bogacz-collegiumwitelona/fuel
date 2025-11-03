@@ -1,16 +1,10 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
-using Services.Helpers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Mail;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;
-using Microsoft.Extensions.Logging;
+using System.Net.Mail;
 
 namespace Services.Services
 {

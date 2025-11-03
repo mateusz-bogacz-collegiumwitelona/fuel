@@ -1,10 +1,5 @@
 ﻿using DTO.Requests;
 using DTO.Responses;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Data.Interfaces
 {
@@ -12,5 +7,9 @@ namespace Data.Interfaces
     {
         Task<List<GetStationsResponse>> GetAllStationsForMapAsync(GetStationsRequest request);
         Task<List<GetStationsResponse>> GetNearestStationAsync(double latitude, double longitude, int? count);
+        Task<List<GetStationListResponse>> GetStationListAsync(GetStationListRequest request);
+        Task<bool> FindBrandAsync(string brandName);
+        Task<List<string>> GetAllBrandsAsync();
+        Task<GetStationListResponse> GetStationProfileAsync(GetStationProfileRequest request);
     }
 }

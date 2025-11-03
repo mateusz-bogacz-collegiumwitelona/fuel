@@ -50,10 +50,16 @@ export default function ListPage() {
   const [error, setError] = React.useState<string | null>(null);
 
   const [sortColumn, setSortColumn] = React.useState<SortColumn>(null);
-  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("asc");
+  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("desc"); // first click -> desc
 
   const [query, setQuery] = React.useState("");
   const [userCoords, setUserCoords] = React.useState<{ lat: number; lon: number } | null>(null);
+
+  // pagination state (backend-driven)
+  const [pageNumber, setPageNumber] = React.useState<number>(1);
+  const [pageSize, setPageSize] = React.useState<number>(10);
+  const [totalPages, setTotalPages] = React.useState<number>(1);
+  const [totalCount, setTotalCount] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     const token = localStorage.getItem("token");
@@ -68,7 +74,8 @@ export default function ListPage() {
     const userEmail = decoded?.email || decoded?.sub || null;
     setEmail(userEmail ?? "Zalogowany użytkownik");
 
-    fetchAllStations(token);
+    // fetch initial page
+    fetchStations(token, pageNumber, pageSize);
 
     // request geolocation so we can compute distances client-side if backend doesn't provide them
     if ("geolocation" in navigator) {
@@ -82,56 +89,188 @@ export default function ListPage() {
         { timeout: 10_000 }
       );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function fetchAllStations(token: string) {
-    setLoading(true);
-    setError(null);
+  // refetch when pageNumber or pageSize change (after initial auth check, we re-read token inside)
+  React.useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetchStations(token, pageNumber, pageSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageNumber, pageSize]);
 
-    try {
-      const res = await fetch(`${API_BASE}/api/station/map/all`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-        // empty filters -> return all stations according to controller docs
-        body: JSON.stringify({ brandName: [], locationLatitude: null, locationLongitude: null, distance: null }),
-      });
+  async function fetchStations(token: string, pageNum: number, pageSz: number) {
+  setLoading(true);
+  setError(null);
 
-      if (!res.ok) {
-        // try a GET fallback (some backends expose other endpoints)
-        const fallback = await fetch(`${API_BASE}/api/station/map/all`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        });
-        if (!fallback.ok) throw new Error(`fetch-failed ${res.status}`);
-        const data2 = await fallback.json();
-        setStations(normalizeStations(data2));
-        return;
-      }
+  // podstawowe body - bazowane na swaggerze (wersja "standard")
+  const baseBody = {
+    brandName: null,
+    locationLatitude: null,
+    locationLongitude: null,
+    distance: null,
+    fuelType: [],
+    minPrice: null,
+    maxPrice: null,
+    sortingByDisance: false,   // some swagger examples use this (typo)
+    sortingByPrice: false,
+    sortingDirection: sortDirection,
+    pagging: {
+      pageNumber: pageNum,
+      pageSize: pageSz,
+    },
+  };
 
-      const data = await res.json();
-      setStations(normalizeStations(data));
-    } catch (err) {
-      console.error("Błąd pobierania stacji:", err);
-      setError("Nie udało się pobrać listy stacji z serwera.");
-      setStations([]);
-    } finally {
-      setLoading(false);
-    }
+  // warianty kompatybilności (jeśli backend oczekuje innych nazw)
+  const altBodies = [
+    // poprawne spellingi
+    {
+      ...baseBody,
+      sortingByDistance: baseBody.sortingByDisance,
+      pagging: undefined,
+      paging: { pageNumber: pageNum, pageSize: pageSz },
+    },
+    // podajemy zarówno pagging i paging na wypadek
+    {
+      ...baseBody,
+      paging: { pageNumber: pageNum, pageSize: pageSz },
+    },
+    // wersja minimalna (czasami walidator nie lubi nullów)
+    {
+      fuelType: [],
+      pagging: { pageNumber: pageNum, pageSize: pageSz },
+    },
+  ];
+
+  async function tryPost(bodyObj: any) {
+    const res = await fetch(`${API_BASE}/api/station/list`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+      body: JSON.stringify(bodyObj),
+    });
+    return res;
   }
 
+  try {
+    // 1) Spróbuj podstawowego body
+    let res = await tryPost(baseBody);
+
+    // 2) Jeśli 400/422/404 -> spróbuj alternatyw
+    if (!res.ok && (res.status === 400 || res.status === 422 || res.status === 404)) {
+      console.warn("Primary POST failed, trying alternative bodies, status:", res.status);
+      // pokaż też treść odpowiedzi (jeśli serwer zwraca json/text)
+      try {
+        const txt = await res.text();
+        console.warn("Primary body response text:", txt);
+      } catch (e) {}
+      let ok = false;
+      for (const alt of altBodies) {
+        try {
+          const altRes = await tryPost(alt);
+          if (altRes.ok) {
+            res = altRes;
+            ok = true;
+            break;
+          } else {
+            const t = await altRes.text();
+            console.warn("Alt POST failed status:", altRes.status, "body tried:", alt, "response:", t);
+          }
+        } catch (e) {
+          console.error("Alt POST threw", e);
+        }
+      }
+      if (!ok && !res.ok) {
+        // spróbuj GET jako ostatnia opcja
+        try {
+          const fallback = await fetch(`${API_BASE}/api/station/list`, {
+            headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+          });
+          if (fallback.ok) {
+            const data2 = await fallback.json();
+            applyListResponse(data2);
+            return;
+          } else {
+            const txt = await fallback.text();
+            throw new Error(`Fallback GET failed: ${fallback.status} ${txt}`);
+          }
+        } catch (e) {
+          throw e;
+        }
+      }
+    }
+
+    if (!res.ok) {
+      // jeśli tu dotarliśmy, to mamy res nie-ok i nie udał się fallback - wypisz szczegóły
+      const text = await res.text().catch(() => "<brak treści>");
+      console.error("fetchStations: non-ok response:", res.status, text);
+      setError(`Serwer zwrócił błąd: ${res.status}. Sprawdź konsolę network / logs backendu.`);
+      setStations([]);
+      setTotalCount(null);
+      setTotalPages(1);
+      return;
+    }
+
+    // OK
+    const data = await res.json();
+    applyListResponse(data);
+  } catch (err: any) {
+    console.error("Błąd pobierania stacji:", err);
+    // pokaż szczegół jeśli to fetch/CORS – CORS zwykle blokuje dostęp do odpowiedzi i rzuca TypeError
+    if (err instanceof TypeError) {
+      setError("Błąd sieci / CORS: sprawdź konsolę network (może brakuje Access-Control-Allow-Origin na backendzie).");
+    } else {
+      setError("Nie udało się pobrać listy stacji z serwera. Sprawdź konsolę w devtools i logi serwera.");
+    }
+    setStations([]);
+    setTotalCount(null);
+    setTotalPages(1);
+  } finally {
+    setLoading(false);
+  }
+}
+
+ function applyListResponse(data: any) {
+  // swagger sample uses { items: [...], pageNumber, pageSize, totalCount, totalPages }
+  const items = Array.isArray(data.items)
+    ? data.items
+    : Array.isArray(data)
+    ? data
+    : Array.isArray(data?.stations)
+    ? data.stations
+    : [];
+
+  // totalCount: prefer number from server, otherwise fallback to items length
+  const totalCountVal = typeof data.totalCount === "number" ? data.totalCount : items.length;
+
+  // pageSize: prefer server pageSize if valid, otherwise fallback to items length or 1
+  const pageSizeVal =
+    typeof data.pageSize === "number" && data.pageSize > 0 ? data.pageSize : Math.max(1, items.length || 1);
+
+  // totalPages: prefer server value if valid, otherwise compute from totalCount/pageSize
+  const totalPagesVal =
+    typeof data.totalPages === "number" && data.totalPages > 0
+      ? data.totalPages
+      : Math.max(1, Math.ceil(totalCountVal / pageSizeVal));
+
+  setStations(normalizeStations(items));
+  setTotalCount(totalCountVal);
+  setTotalPages(totalPagesVal);
+  setPageNumber(typeof data.pageNumber === "number" && data.pageNumber > 0 ? data.pageNumber : 1);
+}
+
+
   function normalizeStations(data: any): Station[] {
-    // backend might return array or { stations: [...] }
-    const arr = Array.isArray(data) ? data : Array.isArray(data?.stations) ? data.stations : [];
+    // backend might return array or { stations: [...] } or { items: [...] }
+    const arr = Array.isArray(data) ? data : Array.isArray(data?.stations) ? data.stations : Array.isArray(data?.items) ? data.items : [];
 
     return arr.map((s: any) => {
       // try to unify naming
-      const fuelPrices = s.fuelPrices ?? s.prices ?? null;
+      const fuelPrices = s.fuelPrices ?? s.prices ?? s.fuelPrice ?? s.fuelPriceList ?? null;
 
       const normalized: Station = {
         id: s.id ?? s.stationId ?? undefined,
@@ -145,7 +284,7 @@ export default function ListPage() {
         city: s.city ?? s.town ?? s.locationCity ?? undefined,
         imageUrl: s.imageUrl ?? s.image ?? undefined,
         address: s.address ?? undefined,
-        distanceMeters: s.distanceMeters ?? s.distanceInMeters ?? (typeof s.distance === "number" && s.distance > 1000 ? s.distance : undefined),
+        distanceMeters: s.distanceMeters ?? s.distanceInMeters ?? (typeof s.distance === "number" ? s.distance : undefined),
         fuelPrices: fuelPrices,
         pricePb95: s.pricePb95 ?? s.pb95 ?? null,
         priceDiesel: s.priceDiesel ?? s.on ?? null,
@@ -225,7 +364,7 @@ export default function ListPage() {
       return newS;
     });
 
-    // filter by query
+    // filter by query (client-side; will be replaced later with backend filtering if needed)
     const q = query.trim().toLowerCase();
     let out = withComputed.filter((s) => {
       if (!q) return true;
@@ -303,18 +442,72 @@ export default function ListPage() {
       setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortColumn(col);
-      setSortDirection("asc"); // first click -> asc ("↓" as requested)
+      setSortDirection("desc"); // first click -> desc with "↓" per your request
     }
   }
 
   function showArrow(col: SortColumn) {
     if (sortColumn !== col) return null;
-    return sortDirection === "asc" ? "↓" : "↑";
+    // per request: first click sorts descending and shows "↓", second click ascending shows "↑"
+    return sortDirection === "desc" ? "↓" : "↑";
   }
 
   function formatPriceValue(val: number | null | undefined) {
     if (val == null || Number.isNaN(val)) return "-";
     return `${Number(val).toFixed(2)} zł`;
+  }
+
+  function onPageSizeChange(newSize: number) {
+    setPageSize(newSize);
+    setPageNumber(1); // reset to first page when size changes
+  }
+
+  function goToPage(p: number) {
+    if (p < 1) p = 1;
+    if (p > totalPages) p = totalPages;
+    setPageNumber(p);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // small helper to render page buttons (shows a window of pages)
+  function renderPageButtons() {
+    const pages: number[] = [];
+    const windowSize = 5;
+    let start = Math.max(1, pageNumber - Math.floor(windowSize / 2));
+    let end = start + windowSize - 1;
+    if (end > totalPages) {
+      end = totalPages;
+      start = Math.max(1, end - windowSize + 1);
+    }
+    for (let i = start; i <= end; i++) pages.push(i);
+
+    return (
+      <div className="flex items-center gap-2">
+        <button className="btn btn-sm" onClick={() => goToPage(1)} disabled={pageNumber === 1}>
+          «1
+        </button>
+        <button className="btn btn-sm" onClick={() => goToPage(pageNumber - 1)} disabled={pageNumber === 1}>
+          ←
+        </button>
+
+        {pages.map((p) => (
+          <button
+            key={p}
+            className={`btn btn-sm ${p === pageNumber ? "btn-active" : ""}`}
+            onClick={() => goToPage(p)}
+          >
+            {p}
+          </button>
+        ))}
+
+        <button className="btn btn-sm" onClick={() => goToPage(pageNumber + 1)} disabled={pageNumber === totalPages}>
+          →
+        </button>
+        <button className="btn btn-sm" onClick={() => goToPage(totalPages)} disabled={pageNumber === totalPages}>
+          {totalPages} »
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -323,13 +516,10 @@ export default function ListPage() {
 
       <main className="mx-auto max-w-6xl px-4 py-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold">
-            Lista stacji benzynowych
-          </h1>
-            <a href="/dashboard"
-            className="btn btn-active btn-info">
+          <h1 className="text-2xl md:text-3xl font-bold">Lista stacji benzynowych</h1>
+          <a href="/dashboard" className="btn btn-outline">
             ← Powrót do dashboardu
-            </a>
+          </a>
         </div>
 
         <section className="bg-base-300 p-4 rounded-xl shadow-md mb-6">
@@ -343,7 +533,24 @@ export default function ListPage() {
               />
             </div>
 
-            <div className="text-sm text-gray-400">Znaleziono: {stations ? sortedAndFiltered.length : "-"}</div>
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-400">Znaleziono: {totalCount ?? (stations ? stations.length : "-")}</div>
+
+              <div className="flex items-center gap-2 text-sm">
+                <label>Stacji na stronę:</label>
+                <select
+                  className="select select-sm"
+                  value={pageSize}
+                  onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                >
+                  {[10, 20, 30, 40, 50].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
           {loading ? (
@@ -351,66 +558,86 @@ export default function ListPage() {
           ) : error ? (
             <div className="text-red-400">{error}</div>
           ) : stations && stations.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="table table-compact w-full">
-                <thead>
-                  <tr>
-                    <th className="cursor-pointer" onClick={() => toggleSort("name")}>Nazwa {showArrow("name")}</th>
-                    <th className="cursor-pointer" onClick={() => toggleSort("benzyna")}>Cena benzyny {showArrow("benzyna")}</th>
-                    <th className="cursor-pointer" onClick={() => toggleSort("diesel")}>Cena diesel {showArrow("diesel")}</th>
-                    <th className="cursor-pointer" onClick={() => toggleSort("lpg")}>Cena LPG {showArrow("lpg")}</th>
-                    <th className="cursor-pointer" onClick={() => toggleSort("distance")}>Odległość {showArrow("distance")}</th>
-                    <th className="cursor-pointer" onClick={() => toggleSort("city")}>Miasto {showArrow("city")}</th>
-                    <th className="cursor-pointer" onClick={() => toggleSort("street")}>Ulica {showArrow("street")}</th>
-                    <th>Akcje</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedAndFiltered.map((s, idx) => {
-                    const name = s.name ?? s.brandName ?? "-";
-                    const benz = extractPrice(s, benzynaCandidates);
-                    const dies = extractPrice(s, dieselCandidates);
-                    const lpg = extractPrice(s, lpgCandidates);
-                    const distance = s.distanceMeters ?? null;
+            <>
+              <div className="overflow-x-auto">
+                <table className="table table-compact w-full">
+                  <thead>
+                    <tr>
+                      <th className="cursor-pointer" onClick={() => toggleSort("name")}>
+                        Nazwa {showArrow("name")}
+                      </th>
+                      <th className="cursor-pointer" onClick={() => toggleSort("benzyna")}>
+                        Cena benzyny {showArrow("benzyna")}
+                      </th>
+                      <th className="cursor-pointer" onClick={() => toggleSort("diesel")}>
+                        Cena diesel {showArrow("diesel")}
+                      </th>
+                      <th className="cursor-pointer" onClick={() => toggleSort("lpg")}>
+                        Cena LPG {showArrow("lpg")}
+                      </th>
+                      <th className="cursor-pointer" onClick={() => toggleSort("distance")}>
+                        Odległość {showArrow("distance")}
+                      </th>
+                      <th className="cursor-pointer" onClick={() => toggleSort("city")}>
+                        Miasto {showArrow("city")}
+                      </th>
+                      <th className="cursor-pointer" onClick={() => toggleSort("street")}>
+                        Ulica {showArrow("street")}
+                      </th>
+                      <th>Akcje</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedAndFiltered.map((s, idx) => {
+                      const name = s.name ?? s.brandName ?? "-";
+                      const benz = extractPrice(s, benzynaCandidates);
+                      const dies = extractPrice(s, dieselCandidates);
+                      const lpg = extractPrice(s, lpgCandidates);
+                      const distance = s.distanceMeters ?? null;
 
-                    return (
-                      <tr key={s.id ?? `${name}-${idx}`}>
-                        <td>
-                          <a
-                            className="font-medium hover:underline cursor-pointer"
-                            onClick={() => toggleSort("name")}
-                          >
-                            {name}
-                          </a>
-                        </td>
-                        <td>{formatPriceValue(benz)}</td>
-                        <td>{formatPriceValue(dies)}</td>
-                        <td>{formatPriceValue(lpg)}</td>
-                        <td>{formatDistance(distance ?? undefined)}</td>
-                        <td>{s.city ?? "-"}</td>
-                        <td>{`${s.street ?? "-"}${s.houseNumber ? " " + s.houseNumber : ""}`}</td>
-                        <td>
-                          <div className="flex gap-2">
-                            <a
-                              href={`/map?lat=${s.latitude ?? ""}&lon=${s.longitude ?? ""}`}
-                              className="btn btn-xs btn-outline"
-                            >
-                              Pokaż na mapie
+                      return (
+                        <tr key={s.id ?? `${name}-${idx}`}>
+                          <td>
+                            <a className="font-medium hover:underline cursor-pointer" onClick={() => toggleSort("name")}>
+                              {name}
                             </a>
-                            <a
-                              href={`/list#${encodeURIComponent(s.id ?? name ?? String(idx))}`}
-                              className="btn btn-xs btn-outline btn-primary"
-                            >
-                              Szczegóły
-                            </a>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          </td>
+                          <td>{formatPriceValue(benz)}</td>
+                          <td>{formatPriceValue(dies)}</td>
+                          <td>{formatPriceValue(lpg)}</td>
+                          <td>{formatDistance(distance ?? undefined)}</td>
+                          <td>{s.city ?? "-"}</td>
+                          <td>{`${s.street ?? "-"}${s.houseNumber ? " " + s.houseNumber : ""}`}</td>
+                          <td>
+                            <div className="flex gap-2">
+                              <a
+                                href={`/map?lat=${s.latitude ?? ""}&lon=${s.longitude ?? ""}`}
+                                className="btn btn-xs btn-outline"
+                              >
+                                Pokaż na mapie
+                              </a>
+                              <a
+                                href={`/list#${encodeURIComponent(s.id ?? name ?? String(idx))}`}
+                                className="btn btn-xs btn-outline btn-primary"
+                              >
+                                Szczegóły
+                              </a>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between">
+                <div>{renderPageButtons()}</div>
+                <div className="text-sm text-gray-400">
+                  Strona {pageNumber} / {totalPages} — {totalCount ?? (stations ? stations.length : 0)} wyników
+                </div>
+              </div>
+            </>
           ) : (
             <div className="text-gray-300">Brak dostępnych stacji.</div>
           )}

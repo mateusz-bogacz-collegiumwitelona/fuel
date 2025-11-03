@@ -4,10 +4,6 @@ using Data.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog.Events;
 using Serilog.Sinks.PeriodicBatching;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Data.Config
 {
