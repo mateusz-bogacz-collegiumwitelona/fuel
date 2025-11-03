@@ -1,15 +1,8 @@
-merge z stationProfile
+merge z userSettings
 
 co zrobiłem:
 
-- endpoint do wyśiwtlenia danych użytkownika
-- endpoint do zmiany nazwy użytkownika
-- edpoint do rejstracji (zwraca token)
-- endpoint weryfikujący rejstracje
-- endpoint do przypomninia hasła
-- endpoint weryfikujący przypomnienie hasła
-- endpoint do zmiany maila
-- endpoint do zmiany hasła
-- dodanie endpoint usunięcia konta
+- poprawa logowania
+- zrobienie refresh token
 
-# Ważne: ze względów bezpieczeństwa funkcje wymagające emaila użytkownika zostały zmienione, teraz email jest brany z tokena JWT
+# Ważne: teraz jwt jest przechowywany w httpolnycookie
