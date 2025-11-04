@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc.Razor.Internal;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Minio;
 using Minio.DataModel.Args;
 using Minio.Exceptions;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace Data.Helpers
 {
@@ -218,17 +218,13 @@ namespace Data.Helpers
             try
             {
                 if (string.IsNullOrWhiteSpace(objectPath))
-                {
                     throw new ArgumentException("Object path must be provided", nameof(objectPath));
-                }
 
                 int expiryInSeconds = 3600;
                 var targetBucket = bucketName ?? _config["MinIO:BucketName"];
 
                 if (string.IsNullOrWhiteSpace(targetBucket))
-                {
                     throw new ArgumentException("Bucket name must be provided", nameof(targetBucket));
-                }
 
                 var presignedGetObjectArgs = new PresignedGetObjectArgs()
                     .WithBucket(targetBucket)

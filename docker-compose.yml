@@ -33,10 +33,11 @@ services:
       - Mail__Host=mailpit
       - ASPNETCORE_URLS=http://+:8080
       - ASPNETCORE_HTTP_PORTS=8080
-      - MinIO__Endpoint-minio:9000 #jak zmienicie port api to tu też trzeba zmenić
+      - MinIO__Endpoint=localhost:9000 #jak zmienicie port api to tu też trzeba zmenić
+      - MinIO__PublicUrl=localhost:9000 #jak zmienicie port api to tu też trzeba zmenić
       - MinIO__AccessKey=${MINIO_ROOT_USER}
       - MinIO__SecretKey=${MINIO_ROOT_PASSWORD}
-      - MinIO__UseSsl=false
+      - MinIO__UseSSL=false
     ports:
       - "${API_PORT}:8080"
     networks:

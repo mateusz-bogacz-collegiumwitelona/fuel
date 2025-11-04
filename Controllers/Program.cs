@@ -151,14 +151,23 @@ builder.Services.Configure<MinIOSettings>(
 builder.Services.AddSingleton<IMinioClient>(sp =>
 {
     var settings = sp.GetRequiredService<IOptions<MinIOSettings>>().Value;
+    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("MinIOConfig");
+
+    logger.LogWarning("=== CONFIGURING MINIO CLIENT ===");
+    logger.LogWarning("Endpoint: {Endpoint}", settings.Endpoint);
+    logger.LogWarning("PublicUrl: {PublicUrl}", settings.PublicUrl);
+    logger.LogWarning("AccessKey: {AccessKey}", settings.AccessKey);
+    logger.LogWarning("BucketName: {BucketName}", settings.BucketName);
+    logger.LogWarning("UseSSL: {UseSSL}", settings.UseSSL);
 
     var client = new MinioClient()
         .WithEndpoint(settings.Endpoint)
-        .WithCredentials(settings.AccessKey, settings.SecretKey);
+        .WithCredentials(settings.AccessKey, settings.SecretKey)
+        .WithSSL(settings.UseSSL) 
+        .Build();
 
-    if (settings.UseSSL) client = client.WithSSL();
-
-    return client.Build();
+    return client;
 });
 
 //register repo 
