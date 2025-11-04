@@ -6,7 +6,7 @@ using Services.Interfaces;
 namespace Controllers.Controllers.Admin
 {
     [ApiController]
-    [Route("api/test")]
+    [Route("api/admin/test")]
     [EnableCors("AllowClient")]
     [Authorize(Roles = "Admin")]
     public class TestContloller : ControllerBase

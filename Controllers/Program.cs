@@ -177,7 +177,8 @@ builder.Services.AddScoped<IProposalStatisticRepository, ProposalStatisticReposi
 builder.Services.AddScoped<ITestRepository, TestRepository>();
 builder.Services.AddScoped<IProposalStatisticRepository, ProposalStatisticRepository>();
 builder.Services.AddScoped<IPriceProposalRepository, PriceProposalRepository>();
-builder.Services.AddScoped<Data.Interfaces.IFuelTypeRepository, FuelTypeRepository>();
+builder.Services.AddScoped<IFuelTypeRepository, FuelTypeRepository>();
+builder.Services.AddScoped<IBrandRepository, BrandRepository>();
 
 //register services 
 builder.Services.AddScoped<ILoginRegisterServices, LoginRegisterServices>();
@@ -187,6 +188,7 @@ builder.Services.AddScoped<IProposalStatisticServices, ProposalStatisticServices
 builder.Services.AddScoped<ITestServices, TestServices>();
 builder.Services.AddScoped<IPriceProposalServices, PriceProposalServices>();
 builder.Services.AddScoped<IFuelTypeServices, FuelTypeServices>();
+builder.Services.AddScoped<IBrandServices, BrandServices>();
 
 //register helpers
 builder.Services.AddScoped<EmailSender>();

@@ -130,7 +130,6 @@ namespace Data.Seeder
                         {
                             Id = Guid.NewGuid(),
                             Name = brandName,
-                            LogoUrl = " ",
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
                         };
@@ -201,7 +200,6 @@ namespace Data.Seeder
                         {
                             Id = Guid.NewGuid(),
                             Name = brandName,
-                            LogoUrl = " ",
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
                         };
