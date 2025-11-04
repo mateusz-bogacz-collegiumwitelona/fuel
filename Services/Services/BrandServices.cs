@@ -5,11 +5,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Services.Services
 {
@@ -75,6 +70,86 @@ namespace Services.Services
                     StatusCodes.Status500InternalServerError,
                     new List<string> { ex.Message }
                 );
+            }
+        }
+        public async Task<Result<List<string>>> GetAllBrandsAsync()
+        {
+            try
+            {
+                var result = await _brandRepository.GetAllBrandsAsync();
+
+                if (result == null || result.Count == 0)
+                    return Result<List<string>>.Bad(
+                        "No brands found.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "No brands available in the database." });
+
+
+                return Result<List<string>>.Good(
+                    $"Succes: {result.Count} is listed",
+                    StatusCodes.Status200OK,
+                    result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while retrieving station list: {ex.Message} | {ex.InnerException}");
+                return Result<List<string>>.Bad(
+                        "An error occurred while processing your request.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { $"{ex.Message} | {ex.InnerException}" });
+            }
+        }
+        public async Task<Result<bool>> EditBrandAsync(string oldName, string newName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(oldName) || string.IsNullOrWhiteSpace(oldName))
+                {
+                    _logger.LogWarning("Validation error. OldName is null, empyt white space");
+
+                    return Result<bool>.Bad(
+                        "Valiadtion error",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "OldName is null, empyt white space" }
+                        );
+                }
+
+                if (string.IsNullOrEmpty(newName) || string.IsNullOrWhiteSpace(newName))
+                {
+                    _logger.LogWarning("Validation error. NewName is null, empyt white space");
+
+                    return Result<bool>.Bad(
+                        "Valiadtion error",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "NewName is null, empyt white space" }
+                        );
+                }
+
+                var result = await _brandRepository.EditBrandAsync(oldName, newName);
+
+                if (!result)
+                {
+                    _logger.LogError("Server error. Cannot edit Brand");
+                    return Result<bool>.Bad(
+                       "Server error",
+                       StatusCodes.Status500InternalServerError,
+                       new List<string> { "Cannot edit Brand" }
+                       );
+                }
+
+                return Result<bool>.Good(
+                       $"Brand {oldName} edited successfull",
+                       StatusCodes.Status200OK,
+                       result
+                       );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while editing station: {ex.Message} | {ex.InnerException}");
+                return Result<bool>.Bad(
+                        "An error occurred while processing your request.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { $"{ex.Message} | {ex.InnerException}" });
             }
         }
     }

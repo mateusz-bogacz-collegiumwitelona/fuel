@@ -40,7 +40,7 @@ namespace Controllers.Controllers.Admin
         ///   "postalCode": "59-220",
         ///   "fuelType": "ON",
         ///   "proposedPrice": 4.44,
-        ///   "photoUrl": "http://localhost:9000/fuel-prices/fuel-prices/2025/10/27/bf06dcd0-5de2-423f-9668-1b41e9cf37c0.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=user%2F20251028%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20251028T214835Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=30abd7f03c798ea2d1b5d880c52a2c01b2d0544394d830b411861d514c5cc005",
+        ///   "photoUrl": "http://localhost:9000/fuel-prices/...",
         ///   "createdAt": "2025-10-27T15:31:18.372993Z"
         /// }
         /// ```

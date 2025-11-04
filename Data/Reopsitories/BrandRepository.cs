@@ -67,5 +67,24 @@ namespace Data.Reopsitories
 
             return result;
         }
+
+        public async Task<List<string>> GetAllBrandsAsync()
+            => await _context.Brand.Select(b => b.Name).ToListAsync();
+        public async Task<bool> FindBrandAsync(string brandName)
+            => await _context.Brand.AnyAsync(b => b.Name.ToLower() == brandName.ToLower());
+
+        public async Task<bool> EditBrandAsync(string oldName, string newName)
+        {
+            var brand = await _context.Brand.FirstOrDefaultAsync(b => b.Name.ToLower() == oldName.ToLower());
+
+            if (brand == null) return false;
+
+            brand.Name = newName;
+            brand.UpdatedAt = DateTime.UtcNow;
+
+            var result = await _context.SaveChangesAsync();
+
+            return result > 0;
+        }
     }
 }

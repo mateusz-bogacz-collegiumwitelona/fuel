@@ -13,13 +13,16 @@ namespace Services.Services
     {
         private readonly IStationRepository _stationRepository;
         private readonly ILogger<StationServices> _logger;
+        private readonly IBrandRepository _brandRepository;
 
         public StationServices(
             IStationRepository stationRepository,
-           ILogger<StationServices> logger)
+           ILogger<StationServices> logger,
+           IBrandRepository brandRepository)
         {
             _stationRepository = stationRepository;
             _logger = logger;
+            _brandRepository = brandRepository;
         }
 
         public async Task<Result<List<GetStationsResponse>>> GetAllStationsForMapAsync(GetStationsRequest request)
@@ -129,7 +132,7 @@ namespace Services.Services
 
                 if (!string.IsNullOrEmpty(request.BrandName))
                 {
-                    bool isBrandExist = await _stationRepository.FindBrandAsync(request.BrandName);
+                    bool isBrandExist = await _brandRepository.FindBrandAsync(request.BrandName);
 
                     if (!isBrandExist)
                     {
@@ -222,34 +225,6 @@ namespace Services.Services
                     StatusCodes.Status500InternalServerError,
                     new List<string> { $"{ex.Message} | {ex.InnerException}" });
 
-            }
-        }
-
-        public async Task<Result<List<string>>> GetAllBrandsAsync()
-        { 
-            try
-            {
-                var result = await _stationRepository.GetAllBrandsAsync();
-
-                if (result == null || result.Count == 0)
-                    return Result<List<string>>.Bad(
-                        "No brands found.",
-                        StatusCodes.Status404NotFound,
-                        new List<string> { "No brands available in the database." });
-
-
-                return Result<List<string>>.Good(
-                    $"Succes: {result.Count} is listed",
-                    StatusCodes.Status200OK,
-                    result);
-            } 
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"An error occurred while retrieving station list: {ex.Message} | {ex.InnerException}");
-                return Result<List<string>>.Bad(
-                        "An error occurred while processing your request.",
-                        StatusCodes.Status404NotFound,
-                        new List<string> {$"{ex.Message} | {ex.InnerException}" });
             }
         }
 

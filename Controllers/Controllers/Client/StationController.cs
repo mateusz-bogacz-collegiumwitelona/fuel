@@ -17,15 +17,17 @@ namespace Contlollers.Controllers.Client
         private readonly IStationServices _stationServices;
         private readonly IPriceProposalServices _priceProposalServices;
         private readonly IFuelTypeServices _fuelTypeServices;
-
+        private readonly IBrandServices _brandServices;
         public StationController(
             IStationServices stationServices,
             IPriceProposalServices priceProposalServices,
-            IFuelTypeServices fuelTypeServices)
+            IFuelTypeServices fuelTypeServices,
+            IBrandServices brandServices)
         {
             _stationServices = stationServices;
             _priceProposalServices = priceProposalServices;
             _fuelTypeServices = fuelTypeServices;
+            _brandServices = brandServices;
         }
 
         /// <summary>
@@ -434,7 +436,7 @@ namespace Contlollers.Controllers.Client
         [HttpGet("all-brands")]
         public async Task<IActionResult> GetAllBrandsAsync()
         {
-            var result = await _stationServices.GetAllBrandsAsync(); 
+            var result = await _brandServices.GetAllBrandsAsync(); 
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new
