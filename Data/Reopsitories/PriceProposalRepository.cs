@@ -73,9 +73,8 @@ namespace Data.Repositories
                 };
 
                 string fileName = $"{proposal.Id}{extension}";
-                string subPath = $"fuel-prices/{DateTime.UtcNow:yyyy/MM/dd}";
-                
-                string? bucketName = _config["MinIO:fuel-prices"];  
+                string subPath = $"{DateTime.UtcNow:yyyy/MM/dd}";
+                string bucketName = _config["MinIO:BucketName"] ?? "fuel-prices";
 
                 await using var photoStream = photo.OpenReadStream();
 
@@ -116,7 +115,7 @@ namespace Data.Repositories
 
                 if (!string.IsNullOrEmpty(photoUrl))
                 {
-                    string? bucketName = _config["MinIO:PriceProposalsBucket"];
+                    string bucketName = _config["MinIO:BucketName"] ?? "fuel-prices";  
                     var deleted = await _s3ApiHelper.DeleteFileAsync(photoUrl, bucketName);
 
                     if (deleted)

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Helpers;
 using Services.Interfaces;
+using System.Security.Claims;
 
 namespace Contlollers.Controllers.Client
 {
@@ -540,7 +541,6 @@ namespace Contlollers.Controllers.Client
         /// POST /api/price-proposal/add
         /// Content-Type: multipart/form-data
         ///
-        /// Email: user@example.pl
         /// BrandName: Orlen
         /// Street: Ignacego Domejki
         /// HouseNumber: 1a
@@ -569,7 +569,6 @@ namespace Contlollers.Controllers.Client
         /// ```
         ///
         /// Validation rules  
-        /// - **Email**: Required, must be a valid email format, user must exist in the system.
         /// - **BrandName**: Gas station brand name (e.g., Orlen, Shell, BP). Required.
         /// - **Street**: Street name where the station is located. Required.
         /// - **HouseNumber**: Street number of the station. Required.
@@ -579,6 +578,7 @@ namespace Contlollers.Controllers.Client
         /// - **Photo**: Required, max size **5 MB**, allowed formats: **JPEG, JPG, PNG, WEBP**.
         ///
         /// Notes  
+        /// - User email is automatically retrieved from JWT token claims.
         /// - The station must exist in the database (matched by brand name, street, house number, and city).
         /// - The user must be registered and authenticated in the system.
         /// - The photo is stored in MinIO with a unique filename based on the proposal ID.
@@ -594,7 +594,19 @@ namespace Contlollers.Controllers.Client
         [HttpPost("price-proposal/add")]
         public async Task<IActionResult> AddNewPriceProposalAsync([FromForm] AddNewPriceProposalRequest request)
         {
-            var result = await _priceProposalServices.AddNewProposalAsync(request);
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            if (string.IsNullOrEmpty(email))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User not authenticated"
+                });
+
+            }
+
+            var result = await _priceProposalServices.AddNewProposalAsync(email ,request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

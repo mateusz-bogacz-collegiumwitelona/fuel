@@ -6,7 +6,7 @@ namespace Services.Interfaces
 {
     public interface IPriceProposalServices
     {
-        Task<Result<string>> AddNewProposalAsync(AddNewPriceProposalRequest request);
+        Task<Result<string>> AddNewProposalAsync(string email, AddNewPriceProposalRequest request);
         Task<Result<GetPriceProposalResponse>> GetPriceProposal(string photoToken);
     }
 }

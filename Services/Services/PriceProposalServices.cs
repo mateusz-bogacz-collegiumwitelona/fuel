@@ -35,7 +35,7 @@ namespace Services.Services
             _fuelTypeRepository = fuelTypeRepository;
         }
 
-        public async Task<Result<string>> AddNewProposalAsync(AddNewPriceProposalRequest request)
+        public async Task<Result<string>> AddNewProposalAsync(string email, AddNewPriceProposalRequest request)
         {
             var stopwatch = Stopwatch.StartNew();
             try
@@ -74,11 +74,11 @@ namespace Services.Services
                         );
                 }
 
-                var user = await _userManager.FindByEmailAsync(request.Email);
+                var user = await _userManager.FindByEmailAsync(email);
 
                 if (user == null)
                 {
-                    _logger.LogWarning("User with email {Email} not found.", request.Email);
+                    _logger.LogWarning("User with email {Email} not found.", email);
                     return Result<string>.Bad(
                         "Validation error",
                         StatusCodes.Status400BadRequest,

@@ -5,10 +5,6 @@ namespace DTO.Requests
 {
     public class AddNewPriceProposalRequest
     {
-        /// user info
-        [Required(ErrorMessage = "Email is required")]
-        [EmailAddress(ErrorMessage = "Invalid email format")]
-        public string Email { get; set; }
 
         /// station info
         public string BrandName { get; set; }
