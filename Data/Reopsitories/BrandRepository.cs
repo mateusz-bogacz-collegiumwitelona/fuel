@@ -86,5 +86,22 @@ namespace Data.Reopsitories
 
             return result > 0;
         }
+
+        public async Task<bool> AddBrandAsync(string name)
+        {
+            var brand = new Brand
+            {
+                Name = name,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _context.Brand.AddAsync(brand);
+
+            var result = await _context.SaveChangesAsync();
+
+            return result > 0;
+        }
+
     }
 }

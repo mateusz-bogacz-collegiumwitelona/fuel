@@ -64,7 +64,7 @@ namespace Services.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while retrieving brands.");
+                _logger.LogError(ex, "An error occurred while retrieving brands list.");
                 return Result<PagedResult<GetBrandDataResponse>>.Bad(
                     "An error occurred while retrieving brands",
                     StatusCodes.Status500InternalServerError,
@@ -92,7 +92,7 @@ namespace Services.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"An error occurred while retrieving station list: {ex.Message} | {ex.InnerException}");
+                _logger.LogError(ex, $"An error occurred while retrieving brand: {ex.Message} | {ex.InnerException}");
                 return Result<List<string>>.Bad(
                         "An error occurred while processing your request.",
                         StatusCodes.Status404NotFound,
@@ -145,7 +145,62 @@ namespace Services.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"An error occurred while editing station: {ex.Message} | {ex.InnerException}");
+                _logger.LogError(ex, $"An error occurred while editing brand: {ex.Message} | {ex.InnerException}");
+                return Result<bool>.Bad(
+                        "An error occurred while processing your request.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { $"{ex.Message} | {ex.InnerException}" });
+            }
+        }
+
+        public async Task<Result<bool>> AddBrandAsync(string name)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
+                {
+                    _logger.LogWarning("Validation error. Name is null, empyt white space");
+
+                    return Result<bool>.Bad(
+                        "Valiadtion error",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Name is null, empyt white space" }
+                        );
+                }
+
+                var isBrandExist = await _brandRepository.FindBrandAsync(name);
+
+                if (isBrandExist)
+                {
+                    _logger.LogWarning("Brand {Name} already exists", name);
+                    return Result<bool>.Bad(
+                        "Appliaction Error",
+                        StatusCodes.Status409Conflict,
+                        new List<string> { "Brand already exists" }
+                        );
+                }
+
+                var result = await _brandRepository.AddBrandAsync(name);
+
+                if (!result)
+                {
+                    _logger.LogError("Server error. Cannot add Brand");
+                    return Result<bool>.Bad(
+                       "Server error",
+                       StatusCodes.Status500InternalServerError,
+                       new List<string> { "Cannot add Brand" }
+                       );
+                }
+
+                return Result<bool>.Good(
+                       $"Brand {name} add successfull",
+                       StatusCodes.Status201Created,
+                       result
+                       );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while add brand: {ex.Message} | {ex.InnerException}");
                 return Result<bool>.Bad(
                         "An error occurred while processing your request.",
                         StatusCodes.Status404NotFound,

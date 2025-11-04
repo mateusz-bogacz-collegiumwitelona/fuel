@@ -161,5 +161,79 @@ namespace Controllers.Controllers.Admin
                     Data = result.Data
                 });
         }
+        /// <summary>
+        /// Add a new fuel brand.
+        /// </summary>
+        /// <remarks>
+        /// Description: Creates a new fuel brand entry in the database.  
+        /// The request must contain a brand name, which will be validated to ensure it’s not null or empty.
+        ///
+        /// Example request (JSON)
+        /// ```http
+        /// POST /api/admin/brand/add
+        /// Content-Type: application/json
+        ///
+        /// {
+        ///   "name": "Orlen"
+        /// }
+        /// ```
+        ///
+        /// Example request (form-data)
+        /// ```http
+        /// POST /api/admin/brand/add
+        /// Content-Type: multipart/form-data
+        ///
+        /// name=Orlen
+        /// ```
+        ///
+        /// Example response (success)
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "Brand Orlen add successful",
+        ///   "data": true
+        /// }
+        /// ```
+        ///
+        /// Example response (validation error)
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Validation error",
+        ///   "errors": [ "Name is null, empty or whitespace" ],
+        ///   "data": false
+        /// }
+        /// ```
+        ///
+        /// Notes:
+        /// - The brand name must be unique (case-insensitive).
+        /// - The `CreatedAt` and `UpdatedAt` timestamps are automatically assigned by the server.
+        /// - Only users with the **Admin** role can access this endpoint.
+        /// </remarks>
+        /// <param name="name">The name of the brand to add.</param>
+        /// <response code="201">Brand successfully added.</response>
+        /// <response code="400">Validation error – brand name is invalid or empty.</response>
+        /// <response code="401">Unauthorized – missing or invalid JWT token.</response>
+        /// <response code="403">Forbidden – user does not have permission to add brands.</response>
+        /// <response code="500">Internal server error while processing the request.</response>
+        [HttpPost("add")]
+        public async Task<IActionResult> AddBrandAsync([FromForm] string name)
+        {
+            var result = await _brandServices.AddBrandAsync(name);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    Data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    Data = result.Data
+                });
+        }
     }
 }

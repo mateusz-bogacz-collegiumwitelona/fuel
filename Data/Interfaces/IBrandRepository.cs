@@ -8,5 +8,6 @@ namespace Data.Interfaces
         Task<List<string>> GetAllBrandsAsync();
         Task<bool> FindBrandAsync(string brandName);
         Task<bool> EditBrandAsync(string oldName, string newName);
+        Task<bool> AddBrandAsync(string name);
     }
 }
