@@ -207,5 +207,60 @@ namespace Services.Services
                         new List<string> { $"{ex.Message} | {ex.InnerException}" });
             }
         }
+
+        public async Task<Result<bool>> DeleteBrandAsync(string name)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
+                {
+                    _logger.LogWarning("Validation error. Name is null, empyt white space");
+                    return Result<bool>.Bad(
+                        "Valiadtion error",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Name is null, empyt white space" }
+                        );
+                }
+
+                var isBrandExist = await _brandRepository.FindBrandAsync(name);
+
+                if (!isBrandExist)
+                {
+                    _logger.LogWarning("Brand {Name} not found", name);
+                    return Result<bool>.Bad(
+                        "Appliaction Error",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "Brand not found" }
+                        );
+                }
+
+                var result = await _brandRepository.DeleteBrandAsync(name);
+
+                if (!result)
+                {
+                    _logger.LogError("Server error. Cannot delete Brand");
+                    return Result<bool>.Bad(
+                       "Server error",
+                       StatusCodes.Status500InternalServerError,
+                       new List<string> { "Cannot delete Brand" }
+                       );
+                }
+
+                return Result<bool>.Good(
+                       $"Brand {name} delete successfull",
+                       StatusCodes.Status200OK,
+                       result
+                       );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while delete brand: {ex.Message} | {ex.InnerException}");
+                return Result<bool>.Bad(
+                        "An error occurred while processing your request.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { $"{ex.Message} | {ex.InnerException}" });
+
+            }
+        }
     }
 }

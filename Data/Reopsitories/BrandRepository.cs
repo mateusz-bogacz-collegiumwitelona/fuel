@@ -103,5 +103,17 @@ namespace Data.Reopsitories
             return result > 0;
         }
 
+        public async Task<bool> DeleteBrandAsync(string name)
+        {
+            var brand = await _context.Brand.FirstOrDefaultAsync(b => b.Name.ToLower() == name.ToLower());
+           
+            if (brand == null) return false;
+
+            _context.Brand.Remove(brand);
+
+            var result = await _context.SaveChangesAsync();
+            return result > 0;
+        }
+
     }
 }

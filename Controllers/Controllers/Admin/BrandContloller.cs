@@ -235,5 +235,79 @@ namespace Controllers.Controllers.Admin
                     Data = result.Data
                 });
         }
+
+        /// <summary>
+        /// Delete a fuel station brand by its name.
+        /// </summary>
+        /// <remarks>
+        /// Description:  
+        /// Permanently removes a fuel station brand from the system.  
+        /// Deleting a brand will also delete all associated **stations** and their related data (fuel prices, proposals, etc.),  
+        /// due to cascade delete rules in the database.
+        ///
+        /// Example request  
+        /// ```http
+        /// DELETE /api/admin/brand/Orlen
+        /// ```
+        ///
+        /// Example response — Successful deletion  
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "Brand Orlen delete successfull",
+        ///   "data": true
+        /// }
+        /// ```
+        ///
+        /// Example response — Brand not found  
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Appliaction Error",
+        ///   "errors": ["Brand not found"],
+        ///   "data": false
+        /// }
+        /// ```
+        ///
+        /// Example response — Validation error  
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Valiadtion error",
+        ///   "errors": ["Name is null, empyt white space"],
+        ///   "data": false
+        /// }
+        /// ```
+        ///
+        /// Notes  
+        /// - This operation is **irreversible**.  
+        /// - Make sure the brand name is spelled exactly as stored in the system.  
+        /// - Cascade deletion will remove all related stations and fuel data.
+        ///
+        /// </remarks>
+        /// <param name="name">Name of the brand to delete.</param>
+        /// <response code="200">Brand deleted successfully.</response>
+        /// <response code="400">Validation error — brand name was empty or invalid.</response>
+        /// <response code="404">Brand not found in the system.</response>
+        /// <response code="500">Unexpected server error occurred while deleting the brand.</response>
+        [HttpDelete("{name}")]
+        public async Task<IActionResult> DeleteBrandAsync(string name)
+        {
+            var result = await _brandServices.DeleteBrandAsync(name);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    Data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    Data = result.Data
+                });
+        }
     }
 }

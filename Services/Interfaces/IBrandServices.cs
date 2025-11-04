@@ -10,5 +10,6 @@ namespace Services.Interfaces
         Task<Result<List<string>>> GetAllBrandsAsync();
         Task<Result<bool>> EditBrandAsync(string oldName, string newName); 
         Task<Result<bool>> AddBrandAsync(string name);
+        Task<Result<bool>> DeleteBrandAsync(string name);
     }
 }
