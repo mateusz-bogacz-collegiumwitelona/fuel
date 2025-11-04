@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Internal;
 using Services.Interfaces;
+using System.Security.Claims;
 
 namespace contlollers.Controllers.Client
 {
@@ -134,6 +135,32 @@ namespace contlollers.Controllers.Client
         public async Task<IActionResult> RefreshTokenAsync()
         {
             var result = await _login.HandleRefreshAsync();
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentUserAsync()
+        {
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var userGuid))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User not authenticated"
+                });
+            }
+
+            var result = await _login.GetCurrentUserAsync(userGuid);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

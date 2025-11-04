@@ -56,7 +56,7 @@ builder.Services.AddCors(op =>
 {
     op.AddPolicy("AllowClient", p =>
     {
-        p.WithOrigins("https://localhost:4000")
+        p.WithOrigins("http://localhost:4000")
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials();
@@ -84,7 +84,7 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.FromSeconds(30)
     };
 
     options.Events = new JwtBearerEvents
@@ -289,7 +289,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 //middleware
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseRouting();
 
