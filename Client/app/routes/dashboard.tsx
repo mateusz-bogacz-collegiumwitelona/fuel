@@ -7,7 +7,11 @@ const API_BASE = "http://localhost:5111";
 function parseJwt(token: string | null) {
     if (!token) return null;
     try {
-        return JSON.parse(atob(token.split(".")[1]));
+        // decode payload in a unicode-safe way
+        const payload = token.split(".")[1];
+        const decoded = atob(payload);
+        // handle unicode characters properly
+        return JSON.parse(decodeURIComponent(escape(decoded)));
     } catch (e) {
         return null;
     }
@@ -19,7 +23,6 @@ type RequestItem = {
     title: string;
     status: "pending" | "accepted" | "rejected" | string;
 };
-
 
 type Station = {
     id?: string;
@@ -51,31 +54,65 @@ export default function Dashboard() {
     const [statsError, setStatsError] = React.useState<string | null>(null);
 
     React.useEffect(() => {
-        const token = localStorage.getItem("token");
-        const expiration = localStorage.getItem("token_expiration");
+        (async () => {
+            const token = localStorage.getItem("token");
+            const expiration = localStorage.getItem("token_expiration");
 
-        if (!token || !expiration || new Date(expiration) <= new Date()) {
-            if (typeof window !== "undefined") window.location.href = "/login";
-            return;
-        }
+            if (token && expiration && new Date(expiration) > new Date()) {
+                const decoded = parseJwt(token);
+                const userEmail = (decoded && (decoded.email || decoded.sub)) || null;
+                setEmail(userEmail ?? "Zalogowany użytkownik");
 
-        const decoded = parseJwt(token);
-        const userEmail = decoded?.email || decoded?.sub || null;
-        setEmail(userEmail ?? "Zalogowany użytkownik");
+                await Promise.all([
+                    fetchRequests(token),
+                    fetchProposalStats(token),
+                    fetchNearestStations(token)
+                ]);
+                return;
+            }
 
-        fetchRequests(token);
-        fetchProposalStats(token);
-        fetchNearestStations(token);
+            try {
+                const refreshRes = await fetch(`${API_BASE}/api/refresh`, {
+                    method: "POST",
+                    headers: { Accept: "application/json" },
+                    credentials: "include",
+                });
+
+                console.log("/api/refresh status:", refreshRes.status);
+
+                console.log("refreshRes.status", refreshRes.status);
+                console.log("refreshRes.body", await refreshRes.text());
+                
+                if (refreshRes.ok) {
+                    setEmail("Zalogowany użytkownik");
+
+                    await Promise.all([
+                        fetchRequests(null),
+                        fetchProposalStats(null),
+                        fetchNearestStations(null)
+                    ]);
+                    return;
+                } else {
+                    console.warn("/api/refresh zwrócił error, redirect to /login");
+                    if (typeof window !== "undefined") window.location.href = "/login";
+                }
+            } catch (err) {
+                console.error("Błąd podczas sprawdzania /api/refresh:", err);
+                if (typeof window !== "undefined") window.location.href = "/login";
+            }
+        })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    async function fetchRequests(token: string) {
+    async function fetchRequests(token: string | null) {
         setRequestsLoading(true);
         try {
+            const headers: Record<string, string> = { Accept: "application/json" };
+            if (token) headers["Authorization"] = `Bearer ${token}`;
+
             const res = await fetch(`${API_BASE}/api/user/requests`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: "application/json",
-                },
+                headers,
+                credentials: "include",
             });
             if (!res.ok) throw new Error("fetch-error");
             const data = await res.json();
@@ -101,31 +138,28 @@ export default function Dashboard() {
         }
     }
 
-
-    async function fetchNearestStations(token: string) {
+    async function fetchNearestStations(token: string | null) {
         setStationsLoading(true);
         setStationsError(null);
 
         const tryFetchWithCoords = async (lat: number, lon: number) => {
             try {
+                const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
+                if (token) headers["Authorization"] = `Bearer ${token}`;
+
                 let res = await fetch(`${API_BASE}/api/station/map/nearest`, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                        Accept: "application/json",
-                    },
+                    headers,
                     body: JSON.stringify({ latitude: lat, longitude: lon }),
+                    credentials: "include", // ensure cookies go with request
                 });
 
                 if (!res.ok) {
                     res = await fetch(
                         `${API_BASE}/api/station/map/nearest?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`,
                         {
-                            headers: {
-                                Authorization: `Bearer ${token}`,
-                                Accept: "application/json",
-                            },
+                            headers,
+                            credentials: "include",
                         }
                     );
                 }
@@ -164,11 +198,12 @@ export default function Dashboard() {
                 async (err) => {
                     console.warn("Geolocation zablokowana/nieudana:", err);
                     try {
+                        const headers: Record<string, string> = { Accept: "application/json" };
+                        if (token) headers["Authorization"] = `Bearer ${token}`;
+
                         const res = await fetch(`${API_BASE}/api/station/map/nearest`, {
-                            headers: {
-                                Authorization: `Bearer ${token}`,
-                                Accept: "application/json",
-                            },
+                            headers,
+                            credentials: "include",
                         });
                         if (!res.ok) throw new Error("no-coords-fetch-failed");
                         const data = await res.json();
@@ -187,11 +222,12 @@ export default function Dashboard() {
             );
         } else {
             try {
+                const headers: Record<string, string> = { Accept: "application/json" };
+                if (token) headers["Authorization"] = `Bearer ${token}`;
+
                 const res = await fetch(`${API_BASE}/api/station/map/nearest`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        Accept: "application/json",
-                    },
+                    headers,
+                    credentials: "include",
                 });
                 if (!res.ok) throw new Error("no-geolocation");
                 const data = await res.json();
@@ -208,7 +244,7 @@ export default function Dashboard() {
         }
     }
 
-    async function fetchProposalStats(token: string) {
+    async function fetchProposalStats(token: string | null) {
         setStatsLoading(true);
         setStatsError(null);
 
@@ -216,11 +252,12 @@ export default function Dashboard() {
 
         for (const ep of tryEndpoints) {
             try {
+                const headers: Record<string, string> = { Accept: "application/json" };
+                if (token) headers["Authorization"] = `Bearer ${token}`;
+
                 const res = await fetch(`${API_BASE}${ep}`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        Accept: "application/json",
-                    },
+                    headers,
+                    credentials: "include",
                 });
 
                 if (!res.ok) {
@@ -279,6 +316,7 @@ export default function Dashboard() {
 
             <main className="mx-auto max-w-350 px-1 py-8">
                 <h1 className="text-2xl md:text-3xl font-bold mb-4">Witaj, jesteś zalogowany!</h1>
+                {email && <p className="mb-4 text-sm text-gray-400">Zalogowany jako: {email}</p>}
 
                 <section className="mb-8">
                     <div className="carousel w-full">
@@ -324,7 +362,6 @@ export default function Dashboard() {
                     </a>
                 </section>
 
-                {/* --- Najbliższe stacje --- */}
                 <section className="bg-base-300 p-6 rounded-xl shadow-md mb-8">
                     <h2 className="text-xl font-semibold mb-10">Najbliższe stacje</h2>
 
@@ -390,7 +427,6 @@ export default function Dashboard() {
                     )}
                 </section>
 
-                {/* --- Statystyki zgłoszeń użytkownika --- */}
                 <section className="bg-base-300 p-6 rounded-xl shadow-md">
                     <h2 className="text-xl font-semibold mb-4">Twoje statystyki zgłoszeń</h2>
 

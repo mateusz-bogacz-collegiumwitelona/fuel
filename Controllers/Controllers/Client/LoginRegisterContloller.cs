@@ -21,12 +21,12 @@ namespace contlollers.Controllers.Client
         }
 
         /// <summary>
-        /// Authenticate user and return a JWT access token.
+        /// Authenticate user and set a secure HTTP-only cookie with JWT token.
         /// </summary>
         /// <remarks>
         /// Description
         /// Authenticates a user using their email and password.
-        /// If the credentials are valid, a JWT token is generated and returned.
+        /// If the credentials are valid, a JWT token is generated and stored in a secure HTTP-only cookie.
         /// 
         /// Example request body for user
         /// ```json
@@ -47,20 +47,29 @@ namespace contlollers.Controllers.Client
         /// Example response
         /// ```json
         /// {
-        ///   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-        ///   "expiration": "2025-10-17T12:34:56Z"
+        ///   "success": true,
+        ///   "message": "Login successful.",
+        ///   "data": {
+        ///     "message": "Login successful.",
+        ///     "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        ///     "email": "user@example.pl",
+        ///     "roles": ["User"]
+        ///   }
         /// }
         /// ```
         ///
         /// Notes
-        /// - The returned `token` should be sent in the `Authorization` header as:  
-        ///   `Bearer {token}`
-        /// - The `expiration` field represents the UTC time when the token becomes invalid.
+        /// - The JWT token is automatically stored in a secure HTTP-only cookie named `jwt`
+        /// - The cookie is sent automatically with subsequent requests - no manual handling required
+        /// - The cookie expires after 3 hours
+        /// - For frontend applications, ensure `withCredentials: true` is set in HTTP client (axios/fetch)
+        /// - For Swagger/Postman testing, you can still use Bearer token in Authorization header
         /// </remarks>
-        /// <response code="200">User successfully logged in</response>
+        /// <response code="200">User successfully logged in, JWT cookie set</response>
         /// <response code="401">Invalid email or password</response>
         /// <response code="403">User has no assigned roles</response>
         /// <response code="404">User with the given email not found</response>
+        /// <response code="423">Account locked due to multiple failed login attempts</response>
         /// <response code="500">Server error — something went wrong in the backend</response>
 
         [AllowAnonymous]
@@ -69,6 +78,62 @@ namespace contlollers.Controllers.Client
         {
             var result = await _login.HandleLoginAsync(request);
 
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Logout user and clear authentication cookie.
+        /// </summary>
+        /// <remarks>
+        /// Description
+        /// Logs out the currently authenticated user by clearing the JWT cookie and signing out from Identity.
+        /// 
+        /// Example response
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "Logout successful."
+        /// }
+        /// ```
+        ///
+        /// Notes
+        /// - This endpoint requires authentication (must have valid JWT cookie)
+        /// - The JWT cookie is removed from the browser
+        /// - User session is terminated on the server side
+        /// - After logout, protected endpoints will return 401 Unauthorized
+        /// </remarks>
+        /// <response code="200">User successfully logged out, JWT cookie cleared</response>
+        /// <response code="401">User is not authenticated</response>
+        /// <response code="500">Server error — something went wrong during logout</response>
+        [HttpPost("logout")]
+        public async Task <IActionResult> LogoutAsync()
+        {
+            var result = await _login.LogoutAsync();
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        [HttpPost("refresh")]
+        public async Task<IActionResult> RefreshTokenAsync()
+        {
+            var result = await _login.HandleRefreshAsync();
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

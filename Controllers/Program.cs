@@ -81,11 +81,9 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),
-
         ClockSkew = TimeSpan.Zero
     };
 
@@ -93,16 +91,25 @@ builder.Services.AddAuthentication(options =>
     {
         OnMessageReceived = context =>
         {
-            Console.WriteLine($"JWT: Token received: {context.Token}");
+            if (context.Request.Cookies.ContainsKey("jwt"))
+            {
+                context.Token = context.Request.Cookies["jwt"];
+                Console.WriteLine($"JWT: Token received from cookie");
+            }
+            else if (context.Request.Headers.ContainsKey("Authorization"))
+            {
+                var authHeader = context.Request.Headers["Authorization"].ToString();
+                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Token = authHeader.Substring("Bearer ".Length).Trim();
+                    Console.WriteLine($"JWT: Token received from Authorization header");
+                }
+            }
             return Task.CompletedTask;
         },
         OnTokenValidated = context =>
         {
-            Console.WriteLine($"JWT: Token validated. Audience claims:");
-            foreach (var claim in context.Principal.Claims.Where(c => c.Type == "aud"))
-            {
-                Console.WriteLine($"  {claim.Type}: {claim.Value}");
-            }
+            Console.WriteLine($"JWT: Token validated successfully");
             return Task.CompletedTask;
         },
         OnAuthenticationFailed = context =>
@@ -111,7 +118,6 @@ builder.Services.AddAuthentication(options =>
             return Task.CompletedTask;
         }
     };
-
 });
 
 // Add DbContext with PostgreSQL
@@ -177,8 +183,8 @@ builder.Services.AddScoped<IProposalStatisticRepository, ProposalStatisticReposi
 builder.Services.AddScoped<ITestRepository, TestRepository>();
 builder.Services.AddScoped<IProposalStatisticRepository, ProposalStatisticRepository>();
 builder.Services.AddScoped<IPriceProposalRepository, PriceProposalRepository>();
-builder.Services.AddScoped<Data.Interfaces.IFuelTypeRepository, FuelTypeRepository>();
-
+builder.Services.AddScoped<IFuelTypeRepository, FuelTypeRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 //register services 
 builder.Services.AddScoped<ILoginRegisterServices, LoginRegisterServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
@@ -192,6 +198,8 @@ builder.Services.AddScoped<IFuelTypeServices, FuelTypeServices>();
 builder.Services.AddScoped<EmailSender>();
 builder.Services.AddScoped<IEmailBody,EmailBodys>();
 builder.Services.AddScoped<S3ApiHelper>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITokenFactory, TokenFactory>();
 
 builder.Services.AddControllers(op =>
 {
@@ -299,6 +307,5 @@ app.UseAuthorization();
 app.UseHttpsRedirection();
 
 app.MapControllers();
-
 
 app.Run();

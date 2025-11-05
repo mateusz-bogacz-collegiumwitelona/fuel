@@ -1,17 +1,16 @@
 ﻿using Data.Interfaces;
 using Data.Models;
 using DTO.Requests;
-using DTO.Responses;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using Services.Helpers;
 using Services.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace Services.Services
 {
@@ -24,7 +23,9 @@ namespace Services.Services
         private readonly ILogger<LoginRegisterServices> _logger;
         private EmailSender _email;
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
-
+        private readonly IHttpContextAccessor _httpContext;
+        private readonly IRefreshTokenRepository _refreshTokenRepository;
+        private readonly ITokenFactory _tokenFactory;
 
         public LoginRegisterServices(
             UserManager<ApplicationUser> userManager,
@@ -33,7 +34,10 @@ namespace Services.Services
             IConfiguration configuration,
             ILogger<LoginRegisterServices> logger,
             EmailSender email,
-            IProposalStatisticRepository proposalStatisticRepository
+            IProposalStatisticRepository proposalStatisticRepository,
+            IHttpContextAccessor httpContext,
+            IRefreshTokenRepository refreshTokenRepository,
+            ITokenFactory tokenFactory
             )
         {
             _userManager = userManager;
@@ -43,10 +47,12 @@ namespace Services.Services
             _logger = logger;
             _email = email;
             _proposalStatisticRepository = proposalStatisticRepository;
+            _httpContext = httpContext;
+            _refreshTokenRepository = refreshTokenRepository;
+            _tokenFactory = tokenFactory;
         }
 
-
-        public async Task<Result<LoginResponse>> HandleLoginAsync(DTO.Requests.LoginRequest request)
+        public async Task<Result<IdentityResult>> HandleLoginAsync(LoginRequest request)
         {
             try
             {
@@ -56,7 +62,7 @@ namespace Services.Services
                 {
                     _logger.LogWarning("Login attempt failed. User with email {Email} not found.", request.Email);
 
-                    return Result<LoginResponse>.Bad(
+                    return Result<IdentityResult>.Bad(
                         $"Can't find user with this email: {request.Email}",
                         StatusCodes.Status404NotFound
                         );
@@ -65,14 +71,14 @@ namespace Services.Services
                 var result = await _signInManager.PasswordSignInAsync(
                     user,
                     request.Password,
-                    true,
-                    false
+                    false,
+                    true
                     );
 
                 if (!result.Succeeded)
                 {
                     _logger.LogWarning("Invalid login attempt for user with email {Email}.", request.Email);
-                    return Result<LoginResponse>.Bad(
+                    return Result<IdentityResult>.Bad(
                         "Invalid login attempt.",
                         StatusCodes.Status401Unauthorized
                         );
@@ -83,95 +89,178 @@ namespace Services.Services
                 if (roles == null || !roles.Any())
                 {
                     _logger.LogWarning("User with email {Email} has no roles assigned.", request.Email);
-                    return Result<LoginResponse>.Bad(
+                    return Result<IdentityResult>.Bad(
                         "User has no roles assigned.",
                         StatusCodes.Status403Forbidden
                         );
                 }
 
-                var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    new Claim(ClaimTypes.Email, user.Email ?? ""),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-                };
+                var jwtToken = _tokenFactory.CreateJwtToken(user, roles);
+                var jwtToString = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+                var context = _httpContext.HttpContext;
+                var refreshToken = _tokenFactory.CreateRefreshToken(
+                    user.Id,
+                    context.Connection.RemoteIpAddress?.ToString(),
+                    context.Request.Headers["User-Agent"].ToString()
+                    );
 
-                foreach (var role in roles)
-                {
-                    claims.Add(new Claim(ClaimTypes.Role, role));
-                }
+                await _refreshTokenRepository.AddAsync(refreshToken);
+                await _refreshTokenRepository.SaveChangesAsync();
 
-                var keyString = _configuration["Jwt:Key"];
-                var issuer = _configuration["Jwt:Issuer"];
-                var audience = _configuration["Jwt:Audience"];
+                SetAuthCookie(context, jwtToString, jwtToken.ValidTo, refreshToken);
 
-                if (string.IsNullOrWhiteSpace(keyString) ||
-                    string.IsNullOrWhiteSpace(issuer) ||
-                    string.IsNullOrWhiteSpace(audience))
-                {
-                    _logger.LogError("JWT configuration is missing or invalid.");
-                    return Result<LoginResponse>.Bad(
-                        "Internal server error.",
-                        StatusCodes.Status500InternalServerError,
-                        new List<string> { "JWT configuration is missing or invalid." }
-                        );
-                }
+                _logger.LogInformation("Login successful for user {Email}.", request.Email);
 
-                if (keyString.Length < 32)
-                {
-                    _logger.LogError("JWT key length is insufficient. It must be at least 16 characters long.");
-                    return Result<LoginResponse>.Bad(
-                        "Internal server error.",
-                        StatusCodes.Status500InternalServerError,
-                        new List<string> { "JWT key length is insufficient. It must be at least 16 characters long." }
-                        );
-                }
-
-                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
-                var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-                JwtSecurityToken token;
-
-                try
-                {
-                    token = new JwtSecurityToken(
-                                issuer: issuer,
-                                audience: audience,
-                                claims: claims,
-                                expires: DateTime.UtcNow.AddHours(3),
-                                signingCredentials: creds
-                            );
-                } catch (Exception tokenEx)
-                {
-                    _logger.LogError(tokenEx, "Error creating JWT token for user {Email}.", request.Email);
-                    return Result<LoginResponse>.Bad(
-                        "Internal server error.",
-                        StatusCodes.Status500InternalServerError,
-                        new List<string> { $"{tokenEx.Message} | {tokenEx.InnerException}" }
-                        );
-                }
-
-                var auth = new LoginResponse
-                {
-                    Token = new JwtSecurityTokenHandler().WriteToken(token),
-                    Expiration = token.ValidTo
-                };
-                _logger.LogInformation("JWT token successfully generated for user {Email}, expires at {Expiration}.", request.Email, token.ValidTo);
-
-                return Result<LoginResponse>.Good(
+                return Result<IdentityResult>.Good(
                     "Login successful.",
                     StatusCodes.Status200OK,
-                    auth
-                    );
+                    IdentityResult.Success
+                );
+
             }
             catch (Exception ex)
             {
-                return Result<LoginResponse>.Bad(
+                return Result<IdentityResult>.Bad(
                     "An error occurred during login.",
                     StatusCodes.Status500InternalServerError,
                     new List<string> { ex.Message }
                     );
             }
+        }
+
+        public async Task<Result<IdentityResult>> LogoutAsync()
+        {
+            try
+            {
+                await _signInManager.SignOutAsync();
+
+                var context = _httpContext.HttpContext;
+
+                context.Response.Cookies.Delete("jwt", new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.None,
+                    Path = "/"
+                });
+
+                _logger.LogInformation("User logged out successfully.");
+
+                return Result<IdentityResult>.Good("Logout successful.", StatusCodes.Status200OK);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred during logout.");
+                return Result<IdentityResult>.Bad(
+                    "An error occurred during logout.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message }
+                    );
+            }
+        }
+
+        public async Task<Result<IdentityResult>> HandleRefreshAsync()
+        {
+            try
+            {
+                var context = _httpContext.HttpContext;
+                var refreshTokenCookie = context.Request.Cookies["refresh_token"];
+
+                if (string.IsNullOrEmpty(refreshTokenCookie))
+                {
+                    _logger.LogWarning("Refresh token cookie is missing.");
+                    return Result<IdentityResult>.Bad(
+                        "Refresh token is missing.",
+                        StatusCodes.Status401Unauthorized
+                    );
+                }
+
+                var storedToken = await _refreshTokenRepository.GetByTokenAsync(refreshTokenCookie);
+                if (storedToken == null || storedToken.IsRevoked || storedToken.ExpiryDate <= DateTime.Now)
+                {
+                    _logger.LogWarning("Invalid or expired refresh token.");
+                    return Result<IdentityResult>.Bad(
+                        "Invalid or expired refresh token.",
+                        StatusCodes.Status401Unauthorized
+                    );
+                }
+
+                var user = await _userManager.FindByIdAsync(storedToken.UserId.ToString());
+                if (user == null)
+                {
+                    _logger.LogWarning("User not found for the provided refresh token.");
+                    return Result<IdentityResult>.Bad(
+                        "User not found.",
+                        StatusCodes.Status404NotFound
+                    );
+                }
+
+                storedToken.IsRevoked = true;
+                storedToken.RevokedAt = DateTime.UtcNow;
+                var roles = await _userManager.GetRolesAsync(user);
+
+                if (roles == null)
+                {
+                    _logger.LogWarning("User has no roles assigned.");
+                    return Result<IdentityResult>.Bad(
+                        "User has no roles assigned.",
+                        StatusCodes.Status403Forbidden
+                    );
+                }
+
+                var jwtToken = _tokenFactory.CreateJwtToken(user, roles);
+                var jwtToString = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+
+                var newRefreshToken = _tokenFactory.CreateRefreshToken(
+                    user.Id,
+                    context.Connection.RemoteIpAddress?.ToString(),
+                    context.Request.Headers["User-Agent"].ToString()
+                    );
+
+                await _refreshTokenRepository.UpdateAsync(storedToken);
+                await _refreshTokenRepository.AddAsync(newRefreshToken);
+                await _refreshTokenRepository.SaveChangesAsync();
+
+                SetAuthCookie(context, jwtToString, jwtToken.ValidTo, newRefreshToken);
+                _logger.LogInformation("Refreshed token for user {Email}", user.Email);
+
+                return Result<IdentityResult>.Good(
+                    "Token refreshed.",
+                    StatusCodes.Status200OK,
+                    IdentityResult.Success);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred during token refresh.");
+                return Result<IdentityResult>.Bad(
+                    "An error occurred during token refresh.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message }
+                    );
+            }
+        }
+
+        private void SetAuthCookie(HttpContext context, string token, DateTime expiry, RefreshToken refresh)
+        {
+            var isDev = context.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment();
+
+            context.Response.Cookies.Append("jwt", token, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = !isDev,
+                SameSite = isDev ? SameSiteMode.Lax : SameSiteMode.None,
+                Expires = expiry,
+                Path = "/"
+            });
+
+            context.Response.Cookies.Append("refresh_token", refresh.Token, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = !isDev,
+                SameSite = SameSiteMode.None,
+                Expires = refresh.ExpiryDate,
+                Path = "/"
+            });
         }
 
         public async Task<Result<IdentityResult>> RegisterNewUserAsync(RegisterNewUserRequest request)

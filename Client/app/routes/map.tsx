@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import "leaflet/dist/leaflet.css";
+import Header from "../components/header";
+import Footer from "../components/footer";
 
 type Station = {
   brandName: string;
@@ -108,38 +110,24 @@ const color = normalizedBrand ? brandColors[normalizedBrand] : brandColors.Defau
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-
-      <header className="w-full bg-gray-800 shadow-sm">
-        <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="text-xl font-bold">FuelStats</div>
-            <nav className="hidden md:flex gap-2 items-center">
-              <a href="/dashboard" className="btn btn-ghost btn-sm">Dashboard</a>
-              <a href="/map" className="btn btn-ghost btn-sm btn-active">Mapa</a>
-              <a href="/list" className="btn btn-ghost btn-sm">Lista</a>
-            </nav>
-          </div>
-        </div>
-      </header>
-
+    <div className="min-h-screen bg-base-200 text-base-content">
+      <Header />
 
       <main className="mx-auto max-w-6xl px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl md:text-3xl font-bold">
             Mapa stacji benzynowych
           </h1>
-            <a href="/dashboard"
-            className="btn bg-blue-600 hover:bg-blue-500 text-white font-semibold text-base px-5 py-2 rounded-l shadow-lg transition-all duration-200">
+            <a href="/dashboard" className="btn btn-outline">
             ← Powrót do dashboardu
-            </a>
+          </a>
         </div>
 
-<div className="bg-gray-800 p-4 rounded-xl shadow-md mb-6 flex flex-wrap gap-3 items-center">
+<div className="bg-base-300 p-4 rounded-xl shadow-md mb-6 flex flex-wrap gap-3 items-center">
   <input
     type="text"
     placeholder="Wpisz nazwę stacji (np. Orlen)"
-    className="input input-bordered bg-gray-700 text-white w-64 placeholder-gray-400"
+    className="input input-bordered bg-base-100 text-base-content w-64 placeholder-gray-400"
     onChange={(e) =>
       setFilters((f) => ({
         ...f,
@@ -188,9 +176,7 @@ const color = normalizedBrand ? brandColors[normalizedBrand] : brandColors.Defau
       </main>
 
 
-      <footer className="mt-12 py-6 text-center text-sm text-gray-400">
-        © FuelStats
-      </footer>
+      <Footer/>
     </div>
   );
 }
