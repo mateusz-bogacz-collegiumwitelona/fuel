@@ -1,4 +1,5 @@
 ﻿using Data.Interfaces;
+using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -58,6 +59,58 @@ namespace Services.Services
                     email);
 
                 return Result<GetProposalStatisticResponse>.Bad(
+                    "Internal Server Error",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message }
+                );
+            }
+        }
+
+        public async Task<Result<PagedResult<TopUserResponse>>> GetTopUserListAsync(GetPaggedRequest request)
+        {
+            try
+            {
+                var result = await _proposalStatisticRepository.GetTopUserListAsync();
+
+                if (result == null)
+                {
+                    _logger.LogWarning("No users found in the database.");
+
+                    var emptyPagedResult = new PagedResult<TopUserResponse>
+                    {
+                        Items = new List<TopUserResponse>(),
+                        PageNumber = request.PageNumber ?? 0,
+                        PageSize = request.PageSize ?? 0,
+                        TotalCount = 0,
+                        TotalPages = 0
+                    };
+
+                    return Result<PagedResult<TopUserResponse>>.Good(
+                        "No users found",
+                        StatusCodes.Status200OK,
+                        emptyPagedResult
+                    );
+
+                }
+
+                int pageNumber = request.PageNumber ?? 1;
+                int pageSize = request.PageSize ?? 10;
+
+                var pagedResult = result.ToPagedResult(pageNumber, pageSize);
+
+                if (pagedResult.PageNumber > pagedResult.TotalPages && pagedResult.TotalPages > 0)
+                    pagedResult = result.ToPagedResult(pagedResult.TotalPages, pageSize);
+
+                return Result<PagedResult<TopUserResponse>>.Good(
+                    "Top users retrieved successfully",
+                    StatusCodes.Status200OK,
+                    pagedResult
+                    );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching the top user list.");
+                return Result<PagedResult<TopUserResponse>>.Bad(
                     "Internal Server Error",
                     StatusCodes.Status500InternalServerError,
                     new List<string> { ex.Message }

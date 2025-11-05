@@ -3,6 +3,7 @@ using Data.Interfaces;
 using Data.Models;
 using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Data.Reopsitories
@@ -147,5 +148,20 @@ namespace Data.Reopsitories
                 return false;
             }
         }
+
+        public async Task<List<TopUserResponse>> GetTopUserListAsync()
+         => await _context.ProposalStatistics
+                .OrderByDescending(ps => ps.Points)
+                .Take(10)
+                .Select(ps => new TopUserResponse
+                {
+                    UserName = ps.User.UserName,
+                    TotalProposals = ps.TotalProposals,
+                    ApprovedProposals = ps.ApprovedProposals,
+                    RejectedProposals = ps.RejectedProposals,
+                    AcceptedRate = ps.AcceptedRate,
+                    Points = ps.Points
+                })
+                .ToListAsync();
     }
 }

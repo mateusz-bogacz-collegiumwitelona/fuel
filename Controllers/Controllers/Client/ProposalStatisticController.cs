@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using DTO.Requests;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
@@ -69,6 +70,20 @@ namespace Contlollers.Controllers.Client
             }
 
             var result = await _proposalStatistic.GetUserProposalStatisticResponse(email);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        [HttpGet("top-users")]
+        public async Task<IActionResult> GetTopUserListAsync([FromQuery] GetPaggedRequest request)
+        {
+            var result = await _proposalStatistic.GetTopUserListAsync(request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new
