@@ -278,7 +278,7 @@ namespace Controllers.Controllers.Admin
         ///   "data": false
         /// }
         /// ```
-        ///
+        ///]
         /// Notes  
         /// - This operation is **irreversible**.  
         /// - Make sure the brand name is spelled exactly as stored in the system.  

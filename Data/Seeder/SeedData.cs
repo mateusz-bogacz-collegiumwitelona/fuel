@@ -101,7 +101,6 @@ namespace Data.Seeder
                     ConcurrencyStamp = Guid.NewGuid().ToString(),
                     SecurityStamp = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow,
-                    Points = 0
                 };
 
                 var result = await _userManager.CreateAsync(newUser, password);
@@ -444,6 +443,7 @@ namespace Data.Seeder
                             ApprovedProposals = approved,
                             RejectedProposals = rejected,
                             AcceptedRate = rate,
+                            Points = approved,
                             UpdatedAt = DateTime.UtcNow
                         };
 

@@ -210,7 +210,6 @@ namespace Services.Services
                     EmailConfirmed = false,
                     SecurityStamp = Guid.NewGuid().ToString(),
                     ConcurrencyStamp = Guid.NewGuid().ToString(),
-                    Points = 0,
                     CreatedAt = DateTime.UtcNow
                 };
 

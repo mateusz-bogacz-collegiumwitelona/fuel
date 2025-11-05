@@ -49,6 +49,7 @@ namespace Data.Reopsitories
                 ApprovedProposals = proposals.ApprovedProposals ?? 0,
                 RejectedProposals = proposals.RejectedProposals ?? 0,
                 AcceptedRate = proposals.AcceptedRate ?? 0,
+                Points = proposals.Points ?? 0,
                 UpdatedAt = proposals.UpdatedAt
             };
         }
