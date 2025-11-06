@@ -1,5 +1,4 @@
-﻿using CommunityToolkit.HighPerformance.Helpers;
-using Data.Context;
+﻿using Data.Context;
 using Data.Helpers;
 using Data.Interfaces;
 using Data.Models;
@@ -9,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NetTopologySuite.Geometries;
 using System.Linq.Expressions;
-using static System.Collections.Specialized.BitVector32;
 
 namespace Data.Reopsitories
 {
@@ -439,6 +437,34 @@ namespace Data.Reopsitories
                 return false;
             }
         }
+
+        public async Task<GetStationInfoForEditResponse> GetStationInfoForEdit(FindStationRequest request)
+            => await _context.Stations
+                .Include(s => s.Brand)
+                .Include(s => s.Address)
+                .Include(s => s.FuelPrice)
+                    .ThenInclude(fp => fp.FuelType)
+                .Where(s =>
+                    s.Brand.Name.ToLower() == request.BrandName.ToLower() &&
+                    s.Address.Street.ToLower() == request.Street.ToLower() &&
+                    s.Address.HouseNumber.ToLower() == request.HouseNumber.ToLower() &&
+                    s.Address.City.ToLower() == request.City.ToLower()
+                )
+                .Select(s => new GetStationInfoForEditResponse
+                {
+                    NewBrandName = s.Brand.Name,
+                    NewStreet = s.Address.Street,
+                    NewHouseNumber = s.Address.HouseNumber,
+                    NewCity = s.Address.City,
+                    NewLatitude = s.Address.Location.Y,
+                    NewLongitude = s.Address.Location.X,
+                    FuelType = s.FuelPrice.Select(fp => new AddFuelTypeRequest
+                    {
+                        Code = fp.FuelType.Code,
+                        Price = fp.Price
+                    }).ToList()
+                })
+                .FirstOrDefaultAsync();
 
         public async Task<bool> AddNewStationAsync(AddStationRequest request)
         {

@@ -403,6 +403,36 @@ namespace Services.Services
             }
         }
 
+        public async Task<Result<GetStationInfoForEditResponse>> GetStationInfoForEdit(FindStationRequest request)
+        {
+            try
+            {
+                var result = await _stationRepository.GetStationInfoForEdit(request);
+
+                if (result == null)
+                {
+                    _logger.LogWarning("Station not found for editing.");
+                    return Result<GetStationInfoForEditResponse>.Bad(
+                        "Station not found.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "No station found with the provided details." });
+                }
+
+                return Result<GetStationInfoForEditResponse>.Good(
+                    "Station info retrieved successfully.",
+                    StatusCodes.Status200OK,
+                    result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while retrieving station info for edit: {ex.Message} | {ex.InnerException}");
+                return Result<GetStationInfoForEditResponse>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" });
+            }
+        }
+
         public async Task<Result<bool>> AddNewStationAsync(AddStationRequest request)
         {
             try

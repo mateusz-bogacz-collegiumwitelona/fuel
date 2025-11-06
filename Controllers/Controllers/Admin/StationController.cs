@@ -182,6 +182,90 @@ namespace Controllers.Controllers.Admin
         }
 
         /// <summary>
+        /// Retrieves station information for editing purposes
+        /// </summary>
+        /// <remarks>
+        /// Gets complete station details including brand, address, location coordinates, and current fuel prices.
+        /// This endpoint is typically used to populate an edit form with existing station data.
+        /// Station is identified by brand name, street, house number, and city.
+        /// 
+        /// Sample request:
+        /// 
+        ///     GET /api/admin/station/edit/info?BrandName=Orlen&amp;Street=Główna&amp;HouseNumber=15A&amp;City=Warszawa
+        ///     
+        /// Sample response:
+        /// 
+        ///     {
+        ///       "success": true,
+        ///       "message": "Station info retrieved successfully.",
+        ///       "data": {
+        ///         "newBrandName": "Orlen",
+        ///         "newStreet": "Główna",
+        ///         "newHouseNumber": "15A",
+        ///         "newCity": "Warszawa",
+        ///         "newLatitude": 52.2297,
+        ///         "newLongitude": 21.0122,
+        ///         "fuelType": [
+        ///           {
+        ///             "code": "PB95",
+        ///             "price": 6.50
+        ///           },
+        ///           {
+        ///             "code": "PB98",
+        ///             "price": 7.20
+        ///           },
+        ///           {
+        ///             "code": "ON",
+        ///             "price": 6.80
+        ///           },
+        ///           {
+        ///             "code": "LPG",
+        ///             "price": 3.20
+        ///           }
+        ///         ]
+        ///       }
+        ///     }
+        ///     
+        /// **Use Case:**
+        /// - Call this endpoint before showing edit form to get current station data
+        /// - Use the returned data to pre-fill form fields
+        /// - User can then modify any fields and submit via PUT /api/admin/station/edit/{stationId}
+        /// 
+        /// **Response Fields:**
+        /// - All fields represent current station data
+        /// - Field names match the edit request format for easy form binding
+        /// - FuelType array contains all currently available fuels at the station
+        /// 
+        /// </remarks>
+        /// <param name="request">Station identification criteria (brand name, street, house number, city)</param>
+        /// <returns>Complete station information ready for editing</returns>
+        /// <response code="200">Station information retrieved successfully</response>
+        /// <response code="404">Station not found with the provided criteria</response>
+        /// <response code="400">Invalid request parameters</response>
+        /// <response code="401">Unauthorized - valid JWT token required</response>
+        /// <response code="403">Forbidden - Admin role required</response>
+        /// <response code="500">Internal server error</response>
+        [HttpGet("edit/info")]
+        public async Task<IActionResult> GetStationInfoForEdit([FromQuery] FindStationRequest request)
+        {
+            var result = await _stationServices.GetStationInfoForEdit(request);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    data = result.Data
+                });
+        }
+
+        /// <summary>
         /// Adds a new fuel station to the system
         /// </summary>
         /// <remarks>
