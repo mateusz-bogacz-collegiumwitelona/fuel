@@ -152,21 +152,24 @@ export default function ListPage() {
     },
   ];
 
-  async function tryPost(bodyObj: any) {
+    async function tryPost(bodyObj: any) {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "application/json",
     };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
+    console.log("tryPost -> POST", `${API_BASE}/api/station/list`, "body:", bodyObj);
     const res = await fetch(`${API_BASE}/api/station/list`, {
       method: "POST",
       headers,
       credentials: "include",
       body: JSON.stringify(bodyObj),
     });
+    console.log("tryPost -> status:", res.status);
     return res;
   }
+
 
   try {
     let res = await tryPost(baseBody);
@@ -209,6 +212,9 @@ export default function ListPage() {
 
           if (fallback.ok) {
             const data2 = await fallback.json();
+                const data = await res.json();
+            console.log("fetchStations: response JSON:", data);
+            applyListResponse(data);
             applyListResponse(data2);
             return;
           } else {
@@ -280,35 +286,74 @@ export default function ListPage() {
 
 
   function normalizeStations(data: any): Station[] {
-    // backend might return array or { stations: [...] } or { items: [...] }
-    const arr = Array.isArray(data) ? data : Array.isArray(data?.stations) ? data.stations : Array.isArray(data?.items) ? data.items : [];
+  // backend might return array or { stations: [...] } or { items: [...] }
+  const arr = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.stations)
+    ? data.stations
+    : Array.isArray(data?.items)
+    ? data.items
+    : [];
 
-    return arr.map((s: any) => {
-      // try to unify naming
-      const fuelPrices = s.fuelPrices ?? s.prices ?? s.fuelPrice ?? s.fuelPriceList ?? null;
+  return arr.map((s: any) => {
+    // unify fuel price formats:
+    // possible shapes:
+    // - { fuelPrices: { PB95: 6.29, ON: 6.99 } }
+    // - { fuelPrice: [ { fuelCode: "PB95", price: 6.29 }, ... ] }
+    // - { prices: { ... } }
+    let fuelPrices: Record<string, number | string> | null = null;
 
-      const normalized: Station = {
-        id: s.id ?? s.stationId ?? undefined,
-        name: s.brandName ?? s.name ?? s.stationName ?? undefined,
-        brandName: s.brandName ?? s.name ?? undefined,
-        street: s.street ?? (s.address ? s.address.split(",")[0] : undefined) ?? undefined,
-        houseNumber: s.houseNumber ?? s.houseNumberString ?? s.no ?? undefined,
-        postalCode: s.postalCode ?? s.postalcode ?? s.postal ?? undefined,
-        latitude: s.latitude ?? s.lat ?? undefined,
-        longitude: s.longitude ?? s.lon ?? s.lng ?? undefined,
-        city: s.city ?? s.town ?? s.locationCity ?? undefined,
-        imageUrl: s.imageUrl ?? s.image ?? undefined,
-        address: s.address ?? undefined,
-        distanceMeters: s.distanceMeters ?? s.distanceInMeters ?? (typeof s.distance === "number" ? s.distance : undefined),
-        fuelPrices: fuelPrices,
-        pricePb95: s.pricePb95 ?? s.pb95 ?? null,
-        priceDiesel: s.priceDiesel ?? s.on ?? null,
-        priceLpg: s.priceLpg ?? s.lpg ?? null,
-      };
+    if (s.fuelPrices && typeof s.fuelPrices === "object" && !Array.isArray(s.fuelPrices)) {
+      fuelPrices = s.fuelPrices;
+    } else if (s.prices && typeof s.prices === "object" && !Array.isArray(s.prices)) {
+      fuelPrices = s.prices;
+    } else if (Array.isArray(s.fuelPrice)) {
+      // convert array-of-objects to map { PB95: 6.29, ... }
+      const map: Record<string, number> = {};
+      for (const item of s.fuelPrice) {
+        const code = (item.fuelCode ?? item.fuel?.code ?? item.code ?? "").toString();
+        const price = typeof item.price === "string" ? parseFloat(item.price.replace(",", ".")) : Number(item.price);
+        if (code && !Number.isNaN(price)) map[code.toLowerCase()] = price;
+      }
+      if (Object.keys(map).length > 0) fuelPrices = map;
+    } else if (Array.isArray(s.fuelPrices)) {
+      // same for fuelPrices array
+      const map: Record<string, number> = {};
+      for (const item of s.fuelPrices) {
+        const code = (item.fuelCode ?? item.fuel?.code ?? item.code ?? "").toString();
+        const price = typeof item.price === "string" ? parseFloat(item.price.replace(",", ".")) : Number(item.price);
+        if (code && !Number.isNaN(price)) map[code.toLowerCase()] = price;
+      }
+      if (Object.keys(map).length > 0) fuelPrices = map;
+    } else if (s.fuelPrice && typeof s.fuelPrice === "object" && !Array.isArray(s.fuelPrice)) {
+      fuelPrices = s.fuelPrice;
+    }
 
-      return normalized;
-    });
-  }
+    const normalized: Station = {
+      id: s.id ?? s.stationId ?? undefined,
+      name: s.brandName ?? s.name ?? s.stationName ?? undefined,
+      brandName: s.brandName ?? s.name ?? undefined,
+      street: s.street ?? (s.address ? s.address.split(",")[0] : undefined) ?? undefined,
+      houseNumber: s.houseNumber ?? s.houseNumberString ?? s.no ?? undefined,
+      postalCode: s.postalCode ?? s.postalcode ?? s.postal ?? undefined,
+      latitude: s.latitude ?? s.lat ?? undefined,
+      longitude: s.longitude ?? s.lon ?? s.lng ?? undefined,
+      city: s.city ?? s.town ?? s.locationCity ?? undefined,
+      imageUrl: s.imageUrl ?? s.image ?? undefined,
+      address: s.address ?? undefined,
+      distanceMeters:
+        s.distanceMeters ??
+        s.distanceInMeters ??
+        (typeof s.distance === "number" ? s.distance : undefined),
+      fuelPrices: fuelPrices,
+      pricePb95: s.pricePb95 ?? s.pb95 ?? null,
+      priceDiesel: s.priceDiesel ?? s.on ?? null,
+      priceLpg: s.priceLpg ?? s.lpg ?? null,
+    };
+
+    return normalized;
+  });
+}
 
   function formatDistance(m?: number) {
     if (m == null || Number.isNaN(m)) return "-";
