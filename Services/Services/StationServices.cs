@@ -347,5 +347,37 @@ namespace Services.Services
                     new List<string> { $"{ex.Message} | {ex.InnerException}" });
             }
         }
+
+        public async Task<Result<bool>> EditStationAsync(EditStationRequest request)
+        {
+            try
+            {
+                var result = await _stationRepository.EditStationAsync(request);
+
+                if (!result)
+                {
+                    _logger.LogWarning("Failed to edit station details.");
+                    return Result<bool>.Bad(
+                        "Failed to edit station details.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Could not update the station with the provided details." },
+                        false);
+                }
+
+                return Result<bool>.Good(
+                    "Station details updated successfully.",
+                    StatusCodes.Status200OK,
+                    true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while editing station details: {ex.Message} | {ex.InnerException}");
+                return Result<bool>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" },
+                    false);
+            }
+        }
     }
 }

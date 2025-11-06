@@ -1,5 +1,6 @@
 ﻿using Data.Context;
 using Data.Enums;
+using Data.Helpers;
 using Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -227,7 +228,9 @@ namespace Data.Seeder
                         HouseNumber = number,
                         City = city,
                         PostalCode = postal,
-                        Location = new NetTopologySuite.Geometries.Point(lon, lat) { SRID = 4326 }
+                        Location = new NetTopologySuite.Geometries.Point(lon, lat) { SRID = GeoConstants.SRID_VALUE },
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
                     };
                     _context.Add(stationAddress);
                     await _context.SaveChangesAsync();

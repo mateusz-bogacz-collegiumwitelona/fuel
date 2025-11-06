@@ -115,5 +115,7 @@ namespace Data.Reopsitories
             return result > 0;
         }
 
+        public async Task<Brand> GetBrandData(string brandName)
+            => await _context.Brand.FirstOrDefaultAsync(b => b.Name.ToLower() == brandName.ToLower());
     }
 }

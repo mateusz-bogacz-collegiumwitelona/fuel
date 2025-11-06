@@ -110,5 +110,98 @@ namespace Controllers.Controllers.Admin
                     Data = result.Data
                 });
         }
+
+        /// <summary>
+        /// Edit an existing fuel station's details.
+        /// </summary>
+        /// <remarks>
+        /// **Description:**  
+        /// Allows an administrator to update the details of an existing fuel station, such as brand, address, or geographic location.  
+        /// The station to be edited is identified using the `FindStation` object, which includes the current brand name, street, house number, and city.
+        ///
+        /// **Example request**  
+        /// ```http
+        /// PUT /api/admin/station/edit
+        /// Content-Type: application/json
+        ///
+        /// {
+        ///   "findStation": {
+        ///     "brandName": "Amic",
+        ///     "street": "Strzelców Bytomskich",
+        ///     "houseNumber": "66F",
+        ///     "city": "Bytom"
+        ///   },
+        ///   "newBrandName": "Orlen",
+        ///   "newStreet": "Katowicka",
+        ///   "newHouseNumber": "120",
+        ///   "newCity": "Katowice",
+        ///   "newLatitude": 50.259,
+        ///   "newLongitude": 19.022
+        /// }
+        /// ```
+        ///
+        /// **Example response — Successful update**  
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "Station details updated successfully.",
+        ///   "data": true
+        /// }
+        /// ```
+        ///
+        /// **Example response — Station not found**  
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Failed to edit station details.",
+        ///   "errors": [ "Could not update the station with the provided details." ],
+        ///   "data": false
+        /// }
+        /// ```
+        ///
+        /// **Example response — Validation error (invalid coordinates)**  
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Validation error",
+        ///   "errors": [ "Latitude must be between -90 and 90." ],
+        ///   "data": false
+        /// }
+        /// ```
+        ///
+        /// **Notes**  
+        /// - `findStation` — required; identifies the existing station to be updated.  
+        /// - `newBrandName` — optional; if the specified brand does not exist, it will be created automatically.  
+        /// - **Address update rule:**  
+        ///   To update the address and geographic location, all of the following fields **must be provided** simultaneously:  
+        ///   `newStreet`, `newHouseNumber`, `newCity`, `newLatitude`, and `newLongitude`.  
+        ///   When these are provided, the system recalculates the spatial `Point` (`longitude`, `latitude`) with SRID = 4326 and updates the `UpdatedAt` timestamp of the address.  
+        /// - Partial address updates (e.g., only changing the city) are ignored to maintain data integrity.  
+        /// - Returns `true` if the update was successful.  
+        /// </remarks>
+        /// <response code="200">Station successfully updated</response>
+        /// <response code="400">Validation error (invalid or missing data)</response>
+        /// <response code="404">Station not found</response>
+        /// <response code="500">Server error during update</response>
+
+        [HttpPut("edit")]
+        public async Task<IActionResult> EditStationAsync([FromBody] EditStationRequest request)
+        {
+            var result = await _stationServices.EditStationAsync(request);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    data = result.Data
+                });
+        }
     }
 }

@@ -11,5 +11,6 @@ namespace Services.Interfaces
         Task<Result<PagedResult<GetStationListResponse>>> GetStationListAsync(GetStationListRequest request);
         Task<Result<GetStationListResponse>> GetStationProfileAsync(GetStationProfileRequest request);
         Task<Result<PagedResult<GetStationListForAdminResponse>>> GetStationsListForAdminAsync(GetPaggedRequest pagged, TableRequest request);
+        Task<Result<bool>> EditStationAsync(EditStationRequest request);
     }
 }

@@ -1,4 +1,5 @@
-﻿using Data.Context;
+﻿using CommunityToolkit.HighPerformance.Helpers;
+using Data.Context;
 using Data.Helpers;
 using Data.Interfaces;
 using Data.Models;
@@ -8,7 +9,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NetTopologySuite.Geometries;
 using System.Linq.Expressions;
-using System.Security.Cryptography.X509Certificates;
 
 namespace Data.Reopsitories
 {
@@ -16,15 +16,18 @@ namespace Data.Reopsitories
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<StationRepository> _logger;
+        private readonly IBrandRepository _brandRepository;
 
         private StationFiltersSorting filters = new StationFiltersSorting();
 
         public StationRepository(
             ApplicationDbContext context,
-            ILogger<StationRepository> logger)
+            ILogger<StationRepository> logger,
+            IBrandRepository brandRepository)
         {
             _context = context;
             _logger = logger;
+            _brandRepository = brandRepository;
         }
 
         public async Task<List<GetStationsResponse>> GetAllStationsForMapAsync(GetStationsRequest request)
@@ -273,6 +276,71 @@ namespace Data.Reopsitories
                 .ToListAsync();
 
             return result;
+        }
+
+        public async Task<bool> IsStationExistAsync(string brandName, string street, string houseNumber, string city)
+            => await _context.Stations.AnyAsync( s => 
+                s.Brand.Name.ToLower() == brandName &&
+                s.Address.Street.ToLower() == street &&
+                s.Address.HouseNumber.ToLower() == houseNumber &&
+                s.Address.City.ToLower() == city
+            );
+
+        public async Task<bool> EditStationAsync(EditStationRequest request)
+        {
+            var station = await _context.Stations
+                .Include(s => s.Address)
+                .Include(s => s.Brand)
+                .FirstOrDefaultAsync(s =>
+                    s.Brand.Name.ToLower() == request.FindStation.BrandName.ToLower() &&
+                    s.Address.Street.ToLower() == request.FindStation.Street.ToLower() &&
+                    s.Address.HouseNumber.ToLower() == request.FindStation.HouseNumber.ToLower() &&
+                    s.Address.City.ToLower() == request.FindStation.City.ToLower()
+                );
+
+            if (station == null)
+            {
+                _logger.LogWarning("Station not found for edit: {findStation}", request.FindStation);
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(request.NewBrandName) && !string.IsNullOrWhiteSpace(request.NewBrandName))
+            {
+                if (!await _brandRepository.FindBrandAsync(request.NewBrandName))
+                    await _brandRepository.AddBrandAsync(request.NewBrandName);
+
+                var brand = await _brandRepository.GetBrandData(request.NewBrandName);
+
+                station.Brand = brand;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.NewStreet) &&
+                 !string.IsNullOrWhiteSpace(request.NewHouseNumber) &&
+                 !string.IsNullOrWhiteSpace(request.NewCity) &&
+                 request.NewLatitude.HasValue &&
+                 request.NewLongitude.HasValue
+            )
+            {
+                var newLocation = new Point(
+                    request.NewLongitude.Value,
+                    request.NewLatitude.Value)
+                { SRID = GeoConstants.SRID_VALUE };
+
+                station.Address.Location = newLocation;
+                station.Address.Street = request.NewStreet;
+                station.Address.HouseNumber = request.NewHouseNumber;
+                station.Address.City = request.NewCity;
+                station.Address.UpdatedAt = DateTime.UtcNow;
+            }
+
+            station.UpdatedAt = DateTime.UtcNow;
+
+            _context.Update(station);
+
+            var result = await _context.SaveChangesAsync();
+
+            return result > 0;
+
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using DTO.Responses;
+﻿using Data.Models;
+using DTO.Responses;
 
 namespace Data.Interfaces
 {
@@ -10,5 +11,6 @@ namespace Data.Interfaces
         Task<bool> EditBrandAsync(string oldName, string newName);
         Task<bool> AddBrandAsync(string name);
         Task<bool> DeleteBrandAsync(string name);
+        Task<Brand> GetBrandData(string brandName);
     }
 }
