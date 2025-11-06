@@ -13,7 +13,7 @@ namespace Data.Models
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt{ get; set; }
 
-        public ICollection<Station> Stations { get; set; } = new List<Station>();
+        public Station Station { get; set; }
     }
 
 }

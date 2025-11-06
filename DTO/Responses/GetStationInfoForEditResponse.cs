@@ -5,12 +5,12 @@ namespace DTO.Responses
 {
     public class GetStationInfoForEditResponse
     {
-        public string NewBrandName { get; set; }
-        public string NewStreet { get; set; }
-        public string NewHouseNumber { get; set; }
-        public string NewCity { get; set; }
-        public double NewLatitude { get; set; }
-        public double NewLongitude { get; set; }
+        public string BrandName { get; set; }
+        public string Street { get; set; }
+        public string HouseNumber { get; set; }
+        public string City { get; set; }
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
         public List<AddFuelTypeRequest> FuelType { get; set; } = new();
     }
 }

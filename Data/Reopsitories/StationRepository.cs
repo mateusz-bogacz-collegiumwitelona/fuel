@@ -434,7 +434,7 @@ namespace Data.Reopsitories
             {
                 await transaction.RollbackAsync();
                 _logger.LogError(ex, "Error editing station: {request}", request);
-                return false;
+                throw;
             }
         }
 
@@ -452,12 +452,12 @@ namespace Data.Reopsitories
                 )
                 .Select(s => new GetStationInfoForEditResponse
                 {
-                    NewBrandName = s.Brand.Name,
-                    NewStreet = s.Address.Street,
-                    NewHouseNumber = s.Address.HouseNumber,
-                    NewCity = s.Address.City,
-                    NewLatitude = s.Address.Location.Y,
-                    NewLongitude = s.Address.Location.X,
+                    BrandName = s.Brand.Name,
+                    Street = s.Address.Street,
+                    HouseNumber = s.Address.HouseNumber,
+                    City = s.Address.City,
+                    Latitude = s.Address.Location.Y,
+                    Longitude = s.Address.Location.X,
                     FuelType = s.FuelPrice.Select(fp => new AddFuelTypeRequest
                     {
                         Code = fp.FuelType.Code,
@@ -529,8 +529,42 @@ namespace Data.Reopsitories
             {
                 await transaction.RollbackAsync();
                 _logger.LogError(ex, "Error adding new station: {request}", request);
-                return false;
+                throw;
             }
         }
+
+        public async Task<bool> DeleteStationAsync(FindStationRequest request)
+        {
+            try
+            {
+                var station = await _context.Stations
+                    .Include(s => s.Brand)
+                    .Include(s => s.Address)
+                    .FirstOrDefaultAsync(s =>
+                        s.Brand.Name.ToLower() == request.BrandName.ToLower() &&
+                        s.Address.Street.ToLower() == request.Street.ToLower() &&
+                        s.Address.HouseNumber.ToLower() == request.HouseNumber.ToLower() &&
+                        s.Address.City.ToLower() == request.City.ToLower()
+                    );
+
+                if (station == null)
+                {
+                    _logger.LogWarning("Station not found for deletion: {findStation}", request);
+                    throw new InvalidOperationException("Station not found.");
+                }
+
+                _context.Stations.Remove(station);
+                var result = await _context.SaveChangesAsync();
+                if (result <= 0)
+                    throw new InvalidOperationException("Failed to delete the station from the database.");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting station: {request}", request);
+                throw;
+            }
+        } 
     }
 }

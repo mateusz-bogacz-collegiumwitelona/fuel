@@ -199,12 +199,12 @@ namespace Controllers.Controllers.Admin
         ///       "success": true,
         ///       "message": "Station info retrieved successfully.",
         ///       "data": {
-        ///         "newBrandName": "Orlen",
-        ///         "newStreet": "Główna",
-        ///         "newHouseNumber": "15A",
-        ///         "newCity": "Warszawa",
-        ///         "newLatitude": 52.2297,
-        ///         "newLongitude": 21.0122,
+        ///         "BrandName": "Orlen",
+        ///         "Street": "Główna",
+        ///         "HouseNumber": "15A",
+        ///         "City": "Warszawa",
+        ///         "Latitude": 52.2297,
+        ///         "Longitude": 21.0122,
         ///         "fuelType": [
         ///           {
         ///             "code": "PB95",
@@ -322,6 +322,63 @@ namespace Controllers.Controllers.Admin
         public async Task<IActionResult> AddNewStationAsync([FromBody] AddStationRequest request)
         {
             var result = await _stationServices.AddNewStationAsync(request);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    data = result.Data
+                });
+        }
+
+        /// <summary>
+        /// Deletes an existing fuel station from the system
+        /// </summary>
+        /// <remarks>
+        /// Removes a fuel station identified by brand name and address details.
+        /// This operation will cascade delete all associated data including:
+        /// - Station address
+        /// - All fuel prices for this station
+        /// - All price proposals for this station
+        /// 
+        /// Sample request:
+        /// 
+        ///     DELETE /api/admin/station/delete
+        ///     {
+        ///       "brandName": "A-Prim",
+        ///       "street": "Beskidzka",
+        ///       "houseNumber": "15",
+        ///       "city": "Grojec"
+        ///     }
+        ///     
+        /// **Important Notes:**
+        /// - All fields are required to uniquely identify the station
+        /// - Brand name and address must match exactly (case-insensitive)
+        /// - This operation is irreversible - all related data will be permanently deleted
+        /// - Deleting a station will automatically remove:
+        ///   * The station's address
+        ///   * All fuel prices associated with this station
+        ///   * All price proposals submitted for this station
+        /// 
+        /// </remarks>
+        /// <param name="request">Station identification details (brand name and full address)</param>
+        /// <returns>Result indicating success or failure of the deletion</returns>
+        /// <response code="200">Station deleted successfully</response>
+        /// <response code="400">Station not found with provided details</response>
+        /// <response code="401">Unauthorized - valid JWT token required</response>
+        /// <response code="403">Forbidden - Admin role required</response>
+        /// <response code="500">Internal server error</response>
+        [HttpDelete("delete")]
+        public async Task<IActionResult> DeleteStationAsync([FromBody] FindStationRequest request)
+        {
+            var result = await _stationServices.DeleteStationAsync(request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, new
                 {

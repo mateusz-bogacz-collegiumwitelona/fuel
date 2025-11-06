@@ -16,5 +16,8 @@ namespace Data.Interfaces
         Task<bool> EditStationAsync(EditStationRequest request);
         Task<GetStationInfoForEditResponse> GetStationInfoForEdit(FindStationRequest request);
         Task<bool> AddNewStationAsync(AddStationRequest request);
+        Task<bool> DeleteStationAsync(FindStationRequest request);
+
+
     }
 }

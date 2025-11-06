@@ -93,9 +93,9 @@ namespace Data.Context
 
             builder.Entity<Station>()
                 .HasOne(s => s.Address)
-                .WithMany(a => a.Stations)
-                .HasForeignKey(s => s.AddressId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .WithOne(a => a.Station)
+                .HasForeignKey<Station>(s => s.AddressId)
+                .OnDelete(DeleteBehavior.Cascade);
 
            builder.Entity<StationAddress>()
                 .Property(sa => sa.Location)

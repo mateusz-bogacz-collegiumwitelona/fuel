@@ -14,5 +14,6 @@ namespace Services.Interfaces
         Task<Result<bool>> EditStationAsync(EditStationRequest request);
         Task<Result<GetStationInfoForEditResponse>> GetStationInfoForEdit(FindStationRequest request);
         Task<Result<bool>> AddNewStationAsync(AddStationRequest request);
+        Task<Result<bool>> DeleteStationAsync(FindStationRequest request);
     }
 }

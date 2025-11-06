@@ -3,6 +3,7 @@ using System;
 using Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251106220340_RepairStationAddressTable2")]
+    partial class RepairStationAddressTable2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -315,8 +318,7 @@ namespace Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AddressId")
-                        .IsUnique();
+                    b.HasIndex("AddressId");
 
                     b.HasIndex("BrandId");
 
@@ -550,9 +552,9 @@ namespace Data.Migrations
             modelBuilder.Entity("Data.Models.Station", b =>
                 {
                     b.HasOne("Data.Models.StationAddress", "Address")
-                        .WithOne("Station")
-                        .HasForeignKey("Data.Models.Station", "AddressId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .WithMany("Stations")
+                        .HasForeignKey("AddressId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Data.Models.Brand", "Brand")
@@ -646,8 +648,7 @@ namespace Data.Migrations
 
             modelBuilder.Entity("Data.Models.StationAddress", b =>
                 {
-                    b.Navigation("Station")
-                        .IsRequired();
+                    b.Navigation("Stations");
                 });
 #pragma warning restore 612, 618
         }
