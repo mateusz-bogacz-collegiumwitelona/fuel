@@ -11,5 +11,6 @@ namespace Data.Interfaces
         Task<List<GetStationListResponse>> GetStationListAsync(GetStationListRequest request);
         Task<GetStationListResponse> GetStationProfileAsync(GetStationProfileRequest request);
         Task<Station> FindStationByDataAsync(string brandName, string street, string houseNumber, string city);
+        Task<List<GetStationListForAdminResponse>> GetStationsListForAdminAsync(TableRequest request);
     }
 }
