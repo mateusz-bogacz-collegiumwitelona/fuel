@@ -7,11 +7,19 @@ const API_BASE = "http://localhost:5111";
 function parseJwt(token: string | null) {
   if (!token) return null;
   try {
-    return JSON.parse(atob(token.split(".")[1]));
+    const payload = token.split(".")[1];
+    const decoded = atob(payload);
+    try {
+      // unicode-safe
+      return JSON.parse(decodeURIComponent(escape(decoded)));
+    } catch {
+      return JSON.parse(decoded);
+    }
   } catch (e) {
     return null;
   }
 }
+
 
 type Station = {
   id?: string;
@@ -62,43 +70,49 @@ export default function ListPage() {
   const [totalCount, setTotalCount] = React.useState<number | null>(null);
 
   React.useEffect(() => {
+  (async () => {
     const token = localStorage.getItem("token");
     const expiration = localStorage.getItem("token_expiration");
 
-    if (!token || !expiration || new Date(expiration) <= new Date()) {
-      if (typeof window !== "undefined") window.location.href = "/login";
+    if (token && expiration && new Date(expiration) > new Date()) {
+      const decoded = parseJwt(token);
+      const userEmail = decoded?.email || decoded?.sub || null;
+      setEmail(userEmail ?? "Zalogowany użytkownik");
+      await fetchStations(token, pageNumber, pageSize);
       return;
     }
 
-    const decoded = parseJwt(token);
-    const userEmail = decoded?.email || decoded?.sub || null;
-    setEmail(userEmail ?? "Zalogowany użytkownik");
+    // no Token, try refresh
+    try {
+      const refreshRes = await fetch(`${API_BASE}/api/refresh`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        credentials: "include",
+      });
 
-    // fetch initial page
-    fetchStations(token, pageNumber, pageSize);
+      console.log("/api/refresh status:", refreshRes.status);
+      const bodyText = await refreshRes.text();
+      console.log("refresh body:", bodyText);
 
-    // request geolocation so we can compute distances client-side if backend doesn't provide them
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
-        },
-        () => {
-          setUserCoords(null);
-        },
-        { timeout: 10_000 }
-      );
+      if (refreshRes.ok) {
+        // refresh works
+        setEmail("Zalogowany użytkownik");
+        // fetchStations can work without token
+        await fetchStations(null, pageNumber, pageSize);
+        return;
+      } else {
+        // refresh doesn't work -> redirect to login
+        if (typeof window !== "undefined") window.location.href = "/login";
+      }
+    } catch (err) {
+      console.error("Błąd podczas /api/refresh:", err);
+      if (typeof window !== "undefined") window.location.href = "/login";
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  })();
 
-  // refetch when pageNumber or pageSize change (after initial auth check, we re-read token inside)
-  React.useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    fetchStations(token, pageNumber, pageSize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageNumber, pageSize]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
 
   async function fetchStations(token: string, pageNum: number, pageSz: number) {
   setLoading(true);

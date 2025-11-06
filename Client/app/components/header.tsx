@@ -1,17 +1,26 @@
 import React from "react";
-import ThemeController from "../components/ThemeController.tsx";
-import { useTheme } from "../context/ThemeContext.tsx";
+import ThemeController from "../components/ThemeController";
+import { useTheme } from "../context/ThemeContext";
+
+const API_BASE = "http://localhost:5111";
 
 export default function Header() {
-    const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
-    const handleLogout = () => {
-        if (typeof window !== "undefined") {
-            localStorage.removeItem("token");
-            localStorage.removeItem("token_expiration");
-            window.location.href = "/login";
-        }
-    };
+  const handleLogout = async () => {
+    try {
+      await fetch(`${API_BASE}/api/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (e) {
+      console.warn("Logout request failed:", e);
+    }
+    localStorage.removeItem("token");
+    localStorage.removeItem("token_expiration");
+    if (typeof window !== "undefined") window.location.href = "/login";
+  };
+
 
     return (
         <header className="w-full bg-base-300 shadow-sm text-base-content">

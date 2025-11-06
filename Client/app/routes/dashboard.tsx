@@ -423,7 +423,7 @@ export default function Dashboard() {
                             ))}
                         </div>
                     ) : (
-                        <div className="text-gray-300">Brak dostępnych stacji.</div>
+                        <div className="text-base-content">Brak dostępnych stacji.</div>
                     )}
                 </section>
 
@@ -433,24 +433,24 @@ export default function Dashboard() {
                     {statsLoading ? (
                         <div>Ładowanie statystyk...</div>
                     ) : statsError ? (
-                        <div className="text-red-400">{statsError}</div>
+                        <div className="text-error">{statsError}</div>
                     ) : stats ? (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="p-4 bg-gray-700 rounded text-center">
-                                <div className="text-3xl font-bold">{stats.total ?? requests?.length ?? 0}</div>
-                                <div className="text-sm text-gray-300 mt-1">Wszystkie zgłoszenia</div>
+                            <div className="p-4 bg-base-100 rounded text-center">
+                                <div className="text-3xl text-base-content font-bold">{stats.total ?? requests?.length ?? 0}</div>
+                                <div className="text-sm text-base-content mt-1">Wszystkie zgłoszenia</div>
                             </div>
-                            <div className="p-4 bg-gray-700 rounded text-center">
-                                <div className="text-3xl font-bold">{stats.accepted ?? 0}</div>
-                                <div className="text-sm text-gray-300 mt-1">Zaakceptowane</div>
+                            <div className="p-4 bg-base-100 rounded text-center">
+                                <div className="text-3xl text-success font-bold">{stats.accepted ?? 0}</div>
+                                <div className="text-sm text-success mt-1">Zaakceptowane</div>
                             </div>
-                            <div className="p-4 bg-gray-700 rounded text-center">
-                                <div className="text-3xl font-bold">{stats.pending ?? 0}</div>
-                                <div className="text-sm text-gray-300 mt-1">W oczekiwaniu</div>
+                            <div className="p-4 bg-base-100 rounded text-center">
+                                <div className="text-3xl text-info font-bold">{stats.pending ?? 0}</div>
+                                <div className="text-sm text-info mt-1">W oczekiwaniu</div>
                             </div>
-                            <div className="p-4 bg-gray-700 rounded text-center">
-                                <div className="text-3xl font-bold">{stats.rejected ?? 0}</div>
-                                <div className="text-sm text-gray-300 mt-1">Odrzucone</div>
+                            <div className="p-4 bg-base-100 rounded text-center">
+                                <div className="text-3xl text-error font-bold">{stats.rejected ?? 0}</div>
+                                <div className="text-sm text-error mt-1">Odrzucone</div>
                             </div>
                         </div>
                     ) : (
