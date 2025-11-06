@@ -1,11 +1,13 @@
 ﻿using Data.Enums;
 using Data.Interfaces;
+using Data.Reopsitories;
 using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;
+using System.Linq;
 
 namespace Services.Services
 {
@@ -14,15 +16,18 @@ namespace Services.Services
         private readonly IStationRepository _stationRepository;
         private readonly ILogger<StationServices> _logger;
         private readonly IBrandRepository _brandRepository;
+        private readonly IFuelTypeRepository _fuelTypeRepository;
 
         public StationServices(
             IStationRepository stationRepository,
            ILogger<StationServices> logger,
-           IBrandRepository brandRepository)
+           IBrandRepository brandRepository,
+           IFuelTypeRepository fuelTypeRepository)
         {
             _stationRepository = stationRepository;
             _logger = logger;
             _brandRepository = brandRepository;
+            _fuelTypeRepository = fuelTypeRepository;
         }
 
         public async Task<Result<List<GetStationsResponse>>> GetAllStationsForMapAsync(GetStationsRequest request)
@@ -116,17 +121,20 @@ namespace Services.Services
             {
                 if (request.FuelType?.Any() == true)
                 {
-                    foreach (var fuelType in request.FuelType)
+                    var fuelTypeCodes = await _fuelTypeRepository.GetAllFuelTypeCodesAsync();
+
+                    var invalidFuelTypes = request.FuelType
+                        .Where(fuelType => !fuelTypeCodes.Contains(fuelType, StringComparer.OrdinalIgnoreCase))
+                        .ToList();
+
+                    if (invalidFuelTypes.Any())
                     {
-                        if (!Enum.TryParse<TypeOfFuel>(fuelType, true, out _))
-                        {
-                            _logger.LogWarning("Invalid fuel type {FuelType}", fuelType);
-                            return Result<PagedResult<GetStationListResponse>>.Bad(
-                                "Invalid fuel tyep",
-                                StatusCodes.Status400BadRequest,
-                                new List<string> { $"Fuel type '{fuelType}' is not recoginized" }
-                                );
-                        }
+                        _logger.LogWarning("Invalid fuel type(s) provided: {FuelTypes}", string.Join(", ", invalidFuelTypes));
+
+                        return Result<PagedResult<GetStationListResponse>>.Bad(
+                            "Validation error",
+                            StatusCodes.Status400BadRequest,
+                            new List<string> { $"Invalid fuel type(s): {string.Join(", ", invalidFuelTypes)}" });
                     }
                 }
 
@@ -352,6 +360,21 @@ namespace Services.Services
         {
             try
             {
+                if (!string.IsNullOrWhiteSpace(request.NewBrandName))
+                {
+                    bool isBrandExist = await _brandRepository.FindBrandAsync(request.NewBrandName);
+
+                    if (!isBrandExist)
+                    {
+                        _logger.LogWarning("Invalid brand name: {BrandName}", request.NewBrandName);
+                        return Result<bool>.Bad(
+                            "Validation error",
+                            StatusCodes.Status400BadRequest,
+                            new List<string> { $"Invalid brand name: {request.NewBrandName}" },
+                            false);
+                    }
+                }
+
                 var result = await _stationRepository.EditStationAsync(request);
 
                 if (!result)
@@ -372,6 +395,77 @@ namespace Services.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"An error occurred while editing station details: {ex.Message} | {ex.InnerException}");
+                return Result<bool>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" },
+                    false);
+            }
+        }
+
+        public async Task<Result<bool>> AddNewStationAsync(AddStationRequest request)
+        {
+            try
+            {
+                bool isBrandExist = await _brandRepository.FindBrandAsync(request.BrandName);
+
+                if (!isBrandExist)
+                {
+                    _logger.LogWarning("Invalid brand name: {BrandName}", request.BrandName);
+                    return Result<bool>.Bad(
+                        "Validation error",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { $"Invalid brand name: {request.BrandName}" },
+                        false);
+                }
+
+                if (request.FuelTypes == null || !request.FuelTypes.Any())
+                {
+                    return Result<bool>.Bad(
+                        "Validation error",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "At least one fuel type must be provided." },
+                        false);
+                }
+
+                var fuelTypeCodes = await _fuelTypeRepository.GetAllFuelTypeCodesAsync();
+                var invalidFuelTypes = request.FuelTypes
+                 .Where(ft => !fuelTypeCodes.Contains(ft.Code, StringComparer.OrdinalIgnoreCase))
+                 .Select(ft => ft.Code)
+                 .ToList();
+
+
+                if (invalidFuelTypes.Any())
+                {
+                    _logger.LogWarning("Invalid fuel type(s) provided: {FuelTypes}", string.Join(", ", invalidFuelTypes));
+
+                    return Result<bool>.Bad(
+                        "Validation error",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { $"Invalid fuel type(s): {string.Join(", ", invalidFuelTypes)}" },
+                        false);
+                }
+
+                var result = await _stationRepository.AddNewStationAsync(request);
+
+                if (!result)
+                {
+                    _logger.LogWarning("Failed to add new station.");
+                    return Result<bool>.Bad(
+                        "Failed to add new station.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Could not add the station with the provided details." },
+                        false);
+                }
+
+                return Result<bool>.Good(
+                    "New station added successfully.",
+                    StatusCodes.Status201Created,
+                    true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while adding new station: {ex.Message} | {ex.InnerException}");
                 return Result<bool>.Bad(
                     "An error occurred while processing your request.",
                     StatusCodes.Status500InternalServerError,

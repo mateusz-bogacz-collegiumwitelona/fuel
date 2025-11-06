@@ -14,5 +14,6 @@ namespace Data.Interfaces
         Task<List<GetStationListForAdminResponse>> GetStationsListForAdminAsync(TableRequest request);
         Task<bool> IsStationExistAsync(string brandName, string street, string houseNumber, string city);
         Task<bool> EditStationAsync(EditStationRequest request);
+        Task<bool> AddNewStationAsync(AddStationRequest request);
     }
 }

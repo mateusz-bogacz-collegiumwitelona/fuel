@@ -52,14 +52,25 @@ namespace Services.Services
                         );
                 }
 
-                if (!Enum.TryParse<TypeOfFuel>(request.FuelType, out var fuelTypeEnum))
+                var vuelTypeCodes = await _fuelTypeRepository.GetAllFuelTypeCodesAsync();
+                
+                foreach (var code in vuelTypeCodes)
                 {
-                    _logger.LogWarning("Invalid fuel type provided: {FuelType}", request.FuelType);
-                    return Result<string>.Bad(
-                        "Validation error",
-                        StatusCodes.Status400BadRequest,
-                        new List<string> { "Invalid fuel type provided." }
-                        );
+                    if (string.Equals(code, request.FuelType, StringComparison.OrdinalIgnoreCase))
+                    {
+                        request.FuelType = code;
+                        break;
+                    }
+
+                    if (!vuelTypeCodes.Contains(request.FuelType))
+                    {
+                        _logger.LogWarning("Invalid fuel type provided: {FuelType}", request.FuelType);
+                        return Result<string>.Bad(
+                            "Validation error",
+                            StatusCodes.Status400BadRequest,
+                            new List<string> { "Invalid fuel type provided." }
+                            );
+                    }
                 }
 
                 var fuelType = await _fuelTypeRepository.FindFuelTypeByNameAsync(request.FuelType);

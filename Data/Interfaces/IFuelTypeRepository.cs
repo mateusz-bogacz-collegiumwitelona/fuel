@@ -1,4 +1,5 @@
 ﻿using Data.Models;
+using DTO.Requests;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,5 +12,6 @@ namespace Data.Interfaces
     {
         Task<FuelType> FindFuelTypeByNameAsync(string fuelType);
         Task<List<string>> GetAllFuelTypeCodesAsync();
+        Task<List<AddFuelTypeRequest>> GetStaionFuelTypes(Guid stationId);
     }
 }
