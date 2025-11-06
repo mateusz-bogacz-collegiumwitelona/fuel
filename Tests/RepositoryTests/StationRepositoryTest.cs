@@ -1,4 +1,5 @@
 ﻿using Data.Context;
+using Data.Interfaces;
 using Data.Models;
 using Data.Reopsitories;
 using DTO.Requests;
@@ -36,6 +37,7 @@ namespace Tests.RepositoryTests
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options;
 
+            var _brandRepo = new Mock<IBrandRepository>();
             _context = new ApplicationDbContext(options);
             _loggerMock = new Mock<ILogger<StationRepository>>();
 
@@ -43,8 +45,8 @@ namespace Tests.RepositoryTests
             var geometryFactory = NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
 
             // creating test brands
-            var brand1 = new Brand { Id = new Guid(), Name = "Brand1", LogoUrl = "", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
-            var brand2 = new Brand { Id = new Guid(), Name = "Brand2", LogoUrl = "", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+            var brand1 = new Brand { Id = new Guid(), Name = "Brand1", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+            var brand2 = new Brand { Id = new Guid(), Name = "Brand2", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
             _context.Brand.AddRange(brand1, brand2);
 
             // creating addresses for stations
@@ -94,7 +96,7 @@ namespace Tests.RepositoryTests
 
             _context.SaveChanges();
             // repo setup
-            _repository = new StationRepository(_context, _loggerMock.Object);
+            _repository = new StationRepository(_context, _loggerMock.Object, _brandRepo.Object);
         }
 
         [Fact]

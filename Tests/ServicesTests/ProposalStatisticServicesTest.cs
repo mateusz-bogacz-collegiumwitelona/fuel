@@ -51,7 +51,7 @@ namespace Tests.ServicesTests
             // Assert
             // GetUserProposalStatisticResponse() should return Bad response (!IsSuccess, code 400)
             Assert.False(result.IsSuccess);
-            Assert.Equal(400, result.StatusCode);
+            Assert.Equal(401, result.StatusCode);
             Assert.Contains("Email is required", result.Errors);
             _loggerMock.Verify(x => x.Log(
                 LogLevel.Warning,

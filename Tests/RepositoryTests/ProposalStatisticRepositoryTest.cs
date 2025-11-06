@@ -79,7 +79,7 @@ namespace Tests.RepositoryTest
             };
 
             // adds statistics && saves changes
-            _context.ProposalStatisicts.Add(stat);
+            _context.ProposalStatistics.Add(stat);
             await _context.SaveChangesAsync();
 
             // Act
@@ -145,7 +145,7 @@ namespace Tests.RepositoryTest
 
             // Act
             // checks nonexisting email, function should return false in this case
-            var result = await _repository.AddProposalStatisticRecordAsunc("notfound@example.com");
+            var result = await _repository.AddProposalStatisticRecordAsync("notfound@example.com");
 
             // Assert
             // if we got a false response, function works fine
@@ -168,8 +168,8 @@ namespace Tests.RepositoryTest
             _userManagerMock.Setup(x => x.FindByEmailAsync(newUser.Email)).ReturnsAsync(newUser);
 
             // Act
-            var result = await _repository.AddProposalStatisticRecordAsunc("user123@example.com");
-            var result2 = await _repository.AddProposalStatisticRecordAsunc("user123@example.com");
+            var result = await _repository.AddProposalStatisticRecordAsync("user123@example.com");
+            var result2 = await _repository.AddProposalStatisticRecordAsync("user123@example.com");
 
             // Assert
             // should ALWAYS pass and return true due to how AddProposalStatisticRecordAsunc() and SaveChangesAsync() work,
@@ -240,7 +240,7 @@ namespace Tests.RepositoryTest
                 AcceptedRate = 50,
                 UpdatedAt = DateTime.UtcNow
             };
-            _context.ProposalStatisicts.Add(stat);
+            _context.ProposalStatistics.Add(stat);
             await _context.SaveChangesAsync();
 
             // Act
@@ -272,7 +272,7 @@ namespace Tests.RepositoryTest
                 AcceptedRate = 50,
                 UpdatedAt = DateTime.UtcNow
             };
-            _context.ProposalStatisicts.Add(stat);
+            _context.ProposalStatistics.Add(stat);
             await _context.SaveChangesAsync();
 
             // Act
