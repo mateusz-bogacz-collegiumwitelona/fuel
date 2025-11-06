@@ -1,20 +1,11 @@
 ﻿using Data.Context;
 using Data.Enums;
-using Data.Models;
+using Data.Helpers;
 using Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions;
-using NetTopologySuite.Algorithm;
-using Pipelines.Sockets.Unofficial.Arenas;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Data.Seeder
 {
@@ -40,13 +31,13 @@ namespace Data.Seeder
         {
             if (!await _roleManager.Roles.AnyAsync()) await SeedRolesAsync();
             if (!await _userManager.Users.AnyAsync()) await SeedUsersAsync();
+            if (!await _context.ProposalStatistics.AnyAsync()) await SeedProposalStatisticsAsync();
             if (!await _context.Brand.AnyAsync()) await SeedBrandsAsync();
             if (!await _context.Stations.AnyAsync()) await SeedStationsAsync();
             if (!await _context.FuelTypes.AnyAsync()) await SeedFuelTypesAsync();
             if (!await _context.FuelPrices.AnyAsync()) await SeedFuelPriceAsync();
             if (!await _context.PriceProposals.AnyAsync()) await SeedPriceProposials();
-            if (!await _context.ProposalStatisicts.AnyAsync()) await SeedPriceProposial();
-
+            
             Console.WriteLine("Database seeding completed.");
         }
 
@@ -111,7 +102,6 @@ namespace Data.Seeder
                     ConcurrencyStamp = Guid.NewGuid().ToString(),
                     SecurityStamp = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow,
-                    Points = 0
                 };
 
                 var result = await _userManager.CreateAsync(newUser, password);
@@ -140,7 +130,6 @@ namespace Data.Seeder
                         {
                             Id = Guid.NewGuid(),
                             Name = brandName,
-                            LogoUrl = " ",
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
                         };
@@ -211,7 +200,6 @@ namespace Data.Seeder
                         {
                             Id = Guid.NewGuid(),
                             Name = brandName,
-                            LogoUrl = " ",
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
                         };
@@ -240,7 +228,9 @@ namespace Data.Seeder
                         HouseNumber = number,
                         City = city,
                         PostalCode = postal,
-                        Location = new NetTopologySuite.Geometries.Point(lon, lat) { SRID = 4326 }
+                        Location = new NetTopologySuite.Geometries.Point(lon, lat) { SRID = GeoConstants.SRID_VALUE },
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
                     };
                     _context.Add(stationAddress);
                     await _context.SaveChangesAsync();
@@ -432,7 +422,7 @@ namespace Data.Seeder
             }
         }
 
-        public async Task SeedPriceProposial()
+        public async Task SeedProposalStatisticsAsync()
         {
             try
             {
@@ -440,7 +430,7 @@ namespace Data.Seeder
 
                 foreach (var user in users)
                 {
-                    if (!await _context.ProposalStatisicts.AnyAsync(ps => ps.UserId == user.Id))
+                    if (!await _context.ProposalStatistics.AnyAsync(ps => ps.UserId == user.Id))
                     {
                         int total = _random.Next(1, 20);
                         int approved = _random.Next(1, total);
@@ -456,10 +446,11 @@ namespace Data.Seeder
                             ApprovedProposals = approved,
                             RejectedProposals = rejected,
                             AcceptedRate = rate,
+                            Points = approved,
                             UpdatedAt = DateTime.UtcNow
                         };
 
-                        await _context.ProposalStatisicts.AddAsync(poposal);
+                        await _context.ProposalStatistics.AddAsync(poposal);
                     }
                 }
 

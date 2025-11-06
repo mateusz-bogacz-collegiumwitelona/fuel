@@ -1,16 +1,16 @@
 ﻿using DTO.Requests;
+using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
 using Services.Helpers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Services.Interfaces
 {
     public interface IUserServices
     {
-        //
+        Task<Result<IdentityResult>> ChangeUserNameAsync(string email, string userName);
+        Task<Result<GetUserInfoResponse>> GetUserInfoAsync(string email);
+        Task<Result<IdentityResult>> ChangeUserEmailAsync(string oldEmail, string newEmail);
+        Task<Result<IdentityResult>> ChangeUserPasswordAsync(string email, ChangePasswordRequest request);
+        Task<Result<IdentityResult>> DeleteUserAsyc(string email, DeleteAccountRequest request);
     }
 }

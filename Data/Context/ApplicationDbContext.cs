@@ -1,12 +1,7 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Data.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Data.Models;
 
 namespace Data.Context
 {
@@ -22,7 +17,7 @@ namespace Data.Context
         public DbSet<Logging> Logging { get; set; }
         public DbSet<PriceProposal> PriceProposals { get; set; }
         public DbSet<Station> Stations { get; set; }
-        public DbSet<ProposalStatistic> ProposalStatisicts { get; set; }
+        public DbSet<ProposalStatistic> ProposalStatistics { get; set; } 
         public DbSet<StationAddress> StationAddress { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)

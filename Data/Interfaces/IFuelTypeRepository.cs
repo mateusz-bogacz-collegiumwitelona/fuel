@@ -1,0 +1,15 @@
+﻿using Data.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Data.Interfaces
+{
+    public interface IFuelTypeRepository
+    {
+        Task<FuelType> FindFuelTypeByNameAsync(string fuelType);
+        Task<List<string>> GetAllFuelTypeCodesAsync();
+    }
+}

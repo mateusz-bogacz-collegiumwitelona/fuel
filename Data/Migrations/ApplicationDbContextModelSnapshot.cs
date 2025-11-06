@@ -70,14 +70,14 @@ namespace Data.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("Points")
-                        .HasColumnType("integer");
-
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
@@ -103,10 +103,6 @@ namespace Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("LogoUrl")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -227,6 +223,11 @@ namespace Data.Migrations
                     b.Property<Guid>("FuelTypeId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("PhotoToken")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("PhotoUrl")
                         .IsRequired()
                         .HasColumnType("text");
@@ -235,7 +236,7 @@ namespace Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<Guid>("ReviewedBy")
+                    b.Property<Guid?>("ReviewedBy")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("StationId")
@@ -271,6 +272,9 @@ namespace Data.Migrations
                     b.Property<int?>("ApprovedProposals")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("Points")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("RejectedProposals")
                         .HasColumnType("integer");
 
@@ -288,7 +292,7 @@ namespace Data.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("ProposalStatisicts");
+                    b.ToTable("ProposalStatistics");
                 });
 
             modelBuilder.Entity("Data.Models.Station", b =>
@@ -328,6 +332,9 @@ namespace Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("HouseNumber")
                         .IsRequired()
                         .HasColumnType("text");
@@ -343,6 +350,9 @@ namespace Data.Migrations
                     b.Property<string>("Street")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 

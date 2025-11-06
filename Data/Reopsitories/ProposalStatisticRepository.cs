@@ -3,12 +3,8 @@ using Data.Interfaces;
 using Data.Models;
 using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Data.Reopsitories
 {
@@ -39,7 +35,7 @@ namespace Data.Reopsitories
                 return null;
             }
 
-            var proposals = _context.ProposalStatisicts
+            var proposals = _context.ProposalStatistics
                 .FirstOrDefault(ps => ps.UserId == user.Id);
 
             if (proposals == null)
@@ -54,11 +50,12 @@ namespace Data.Reopsitories
                 ApprovedProposals = proposals.ApprovedProposals ?? 0,
                 RejectedProposals = proposals.RejectedProposals ?? 0,
                 AcceptedRate = proposals.AcceptedRate ?? 0,
+                Points = proposals.Points ?? 0,
                 UpdatedAt = proposals.UpdatedAt
             };
         }
 
-        public async Task<bool> AddProposalStatisticRecordAsunc(string email)
+        public async Task<bool> AddProposalStatisticRecordAsync(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
 
@@ -80,7 +77,7 @@ namespace Data.Reopsitories
                 UpdatedAt = DateTime.UtcNow
             };
 
-            await _context.ProposalStatisicts.AddAsync(proposal);
+            await _context.ProposalStatistics.AddAsync(proposal);
             int isSaved = await _context.SaveChangesAsync();
 
             if (isSaved <= 0)
@@ -104,7 +101,7 @@ namespace Data.Reopsitories
                     return false;
                 }
 
-                var userProposialStats = _context.ProposalStatisicts
+                var userProposialStats = _context.ProposalStatistics
                     .FirstOrDefault(ps => ps.UserId == user.Id);
 
                 if (userProposialStats == null)
@@ -151,5 +148,20 @@ namespace Data.Reopsitories
                 return false;
             }
         }
+
+        public async Task<List<TopUserResponse>> GetTopUserListAsync()
+         => await _context.ProposalStatistics
+                .OrderByDescending(ps => ps.Points)
+                .Take(10)
+                .Select(ps => new TopUserResponse
+                {
+                    UserName = ps.User.UserName,
+                    TotalProposals = ps.TotalProposals,
+                    ApprovedProposals = ps.ApprovedProposals,
+                    RejectedProposals = ps.RejectedProposals,
+                    AcceptedRate = ps.AcceptedRate,
+                    Points = ps.Points
+                })
+                .ToListAsync();
     }
 }

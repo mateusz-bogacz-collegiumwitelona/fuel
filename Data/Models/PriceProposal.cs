@@ -1,10 +1,5 @@
 ﻿using Data.Enums;
-using StackExchange.Redis;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations;
 
 namespace Data.Models
 {
@@ -24,10 +19,13 @@ namespace Data.Models
         public decimal ProposedPrice { get; set; }
         public string PhotoUrl { get; set; }
         public PriceProposalStatus Status { get; set; }
-        public string? AdminComment { get; set; }
-        public Guid ReviewedBy { get; set; }
-        public DateTime CreatedAt { get; set; }
 
+        [MaxLength(64)]
+        public string PhotoToken { get; set; }
+
+        public string? AdminComment { get; set; }
+        public Guid? ReviewedBy { get; set; }
+        public DateTime CreatedAt { get; set; }
         
     }
 }

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace DTO.Responses
+﻿namespace DTO.Responses
 {
     public class GetProposalStatisticResponse
     {
@@ -12,6 +6,7 @@ namespace DTO.Responses
         public int ApprovedProposals { get; set; }
         public int RejectedProposals { get; set; }
         public int AcceptedRate { get; set; }
+        public int Points { get; set; }
         public DateTime UpdatedAt { get; set; }
     }
 }

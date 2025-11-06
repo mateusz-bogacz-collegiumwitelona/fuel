@@ -1,18 +1,10 @@
-﻿using DTO.Requests;
+﻿using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Data.Interfaces
 {
     public interface IUserRepository
     {
-        Task<IdentityResult> RegisterNewUser(RegisterNewUserRequest request);
-        Task<string> GenerateConfirEmailTokenAsync(string email);
-        Task<IdentityResult> ConfirmEmailAsync(ConfirmEmailRequest request);
-        Task<string> GeneratePasswordResetToken(string email);
+        Task<GetUserInfoResponse> GetUserInfoAsync(string email);
     }
 }

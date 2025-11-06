@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Services.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,8 +7,8 @@ using System.Threading.Tasks;
 
 namespace Services.Interfaces
 {
-    public interface IEmaliBody
+    public interface IFuelTypeServices
     {
-        string GenerateConfirmEmailBody(string userName, string confirmationLink, string token);
+        Task<Result<List<string>>> GetAllFuelTypeCodesAsync();
     }
 }
