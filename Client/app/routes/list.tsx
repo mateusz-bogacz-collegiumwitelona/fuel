@@ -114,7 +114,7 @@ export default function ListPage() {
 }, []);
 
 
-  async function fetchStations(token: string, pageNum: number, pageSz: number) {
+  async function fetchStations(token: string | null, pageNum: number, pageSz: number) {
   setLoading(true);
   setError(null);
 
@@ -126,7 +126,7 @@ export default function ListPage() {
     fuelType: [],
     minPrice: null,
     maxPrice: null,
-    sortingByDisance: false,   // some swagger examples use this (typo)
+    sortingByDisance: false,
     sortingByPrice: false,
     sortingDirection: sortDirection,
     pagging: {
@@ -153,13 +153,16 @@ export default function ListPage() {
   ];
 
   async function tryPost(bodyObj: any) {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE}/api/station/list`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
+      headers,
+      credentials: "include",
       body: JSON.stringify(bodyObj),
     });
     return res;
@@ -168,12 +171,14 @@ export default function ListPage() {
   try {
     let res = await tryPost(baseBody);
 
+    // if the first POST failed, try alternate request bodies
     if (!res.ok && (res.status === 400 || res.status === 422 || res.status === 404)) {
       console.warn("Primary POST failed, trying alternative bodies, status:", res.status);
       try {
-        const txt = await res.text();
+        const txt = await res.text().catch(() => "<no body>");
         console.warn("Primary body response text:", txt);
-      } catch (e) {}
+      } catch {}
+
       let ok = false;
       for (const alt of altBodies) {
         try {
@@ -183,24 +188,31 @@ export default function ListPage() {
             ok = true;
             break;
           } else {
-            const t = await altRes.text();
+            const t = await altRes.text().catch(() => "<no body>");
             console.warn("Alt POST failed status:", altRes.status, "body tried:", alt, "response:", t);
           }
         } catch (e) {
           console.error("Alt POST threw", e);
         }
       }
+
+      // if all POSTs fail, try GET fallback (with credentials)
       if (!ok && !res.ok) {
         try {
+          const fallbackHeaders: Record<string, string> = { Accept: "application/json" };
+          if (token) fallbackHeaders["Authorization"] = `Bearer ${token}`;
+
           const fallback = await fetch(`${API_BASE}/api/station/list`, {
-            headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+            headers: fallbackHeaders,
+            credentials: "include",
           });
+
           if (fallback.ok) {
             const data2 = await fallback.json();
             applyListResponse(data2);
             return;
           } else {
-            const txt = await fallback.text();
+            const txt = await fallback.text().catch(() => "<no body>");
             throw new Error(`Fallback GET failed: ${fallback.status} ${txt}`);
           }
         } catch (e) {
@@ -235,6 +247,7 @@ export default function ListPage() {
     setLoading(false);
   }
 }
+
 
  function applyListResponse(data: any) {
   // swagger sample uses { items: [...], pageNumber, pageSize, totalCount, totalPages }
