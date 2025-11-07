@@ -3,6 +3,7 @@ using DTO.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Services.Helpers;
 using Services.Interfaces;
 
 namespace Controllers.Controllers.Admin
@@ -100,5 +101,26 @@ namespace Controllers.Controllers.Admin
                     Data = result.Data
                 });
         }
+
+        [HttpPut("change-role")]
+        public async Task<IActionResult> ChangeUserRoleAsync([FromQuery]string email, [FromQuery]string newRole)
+        {
+            var result = await _userServices.ChangeUserRoleAsync(email, newRole);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    data = result.Data
+                });
+        }
+
     }
 }

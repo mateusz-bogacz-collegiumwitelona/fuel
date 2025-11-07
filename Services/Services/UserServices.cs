@@ -5,6 +5,7 @@ using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;
@@ -16,15 +17,18 @@ namespace Services.Services
         private readonly IUserRepository _userRepository;
         private readonly ILogger<UserServices> _logger;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly RoleManager<IdentityRole<Guid>> _roleManager;
 
         public UserServices(
             IUserRepository userRepository,
             ILogger<UserServices> logger,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            RoleManager<IdentityRole<Guid>> roleManager)
         {
             _userRepository = userRepository;
             _logger = logger;
             _userManager = userManager;
+            _roleManager = roleManager;
         }
 
         public async Task<Result<GetUserInfoResponse>> GetUserInfoAsync(string email)
@@ -447,6 +451,83 @@ namespace Services.Services
                 return Result<PagedResult<GetUserListResponse>>.Bad(
                     "An unexpected error occurred.",
                     StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        public async Task<Result<IdentityResult>> ChangeUserRoleAsync(string email, string newRole)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    _logger.LogWarning("Email is null or empty.");
+                    return Result<IdentityResult>.Bad(
+                        "Email is required.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "EmailIsNullOrEmpty" }
+                    );
+                }
+
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user == null)
+                {
+                    _logger.LogWarning("User with email '{Email}' does not exist.", email);
+                    return Result<IdentityResult>.Bad(
+                        $"User with email {email} does not exist.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "UserNotFound" }
+                    );
+                }
+
+                if (!await _roleManager.RoleExistsAsync(newRole))
+                {
+                    _logger.LogWarning("Role '{Role}' does not exist.", newRole);
+                    return Result<IdentityResult>.Bad(
+                        $"Role {newRole} does not exist.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "RoleNotFound" }
+                    );
+                }
+
+                var currentRoles = await _userManager.GetRolesAsync(user);
+
+                var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                if (!removeResult.Succeeded)
+                {
+                    _logger.LogError("Failed to remove current roles from user '{Email}'.", email);
+                    return Result<IdentityResult>.Bad(
+                        $"Failed to remove existing roles from {email}.",
+                        StatusCodes.Status400BadRequest,
+                        removeResult.Errors.Select(e => e.Description).ToList()
+                    );
+                }
+
+                var addResult = await _userManager.AddToRoleAsync(user, newRole);
+                if (!addResult.Succeeded)
+                {
+                    _logger.LogError("Failed to assign role '{Role}' to user '{Email}'.", newRole, email);
+                    return Result<IdentityResult>.Bad(
+                        $"Failed to assign role {newRole} to {email}.",
+                        StatusCodes.Status400BadRequest,
+                        addResult.Errors.Select(e => e.Description).ToList()
+                    );
+                }
+
+                _logger.LogInformation("Successfully changed role for '{Email}' to '{Role}'.", email, newRole);
+
+                return Result<IdentityResult>.Good(
+                    $"Role changed successfully to {newRole}.",
+                    StatusCodes.Status200OK,
+                    addResult
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while changing role for '{Email}' to '{Role}'.", email, newRole);
+                return Result<IdentityResult>.Bad(
+                    "An unexpected error occurred.",
+                    StatusCodes.Status500InternalServerError
+                );
             }
         }
     }
