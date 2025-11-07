@@ -5,6 +5,7 @@ using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Linq.Expressions;
 
 namespace Data.Reopsitories
 {
@@ -94,6 +95,81 @@ namespace Data.Reopsitories
                     Description = "An error occurred during user deletion."
                 });
             }
+        }
+
+        public async Task<List<GetUserListResponse>> GetUserListAsync(TableRequest request)
+        {
+            var rolePriority = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "admin", 2 },
+                { "user", 1 }
+            };
+
+            var query = from u in _context.Users
+                        where !u.IsDeleted
+                        join ur in _context.UserRoles on u.Id equals ur.UserId
+                        join r in _context.Roles on ur.RoleId equals r.Id
+                        select new
+                        {
+                            u.UserName,
+                            u.Email,
+                            Role = r.Name,
+                            u.CreatedAt
+                        };
+
+            if (!string.IsNullOrEmpty(request.Search))
+            {
+                string searchLower = request.Search.ToLower();
+                query = query.Where(u =>
+                    u.UserName.ToLower().Contains(searchLower) ||
+                    u.Email.ToLower().Contains(searchLower) ||
+                    u.Role.ToLower().Contains(searchLower)
+                );
+            }
+
+            var list = await query.AsNoTracking().ToListAsync();
+
+            if (!string.IsNullOrEmpty(request.SortBy))
+            {
+                switch (request.SortBy.ToLower())
+                {
+                    case "username":
+                        list = request.SortDirection?.ToLower() == "desc"
+                            ? list.OrderByDescending(u => u.UserName).ToList()
+                            : list.OrderBy(u => u.UserName).ToList();
+                        break;
+
+                    case "email":
+                        list = request.SortDirection?.ToLower() == "desc"
+                            ? list.OrderByDescending(u => u.Email).ToList()
+                            : list.OrderBy(u => u.Email).ToList();
+                        break;
+
+                    case "roles":
+                        list = request.SortDirection?.ToLower() == "desc"
+                            ? list.OrderByDescending(u => rolePriority.ContainsKey(u.Role.ToLower()) ? rolePriority[u.Role.ToLower()] : 0).ToList()
+                            : list.OrderBy(u => rolePriority.ContainsKey(u.Role.ToLower()) ? rolePriority[u.Role.ToLower()] : 0).ToList();
+                        break;
+
+                    case "createdat":
+                        list = request.SortDirection?.ToLower() == "desc"
+                            ? list.OrderByDescending(u => u.CreatedAt).ToList()
+                            : list.OrderBy(u => u.CreatedAt).ToList();
+                        break;
+
+                    default:
+                        list = list.OrderByDescending(u => rolePriority.ContainsKey(u.Role.ToLower()) ? rolePriority[u.Role.ToLower()] : 0).ToList();
+                        break;
+                }
+            }
+
+            return list.Select(u => new GetUserListResponse
+            {
+                UserName = u.UserName,
+                Email = u.Email,
+                Roles = u.Role,
+                CreatedAt = u.CreatedAt
+            }).ToList();
         }
     }
 }

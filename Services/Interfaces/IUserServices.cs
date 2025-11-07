@@ -12,5 +12,6 @@ namespace Services.Interfaces
         Task<Result<IdentityResult>> ChangeUserEmailAsync(string oldEmail, string newEmail);
         Task<Result<IdentityResult>> ChangeUserPasswordAsync(string email, ChangePasswordRequest request);
         Task<Result<IdentityResult>> DeleteUserAsyc(string email, DeleteAccountRequest request);
+        Task<Result<PagedResult<GetUserListResponse>>> GetUserListAsync(GetPaggedRequest pagged, TableRequest request);
     }
 }

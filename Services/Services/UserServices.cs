@@ -4,6 +4,7 @@ using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;
@@ -396,6 +397,54 @@ namespace Services.Services
             {
                 _logger.LogError(ex, "An error occurred while deleting user with email {Email}.", email);
                 return Result<IdentityResult>.Bad(
+                    "An unexpected error occurred.",
+                    StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        public async Task<Result<PagedResult<GetUserListResponse>>> GetUserListAsync(GetPaggedRequest pagged, TableRequest request)
+        {
+            try
+            {
+                var result = await _userRepository.GetUserListAsync(request);
+
+                if (result == null || !result.Any())
+                {
+                    _logger.LogWarning("No user found in the database.");
+
+                    var emptyPage = new PagedResult<GetUserListResponse>
+                    {
+                        Items = new List<GetUserListResponse>(),
+                        PageNumber = pagged.PageNumber ?? 1,
+                        PageSize = pagged.PageSize ?? 10,
+                        TotalCount = 0,
+                        TotalPages = 0
+                    };
+
+                    return Result<PagedResult<GetUserListResponse>>.Good(
+                        "No users found.",
+                        StatusCodes.Status200OK,
+                        emptyPage);
+                }
+
+                int pageNumber = pagged.PageNumber ?? 1;
+                int pageSize = pagged.PageSize ?? 10;
+
+                var pagedResult = result.ToPagedResult(pageNumber, pageSize);
+
+                if (pagedResult.PageNumber > pagedResult.TotalPages && pagedResult.TotalPages > 0)
+                    pagedResult = result.ToPagedResult(pagedResult.TotalPages, pageSize);
+
+                return Result<PagedResult<GetUserListResponse>>.Good(
+                    "Users retrieved successfully",
+                    StatusCodes.Status200OK,
+                    pagedResult
+                    );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving user list.");
+                return Result<PagedResult<GetUserListResponse>>.Bad(
                     "An unexpected error occurred.",
                     StatusCodes.Status500InternalServerError);
             }
