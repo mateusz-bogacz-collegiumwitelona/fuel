@@ -154,7 +154,7 @@ namespace Controllers.Controllers.Admin
         /// <response code="500">Internal server error</response>
 
         [HttpPut("change-role")]
-        public async Task<IActionResult> ChangeUserRoleAsync([FromQuery]string email, [FromQuery]string newRole)
+        public async Task<IActionResult> ChangeUserRoleAsync([FromQuery] string email, [FromQuery] string newRole)
         {
             var result = await _userServices.ChangeUserRoleAsync(email, newRole);
             return result.IsSuccess
@@ -205,5 +205,34 @@ namespace Controllers.Controllers.Admin
                 });
         }
 
+        [HttpPost("unlock")]
+        public async Task<IActionResult> UnlockUserAsync([FromQuery] string userEmail)
+        {
+            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(adminEmail))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User not authenticated"
+                });
+            }
+            var result = await _userServices.UnlockUserAsync(adminEmail, userEmail);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    data = result.Data
+                });
+
+        }
     }
 }

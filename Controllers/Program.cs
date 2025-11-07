@@ -17,6 +17,7 @@ using Microsoft.IdentityModel.Tokens;
 using Minio;
 using Serilog;
 using Serilog.Sinks.PeriodicBatching;
+using Services.BackgroundServices;
 using Services.Helpers;
 using Services.Interfaces;
 using Services.Services;
@@ -194,6 +195,9 @@ builder.Services.AddScoped<IBrandServices, BrandServices>();
 builder.Services.AddScoped<EmailSender>();
 builder.Services.AddScoped<IEmailBody,EmailBodys>();
 builder.Services.AddScoped<S3ApiHelper>();
+
+//register background services
+builder.Services.AddHostedService<BanExpirationService>();
 
 builder.Services.AddControllers(op =>
 {

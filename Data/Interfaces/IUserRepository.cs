@@ -13,5 +13,6 @@ namespace Data.Interfaces
         Task<List<GetUserListResponse>> GetUserListAsync(TableRequest request);
         Task<bool> AddBanRecordAsync(ApplicationUser user, ApplicationUser admin, SetLockoutForUserRequest request);
         Task DeactivateActiveBansAsync(Guid userId, Guid unbannedByAdminId);
+        Task<List<BanRecord>> GetExpiredBans(CancellationToken cancellation);
     }
 }

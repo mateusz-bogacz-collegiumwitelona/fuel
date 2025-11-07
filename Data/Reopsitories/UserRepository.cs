@@ -212,5 +212,10 @@ namespace Data.Reopsitories
 
             await _context.SaveChangesAsync();
         }
+
+        public async Task<List<BanRecord>> GetExpiredBans(CancellationToken cancellation)
+            => await _context.BanRecords
+                .Where(b => b.IsActive && b.BannedUntil.HasValue && b.BannedUntil <= DateTime.UtcNow)
+                .ToListAsync(cancellation);
     }
 }

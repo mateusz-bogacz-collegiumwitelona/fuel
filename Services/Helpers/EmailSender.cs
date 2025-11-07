@@ -162,5 +162,67 @@ namespace Services.Helpers
                 return false;
             }
         }
+
+        public async Task<bool> SendUnlockEmailAsync(
+            string email,
+            string userName,
+            string adminName
+        )
+        {
+            try
+            {
+                var emailBody = _emailBody.GenerateUnlockEmailBody(userName, adminName);
+                string subject = "Fuel App - Account Unlocked";
+                var result = await SendEmailAsync(email, subject, emailBody);
+
+                if (result)
+                {
+                    _logger.LogInformation("Unlock email sent successfully to {Email}", email);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to send unlock email to {Email}", email);
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in SendUnlockEmailAsync for {Email}: {Message}",
+                    email, ex.Message);
+                return false;
+            }
+        }
+
+        public async Task<bool> SendAutoUnlockEmailAsync(
+            string email,
+            string userName,
+            string banReason,
+            DateTime bannedAt,
+            DateTime bannedUntil)
+        {
+            try
+            {
+                var emailBody = _emailBody.GenerateAutoUnlockEmailBody(
+                    userName, banReason, bannedAt, bannedUntil);
+                string subject = "Fuel App - Your Ban Has Expired";
+                var result = await SendEmailAsync(email, subject, emailBody);
+
+                if (result)
+                {
+                    _logger.LogInformation("Auto-unlock email sent successfully to {Email}", email);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to send auto-unlock email to {Email}", email);
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in SendAutoUnlockEmailAsync for {Email}: {Message}",
+                    email, ex.Message);
+                return false;
+            }
+        }
     }
 }

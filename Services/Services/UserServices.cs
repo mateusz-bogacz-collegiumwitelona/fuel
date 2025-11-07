@@ -666,5 +666,115 @@ namespace Services.Services
                 );
             }
         }
+
+        public async Task<Result<IdentityResult>> UnlockUserAsync(string adminEmail, string userEmail)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(userEmail))
+                {
+                    _logger.LogWarning("Email is null or empty.");
+                    return Result<IdentityResult>.Bad(
+                        "Email is required.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "EmailIsNullOrEmpty" }
+                    );
+                }
+
+                var user = await _userManager.FindByEmailAsync(userEmail);
+                if (user == null)
+                {
+                    _logger.LogWarning("User with email '{Email}' does not exist.", userEmail);
+                    return Result<IdentityResult>.Bad(
+                        $"User with email {userEmail} does not exist.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "UserNotFound" }
+                    );
+                }
+
+                if (await _userManager.IsInRoleAsync(user, "Admin"))
+                {
+                    _logger.LogWarning("Cannot ban an admin: {Email}", adminEmail);
+                    return Result<IdentityResult>.Bad(
+                        "Cannot ban an admin.",
+                        StatusCodes.Status403Forbidden,
+                        new List<string> { "CannotBanAdmin" }
+                    );
+                }
+
+                var admin = await _userManager.FindByEmailAsync(adminEmail);
+                if (admin == null)
+                {
+                    _logger.LogWarning("Admin with email '{Email}' does not exist.", adminEmail);
+                    return Result<IdentityResult>.Bad(
+                        $"Admin with email {adminEmail} does not exist.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "AdminNotFound" }
+                    );
+                }
+
+                if (!await _userManager.IsInRoleAsync(admin, "Admin"))
+                {
+                    _logger.LogWarning("User '{AdminEmail}' is not an admin", adminEmail);
+                    return Result<IdentityResult>.Bad(
+                        $"User {adminEmail} is not an admin.",
+                        StatusCodes.Status403Forbidden,
+                        new List<string> { "NotAdmin" }
+                    );
+                }
+
+                var isLockedOut = await _userManager.IsLockedOutAsync(user);
+
+                if (!isLockedOut)
+                {
+                    _logger.LogWarning("User {Email} is not locked out", userEmail);
+                    return Result<IdentityResult>.Bad(
+                        "User is not locked out.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "UserNotLockedOut" }
+                    );
+                }
+
+                await _userRepository.DeactivateActiveBansAsync(user.Id, admin.Id);
+
+                var unlockResult = await _userManager.SetLockoutEndDateAsync(user, null);
+
+                if (!unlockResult.Succeeded)
+                {
+                    _logger.LogError("Cannot unlock user {Email}", userEmail);
+                    return Result<IdentityResult>.Bad(
+                        "Failed to unlock user.",
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { "CannotUnlockUser" }
+                    );
+                }
+
+                await _userManager.ResetAccessFailedCountAsync(user);
+
+                await _email.SendUnlockEmailAsync(
+                    user.Email,
+                    user.UserName,
+                    admin.UserName
+                    );
+
+                _logger.LogInformation("User {Email} unlocked successfully by admin {AdminEmail}",
+            userEmail, adminEmail);
+
+                return Result<IdentityResult>.Good(
+                    "User unlocked successfully",
+                    StatusCodes.Status200OK,
+                    unlockResult
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception occurred during unlocking user: {Email}", userEmail);
+                return Result<IdentityResult>.Bad(
+                    "An error occurred during user unlock",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message }
+                );
+            }
+        }
     }
 }
