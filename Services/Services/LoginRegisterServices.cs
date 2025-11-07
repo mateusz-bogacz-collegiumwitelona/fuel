@@ -24,7 +24,7 @@ namespace Services.Services
         private readonly ILogger<LoginRegisterServices> _logger;
         private EmailSender _email;
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
-
+        private readonly IUserRepository _userRepository;
 
         public LoginRegisterServices(
             UserManager<ApplicationUser> userManager,
@@ -33,7 +33,8 @@ namespace Services.Services
             IConfiguration configuration,
             ILogger<LoginRegisterServices> logger,
             EmailSender email,
-            IProposalStatisticRepository proposalStatisticRepository
+            IProposalStatisticRepository proposalStatisticRepository,
+            IUserRepository userRepository
             )
         {
             _userManager = userManager;
@@ -43,6 +44,7 @@ namespace Services.Services
             _logger = logger;
             _email = email;
             _proposalStatisticRepository = proposalStatisticRepository;
+            _userRepository = userRepository;
         }
 
 
@@ -59,6 +61,17 @@ namespace Services.Services
                     return Result<LoginResponse>.Bad(
                         $"Can't find user with this email: {request.Email}",
                         StatusCodes.Status404NotFound
+                        );
+                }
+
+                var isDeleted = await _userRepository.IsUserDeleted(user);
+
+                if (isDeleted)
+                {
+                    _logger.LogWarning("Login attempt failed. User with email {Email} is deleted.", request.Email);
+                    return Result<LoginResponse>.Bad(
+                        "User account is deleted.",
+                        StatusCodes.Status403Forbidden
                         );
                 }
 

@@ -6,6 +6,10 @@ namespace Data.Models
     {
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+
+        public bool IsDeleted { get; set; } = false;
+        public DateTime? DeletdAt { get; set; }
+
         public ICollection<PriceProposal> PriceProposal { get; set; } = new List<PriceProposal>();
         public ProposalStatistic ProposalStatistic { get; set; }
     }

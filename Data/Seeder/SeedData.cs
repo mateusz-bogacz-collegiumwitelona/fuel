@@ -102,6 +102,7 @@ namespace Data.Seeder
                     ConcurrencyStamp = Guid.NewGuid().ToString(),
                     SecurityStamp = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow,
+                    IsDeleted = false
                 };
 
                 var result = await _userManager.CreateAsync(newUser, password);

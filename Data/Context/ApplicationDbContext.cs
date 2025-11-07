@@ -24,6 +24,7 @@ namespace Data.Context
         {
             base.OnModelCreating(builder);
 
+
             builder.Entity<Brand>()
                 .HasIndex(b => b.Name)
                 .IsUnique();
@@ -53,7 +54,7 @@ namespace Data.Context
                 .HasOne(au => au.ProposalStatistic)
                 .WithOne(ps => ps.User)
                 .HasForeignKey<ProposalStatistic>(ps => ps.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<ApplicationUser>()
                 .HasMany(u => u.PriceProposal)

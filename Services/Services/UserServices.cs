@@ -370,7 +370,7 @@ namespace Services.Services
                         );
                 }
 
-                var result = await _userManager.DeleteAsync(user);
+                var result = await _userRepository.DeleteUserAsync(user);
 
                 if (!result.Succeeded)
                 {
