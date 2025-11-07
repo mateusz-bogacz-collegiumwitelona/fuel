@@ -102,6 +102,56 @@ namespace Controllers.Controllers.Admin
                 });
         }
 
+        /// <summary>
+        /// Changes the role of an existing user.
+        /// </summary>
+        /// <remarks>
+        /// Allows an administrator to promote or demote a user between available roles.
+        /// Currently, the system supports two roles: <c>User</c> and <c>Admin</c>.
+        /// 
+        /// When changing a role:
+        /// - Promoting a user to <c>Admin</c> automatically removes the <c>User</c> role.
+        /// - Demoting an admin to <c>User</c> automatically removes the <c>Admin</c> role.
+        /// 
+        /// **Sample request:**
+        /// 
+        ///     PUT /api/admin/user/change-role?email=user@example.pl&newRole=Admin
+        /// 
+        /// **Sample success response (200 OK):**
+        /// 
+        ///     {
+        ///       "success": true,
+        ///       "message": "Role changed successfully to Admin.",
+        ///       "data": {
+        ///         "succeeded": true,
+        ///         "errors": []
+        ///       }
+        ///     }
+        /// 
+        /// **Sample error response (404 Not Found):**
+        /// 
+        ///     {
+        ///       "success": false,
+        ///       "message": "User with this email user@example.pl doesn't exist.",
+        ///       "errors": [ "UserDoNotExist" ]
+        ///     }
+        /// 
+        /// **Important Notes:**
+        /// - Only users with the <c>Admin</c> role can access this endpoint.
+        /// - The <c>email</c> parameter must correspond to a registered user.
+        /// - The <c>newRole</c> parameter must be a valid existing role (<c>User</c> or <c>Admin</c>).
+        /// 
+        /// </remarks>
+        /// <param name="email">Email of the user whose role will be changed.</param>
+        /// <param name="newRole">Target role to assign (<c>User</c> or <c>Admin</c>).</param>
+        /// <returns>Operation result with success flag and identity result details.</returns>
+        /// <response code="200">Role changed successfully</response>
+        /// <response code="400">Invalid input data or missing parameters</response>
+        /// <response code="401">Unauthorized - valid JWT token required</response>
+        /// <response code="403">Forbidden - Admin role required</response>
+        /// <response code="404">User or role not found</response>
+        /// <response code="500">Internal server error</response>
+
         [HttpPut("change-role")]
         public async Task<IActionResult> ChangeUserRoleAsync([FromQuery]string email, [FromQuery]string newRole)
         {
