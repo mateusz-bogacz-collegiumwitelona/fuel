@@ -1,4 +1,5 @@
 ﻿using Data.Models;
+using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
 
@@ -10,5 +11,7 @@ namespace Data.Interfaces
         Task<bool> IsUserDeleted(ApplicationUser user);
         Task<IdentityResult> DeleteUserAsync(ApplicationUser user);
         Task<List<GetUserListResponse>> GetUserListAsync(TableRequest request);
+        Task<bool> AddBanRecordAsync(ApplicationUser user, ApplicationUser admin, SetLockoutForUserRequest request);
+        Task DeactivateActiveBansAsync(Guid userId, Guid unbannedByAdminId);
     }
 }

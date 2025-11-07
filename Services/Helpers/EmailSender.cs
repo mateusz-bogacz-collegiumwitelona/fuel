@@ -131,5 +131,36 @@ namespace Services.Helpers
                 return false;
             }
         }
+
+        public async Task<bool> SendLockoutEmailAsync(
+            string email, 
+            string userName, 
+            string adminName, 
+            int? days, 
+            string reason)
+        {
+            try
+            {
+                var emailBody = _emailBody.GenerateLockoutEmailBody(userName, adminName, days, reason);
+                string subject = "Fuel App - Account Lockout Notification";
+                var result = await SendEmailAsync(email, subject, emailBody);
+                
+                if (result)
+                {
+                    _logger.LogInformation("Lockout email sent successfully to {Email}", email);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to send lockout email to {Email}", email);
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in SendLockoutEmailAsync for {Email}: {Message}",
+                    email, ex.Message);
+                return false;
+            }
+        }
     }
 }

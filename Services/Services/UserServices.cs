@@ -18,17 +18,20 @@ namespace Services.Services
         private readonly ILogger<UserServices> _logger;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
+        private EmailSender _email;
 
         public UserServices(
             IUserRepository userRepository,
             ILogger<UserServices> logger,
             UserManager<ApplicationUser> userManager,
-            RoleManager<IdentityRole<Guid>> roleManager)
+            RoleManager<IdentityRole<Guid>> roleManager,
+            EmailSender email)
         {
             _userRepository = userRepository;
             _logger = logger;
             _userManager = userManager;
             _roleManager = roleManager;
+            _email = email;
         }
 
         public async Task<Result<GetUserInfoResponse>> GetUserInfoAsync(string email)
@@ -527,6 +530,139 @@ namespace Services.Services
                 return Result<IdentityResult>.Bad(
                     "An unexpected error occurred.",
                     StatusCodes.Status500InternalServerError
+                );
+            }
+        }
+
+        public async Task<Result<IdentityResult>> LockoutUserAsync(string adminEmail, SetLockoutForUserRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.Email))
+                {
+                    _logger.LogWarning("Email is null or empty.");
+                    return Result<IdentityResult>.Bad(
+                        "Email is required.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "EmailIsNullOrEmpty" }
+                    );
+                }
+
+                if (string.IsNullOrWhiteSpace(request.Reason))
+                {
+                    _logger.LogWarning("Reason is null or empty.");
+                    return Result<IdentityResult>.Bad(
+                        "Reason is required.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "ReasonIsNullOrEmpty" }
+                    );
+                }
+
+                var user = await _userManager.FindByEmailAsync(request.Email);
+                if (user == null)
+                {
+                    _logger.LogWarning("User with email '{Email}' does not exist.", request.Email);
+                    return Result<IdentityResult>.Bad(
+                        $"User with email {request.Email} does not exist.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "UserNotFound" }
+                    );
+                }
+
+                if (await _userManager.IsInRoleAsync(user, "Admin"))
+                {
+                    _logger.LogWarning("Cannot ban an admin: {Email}", request.Email);
+                    return Result<IdentityResult>.Bad(
+                        "Cannot ban an admin.",
+                        StatusCodes.Status403Forbidden,
+                        new List<string> { "CannotBanAdmin" }
+                    );
+                }
+
+                var admin = await _userManager.FindByEmailAsync(adminEmail);
+                if (admin == null)
+                {
+                    _logger.LogWarning("Admin with email '{Email}' does not exist.", adminEmail);
+                    return Result<IdentityResult>.Bad(
+                        $"Admin with email {adminEmail} does not exist.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "AdminNotFound" }
+                    );
+                }
+
+                if (!await _userManager.IsInRoleAsync(admin, "Admin"))
+                {
+                    _logger.LogWarning("User '{AdminEmail}' is not an admin", adminEmail);
+                    return Result<IdentityResult>.Bad(
+                        $"User {adminEmail} is not an admin.",
+                        StatusCodes.Status403Forbidden,
+                        new List<string> { "NotAdmin" }
+                    );
+                }
+
+                await _userRepository.DeactivateActiveBansAsync(user.Id, admin.Id);
+
+                await _userManager.SetLockoutEnabledAsync(user, true);
+
+                var lockoutEnd = request.Days.HasValue
+                    ? DateTimeOffset.UtcNow.AddDays(request.Days.Value)
+                    : DateTimeOffset.MaxValue;
+
+                var banResult = await _userManager.SetLockoutEndDateAsync(user, lockoutEnd);
+
+                if (!banResult.Succeeded)
+                {
+                    _logger.LogError("Cannot ban user {Email}", request.Email);
+                    return Result<IdentityResult>.Bad(
+                        "Failed to ban user.",
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { "CannotBanUser" }
+                    );
+                }
+
+                var addBanRecord = await _userRepository.AddBanRecordAsync(user, admin, request);
+
+                if (!addBanRecord)
+                {
+                    _logger.LogError("Cannot add ban record for user {Email}", request.Email);
+                    return Result<IdentityResult>.Bad(
+                        $"Cannot add ban record for user with email {request.Email}.",
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { "CannotAddBanRecord" }
+                    );
+                }
+
+                var message = request.Days.HasValue
+                    ? $"User banned successfully for {request.Days.Value} days"
+                    : "User banned permanently";
+
+                var sendEmail = await _email.SendLockoutEmailAsync(
+                    user.Email,
+                    user.UserName,
+                    admin.UserName,
+                    request.Days,
+                    request.Reason
+                    );
+
+                if (!sendEmail) _logger.LogWarning("Failed to send lockout email to {Email}, but user was banned successfully", user.Email);
+
+                _logger.LogInformation("User {Email} banned successfully. {BanType}",
+                    request.Email,
+                    request.Days.HasValue ? $"Duration: {request.Days.Value} days" : "Permanent");
+
+                return Result<IdentityResult>.Good(
+                    message,
+                    StatusCodes.Status200OK,
+                    banResult
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception occurred during banning user: {Email}", request.Email);
+                return Result<IdentityResult>.Bad(
+                    "An error occurred during user ban",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message }
                 );
             }
         }

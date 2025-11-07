@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Helpers;
 using Services.Interfaces;
+using System.Security.Claims;
 
 namespace Controllers.Controllers.Admin
 {
@@ -156,6 +157,38 @@ namespace Controllers.Controllers.Admin
         public async Task<IActionResult> ChangeUserRoleAsync([FromQuery]string email, [FromQuery]string newRole)
         {
             var result = await _userServices.ChangeUserRoleAsync(email, newRole);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    data = result.Data
+                });
+        }
+
+        [HttpPost("lock-out")]
+        public async Task<IActionResult> LockoutUserAsync(SetLockoutForUserRequest request)
+        {
+            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            if (string.IsNullOrEmpty(adminEmail))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User not authenticated"
+                });
+
+            }
+
+            var result = await _userServices.LockoutUserAsync(adminEmail, request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, new
                 {

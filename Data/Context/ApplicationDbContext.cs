@@ -19,7 +19,7 @@ namespace Data.Context
         public DbSet<Station> Stations { get; set; }
         public DbSet<ProposalStatistic> ProposalStatistics { get; set; } 
         public DbSet<StationAddress> StationAddress { get; set; }
-
+        public DbSet<BanRecord> BanRecords { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -98,7 +98,25 @@ namespace Data.Context
                 .HasForeignKey<Station>(s => s.AddressId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-           builder.Entity<StationAddress>()
+            builder.Entity<BanRecord>()
+            .HasOne(b => b.User)
+            .WithMany(u => u.BansReceived)
+            .HasForeignKey(b => b.UserId)
+            .OnDelete(DeleteBehavior.Restrict); 
+
+            builder.Entity<BanRecord>()
+                .HasOne(b => b.Admin)
+                .WithMany(u => u.BansGiven)
+                .HasForeignKey(b => b.AdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<BanRecord>()
+                .HasOne(b => b.UnbannedByAdmin)
+                .WithMany(u => u.UnbansGiven)
+                .HasForeignKey(b => b.UnbannedByAdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<StationAddress>()
                 .Property(sa => sa.Location)
                 .HasColumnType("geometry(Point, 4326)");
         }
