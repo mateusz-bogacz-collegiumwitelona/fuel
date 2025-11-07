@@ -1,4 +1,5 @@
 ﻿using Data.Context;
+using Data.FiltersSorting;
 using Data.Interfaces;
 using Data.Models;
 using DTO.Requests;
@@ -14,6 +15,7 @@ namespace Data.Reopsitories
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<UserRepository> _logger;
+        private UserFilterSorting _filters = new();
 
         public UserRepository(
             ApplicationDbContext context, 
@@ -106,16 +108,18 @@ namespace Data.Reopsitories
                 { "user", 1 }
             };
 
+
             var query = from u in _context.Users
                         where !u.IsDeleted
                         join ur in _context.UserRoles on u.Id equals ur.UserId
                         join r in _context.Roles on ur.RoleId equals r.Id
                         select new
                         {
-                            u.UserName,
-                            u.Email,
+                            UserId = u.Id,
+                            UserName = u.UserName,
+                            Email = u.Email,
                             Role = r.Name,
-                            u.CreatedAt
+                            CreatedAt = u.CreatedAt
                         };
 
             if (!string.IsNullOrEmpty(request.Search))
@@ -128,49 +132,29 @@ namespace Data.Reopsitories
                 );
             }
 
-            var list = await query.AsNoTracking().ToListAsync();
+            var users = await query.AsNoTracking().ToListAsync();
 
-            if (!string.IsNullOrEmpty(request.SortBy))
-            {
-                switch (request.SortBy.ToLower())
-                {
-                    case "username":
-                        list = request.SortDirection?.ToLower() == "desc"
-                            ? list.OrderByDescending(u => u.UserName).ToList()
-                            : list.OrderBy(u => u.UserName).ToList();
-                        break;
+            var userIds = users.Select(u => u.UserId).ToList();
+            var bannedUserIds = await _context.BanRecords
+                .Where(b => userIds.Contains(b.UserId) && b.IsActive)
+                .Select(b => b.UserId)
+                .Distinct()
+                .ToListAsync();
 
-                    case "email":
-                        list = request.SortDirection?.ToLower() == "desc"
-                            ? list.OrderByDescending(u => u.Email).ToList()
-                            : list.OrderBy(u => u.Email).ToList();
-                        break;
+            var bannedUsersSet = new HashSet<Guid>(bannedUserIds);
 
-                    case "roles":
-                        list = request.SortDirection?.ToLower() == "desc"
-                            ? list.OrderByDescending(u => rolePriority.ContainsKey(u.Role.ToLower()) ? rolePriority[u.Role.ToLower()] : 0).ToList()
-                            : list.OrderBy(u => rolePriority.ContainsKey(u.Role.ToLower()) ? rolePriority[u.Role.ToLower()] : 0).ToList();
-                        break;
-
-                    case "createdat":
-                        list = request.SortDirection?.ToLower() == "desc"
-                            ? list.OrderByDescending(u => u.CreatedAt).ToList()
-                            : list.OrderBy(u => u.CreatedAt).ToList();
-                        break;
-
-                    default:
-                        list = list.OrderByDescending(u => rolePriority.ContainsKey(u.Role.ToLower()) ? rolePriority[u.Role.ToLower()] : 0).ToList();
-                        break;
-                }
-            }
-
-            return list.Select(u => new GetUserListResponse
+            var list = users.Select(u => new GetUserListResponse
             {
                 UserName = u.UserName,
                 Email = u.Email,
                 Roles = u.Role,
-                CreatedAt = u.CreatedAt
+                CreatedAt = u.CreatedAt,
+                IsBanned = bannedUsersSet.Contains(u.UserId)
             }).ToList();
+
+            list = _filters.ApplySorting(list, request.SortBy, request.SortDirection, rolePriority);
+
+            return list;
         }
 
         public async Task<bool> AddBanRecordAsync(ApplicationUser user, ApplicationUser admin, SetLockoutForUserRequest request )

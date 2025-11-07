@@ -18,7 +18,7 @@ namespace Data.Reopsitories
         private readonly IBrandRepository _brandRepository;
         private readonly IFuelTypeRepository _fuelTypeRepository;
 
-        private StationFiltersSorting filters = new StationFiltersSorting();
+        private StationFiltersSorting _filters = new();
 
         public StationRepository(
             ApplicationDbContext context,
@@ -43,7 +43,7 @@ namespace Data.Reopsitories
                 query = query.Where(s => request.BrandName.Contains(s.Brand.Name));
 
             if (request.LocationLatitude.HasValue && request.LocationLongitude.HasValue && request.Distance.HasValue)
-                query = filters.FilterByDistance<Station>(
+                query = _filters.FilterByDistance<Station>(
                     query,
                     (int)request.Distance.Value,
                     (float)request.LocationLatitude,
@@ -107,7 +107,7 @@ namespace Data.Reopsitories
                 request.LocationLatitude.HasValue &&
                 request.Distance.HasValue)
             {
-                stations = filters.FilterByDistance<Station>(
+                stations = _filters.FilterByDistance<Station>(
                     stations,
                     (int)request.Distance.Value,
                     (float)request.LocationLatitude.Value,
@@ -116,17 +116,17 @@ namespace Data.Reopsitories
             }
 
             if (request.FuelType != null && request.FuelType.Any())
-                stations = filters.FilterByFuelType(stations, request.FuelType);
+                stations = _filters.FilterByFuelType(stations, request.FuelType);
 
             if (request.MinPrice.HasValue || request.MaxPrice.HasValue)
-                stations = filters.FilterByPrice(stations, request.MinPrice, request.MaxPrice);
+                stations = _filters.FilterByPrice(stations, request.MinPrice, request.MaxPrice);
 
             if (!string.IsNullOrEmpty(request.BrandName))
-                stations = filters.FilterByBrand(stations, request.BrandName);
+                stations = _filters.FilterByBrand(stations, request.BrandName);
 
             if (request.SortingByDisance.HasValue)
             {
-                stations = filters.SortingByDistance(
+                stations = _filters.SortingByDistance(
                     stations,
                     (float)request.LocationLongitude.Value,
                     (float)request.LocationLatitude.Value,
@@ -136,7 +136,7 @@ namespace Data.Reopsitories
             else if (request.SortingByPrice.HasValue)
             {
                 stations = stations.Where(s => s.FuelPrice.Any());
-                stations = filters.SortingByPrice(
+                stations = _filters.SortingByPrice(
                     stations,
                     request.SortingDirection
                 );
