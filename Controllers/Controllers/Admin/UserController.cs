@@ -27,13 +27,14 @@ namespace Controllers.Controllers.Admin
         /// Retrieves a paginated and filterable list of users
         /// </summary>
         /// <remarks>
-        /// Returns a complete list of users (non-deleted) with their assigned roles and creation dates.
+        /// Returns a complete list of users (non-deleted) with their assigned roles, creation dates, and ban status.
         /// Supports searching, sorting, and pagination for admin management purposes.
         /// 
         /// **Features:**
         /// - Filter users by username, email, or role name
-        /// - Sort by username, email, role, or creation date
+        /// - Sort by username, email, role, creation date, or ban status
         /// - Paginate results using `PageNumber` and `PageSize`
+        /// - Automatically displays ban status for each user
         /// 
         /// **Sample Request:**
         /// 
@@ -50,37 +51,47 @@ namespace Controllers.Controllers.Admin
         ///             "userName": "Admin",
         ///             "email": "admin@example.pl",
         ///             "roles": "Admin",
-        ///             "createdAt": "2025-11-07T14:38:54.705875Z"
+        ///             "createdAt": "2025-11-07T14:38:54.705875Z",
+        ///             "isBanned": false
         ///           },
         ///           {
         ///             "userName": "User1",
         ///             "email": "user1@example.pl",
         ///             "roles": "User",
-        ///             "createdAt": "2025-11-07T14:38:55.153691Z"
+        ///             "createdAt": "2025-11-07T14:38:55.153691Z",
+        ///             "isBanned": true
         ///           }
         ///         ],
         ///         "pageNumber": 1,
         ///         "pageSize": 10,
         ///         "totalCount": 2,
-        ///         "totalPages": 1
+        ///         "totalPages": 1,
+        ///         "hasPreviousPage": false,
+        ///         "hasNextPage": false
         ///       }
         ///     }
         /// 
-        /// **Use Case:**
-        /// - Used in the admin panel to view and manage users
-        /// - Can be combined with UI search/sort controls for live filtering
         /// 
         /// **Supported Sorting Fields:**
         /// - `username` → alphabetical order
         /// - `email` → alphabetical order
-        /// - `roles` → by role priority (Admin > User)
-        /// - `createdAt` → by account creation date
+        /// - `roles` or `role` → by role priority (Admin > User)
+        /// - `createdAt` or `created` → by account creation date
+        /// - `isBanned`, `banned`, or `ban` → banned users first/last (with secondary sort by username)
+        /// 
+        /// **Default Sorting:**
+        /// - When no `SortBy` is specified, users are sorted by role priority (Admin first) then by username
+        /// 
+        /// **Pagination Behavior:**
+        /// - If requested page number exceeds total pages, automatically returns the last available page
+        /// - Returns empty result set with appropriate metadata if no users are found
+        /// - Page numbers and sizes default to 1 and 10 respectively if not specified
         /// 
         /// </remarks>
         /// <param name="pagged">Pagination configuration (page number and page size)</param>
         /// <param name="request">Search and sorting configuration (search text, sort field, sort direction)</param>
-        /// <returns>Paginated list of users with role and account details</returns>
-        /// <response code="200">Users retrieved successfully</response>
+        /// <returns>Paginated list of users with role, ban status, and account details</returns>
+        /// <response code="200">Users retrieved successfully (including empty result sets)</response>
         /// <response code="400">Invalid query parameters</response>
         /// <response code="401">Unauthorized - valid JWT token required</response>
         /// <response code="403">Forbidden - Admin role required</response>
@@ -173,6 +184,73 @@ namespace Controllers.Controllers.Admin
                 });
         }
 
+        /// <summary>
+        /// Bans or suspends a user account with specified reason and duration
+        /// </summary>
+        /// <remarks>
+        /// Applies a temporary or permanent ban to a user account, preventing them from accessing the application.
+        /// Automatically deactivates any previous active bans, creates a new ban record, and sends a notification email to the affected user.
+        /// 
+        /// **Features:**
+        /// - Temporary ban (specify number of days) or permanent ban (omit days)
+        /// - Automatic deactivation of previous active bans before applying new one
+        /// - Email notification sent to banned user with ban details
+        /// - Complete ban audit trail with admin information
+        /// - Protection against banning admin accounts
+        /// 
+        /// **Ban Types:**
+        /// - **Temporary Ban**: Specify `days` parameter (e.g., 7, 30, 90)
+        /// - **Permanent Ban**: Leave `days` as null or omit it
+        /// 
+        /// **Sample Request (Temporary Ban):**
+        /// 
+        ///     POST /api/admin/lock-out
+        ///     {
+        ///       "email": "user@example.pl",
+        ///       "reason": "Violation of Terms of Service - inappropriate content",
+        ///       "days": 7
+        ///     }
+        /// 
+        /// **Sample Request (Permanent Ban):**
+        /// 
+        ///     POST /api/admin/lock-out
+        ///     {
+        ///       "email": "user@example.pl",
+        ///       "reason": "Severe violation - repeated offenses",
+        ///       "days": null
+        ///     }
+        /// 
+        /// **Sample Response (Success):**
+        /// 
+        ///     {
+        ///       "success": true,
+        ///       "message": "User banned successfully for 7 days",
+        ///       "data": {
+        ///         "succeeded": true,
+        ///         "errors": []
+        ///       }
+        ///     }
+        /// 
+        /// **Sample Response (Permanent Ban Success):**
+        /// 
+        ///     {
+        ///       "success": true,
+        ///       "message": "User banned permanently",
+        ///       "data": {
+        ///         "succeeded": true,
+        ///         "errors": []
+        ///       }
+        ///     }
+        /// 
+        /// </remarks>
+        /// <param name="request">Ban configuration (user email, reason, optional duration in days)</param>
+        /// <returns>Ban operation result with success status and details</returns>
+        /// <response code="200">User banned successfully (temporary or permanent)</response>
+        /// <response code="400">Invalid request - email or reason missing</response>
+        /// <response code="401">Unauthorized - valid JWT token required or admin email not found in claims</response>
+        /// <response code="403">Forbidden - Cannot ban admin accounts or requesting user is not an admin</response>
+        /// <response code="404">User not found or admin not found</response>
+        /// <response code="500">Internal server error - failed to apply ban or create ban record</response>
         [HttpPost("lock-out")]
         public async Task<IActionResult> LockoutUserAsync(SetLockoutForUserRequest request)
         {
@@ -205,6 +283,53 @@ namespace Controllers.Controllers.Admin
                 });
         }
 
+        /// <summary>
+        /// Unlocks a banned or suspended user account
+        /// </summary>
+        /// <remarks>
+        /// Removes an active ban from a user account, restoring their access to the application.
+        /// Automatically deactivates all active ban records, resets failed login attempts, and sends a notification email to the user.
+        /// 
+        /// **Features:**
+        /// - Removes temporary or permanent bans
+        /// - Automatic deactivation of all active ban records with audit trail
+        /// - Resets failed access attempt counter
+        /// - Email notification sent to unbanned user
+        /// - Complete unlock audit trail with admin information
+        /// 
+        /// **Sample Request:**
+        /// 
+        ///     POST /api/admin/unlock?userEmail=user@example.pl
+        /// 
+        /// **Sample Response (Success):**
+        /// 
+        ///     {
+        ///       "success": true,
+        ///       "message": "User unlocked successfully",
+        ///       "data": {
+        ///         "succeeded": true,
+        ///         "errors": []
+        ///       }
+        ///     }
+        /// 
+        /// **Sample Response (User Not Banned):**
+        /// 
+        ///     {
+        ///       "success": false,
+        ///       "message": "User is not locked out.",
+        ///       "errors": ["UserNotLockedOut"],
+        ///       "data": null
+        ///     }
+        /// 
+        /// </remarks>
+        /// <param name="userEmail">Email address of the user to unlock (query parameter)</param>
+        /// <returns>Unlock operation result with success status and details</returns>
+        /// <response code="200">User unlocked successfully</response>
+        /// <response code="400">Invalid request - email missing or user is not currently locked out</response>
+        /// <response code="401">Unauthorized - valid JWT token required or admin email not found in claims</response>
+        /// <response code="403">Forbidden - Requesting user is not an admin (cannot unlock users) or attempting to unlock an admin account</response>
+        /// <response code="404">User not found or admin not found</response>
+        /// <response code="500">Internal server error - failed to unlock user or update ban records</response>
         [HttpPost("unlock")]
         public async Task<IActionResult> UnlockUserAsync([FromQuery] string userEmail)
         {
