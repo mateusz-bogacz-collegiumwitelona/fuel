@@ -16,5 +16,6 @@ namespace Services.Interfaces
         Task<Result<IdentityResult>> ChangeUserRoleAsync(string email, string newRole);
         Task<Result<IdentityResult>> LockoutUserAsync(string adminEmail, SetLockoutForUserRequest request);
         Task<Result<IdentityResult>> UnlockUserAsync(string adminEmail, string userEmail);
+        Task<Result<ReviewUserBanResponses>> GetUserBanInfoAsync(string email);
     }
 }

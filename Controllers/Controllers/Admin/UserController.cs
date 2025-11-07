@@ -284,6 +284,100 @@ namespace Controllers.Controllers.Admin
         }
 
         /// <summary>
+        /// Retrieves detailed information about a user's active ban
+        /// </summary>
+        /// <remarks>
+        /// Returns comprehensive details about a user's current active ban status, including the reason, duration, and admin who issued the ban.
+        /// Only retrieves information for currently active bans - returns 404 if user is not banned or has no active ban records.
+        /// 
+        /// **Features:**
+        /// - View complete ban details for any user
+        /// - Displays ban reason and justification
+        /// - Shows ban duration (temporary or permanent)
+        /// - Identifies admin who issued the ban
+        /// - Provides timestamps for ban start and expiry
+        /// 
+        /// **Sample Request:**
+        /// 
+        ///     GET /api/admin/user/lock-out/review?email=user@example.pl
+        /// 
+        /// **Sample Response (Active Ban - Temporary):**
+        /// 
+        ///     {
+        ///       "success": true,
+        ///       "message": "Ban information retrieved successfully.",
+        ///       "data": {
+        ///         "userName": "User2",
+        ///         "reason": "Violation of Terms of Service - inappropriate content",
+        ///         "bannedAt": "2025-11-07T22:08:57.51804Z",
+        ///         "bannedUntil": "2025-11-14T22:08:57.518078Z",
+        ///         "bannedBy": "Admin"
+        ///       }
+        ///     }
+        /// 
+        /// **Sample Response (Active Ban - Permanent):**
+        /// 
+        ///     {
+        ///       "success": true,
+        ///       "message": "Ban information retrieved successfully.",
+        ///       "data": {
+        ///         "userName": "User2",
+        ///         "reason": "Severe violation - repeated offenses",
+        ///         "bannedAt": "2025-11-07T22:08:57.51804Z",
+        ///         "bannedUntil": "9999-12-31T23:59:59.9999999Z",
+        ///         "bannedBy": "Admin"
+        ///       }
+        ///     }
+        /// 
+        /// **Sample Response (No Active Ban):**
+        /// 
+        ///     {
+        ///       "success": false,
+        ///       "message": "No ban information found for the user.",
+        ///       "errors": ["NoBanInfoFound"],
+        ///       "data": null
+        ///     }
+        /// 
+        /// **Response Fields Explained:**
+        /// - `userName` - Username of the banned user
+        /// - `reason` - Detailed reason for the ban as provided by admin
+        /// - `bannedAt` - UTC timestamp when ban was applied
+        /// - `bannedUntil` - UTC timestamp when ban expires (or DateTime.MaxValue for permanent bans)
+        /// - `bannedBy` - Username of the admin who issued the ban
+        /// 
+        /// **Ban Type Identification:**
+        /// - **Temporary Ban**: `bannedUntil` contains a realistic future date
+        /// - **Permanent Ban**: `bannedUntil` is set to DateTime.MaxValue (9999-12-31T23:59:59.9999999Z)
+        /// 
+        /// </remarks>
+        /// <param name="email">Email address of the user to check ban status (query parameter)</param>
+        /// <returns>Detailed information about the user's active ban</returns>
+        /// <response code="200">Ban information retrieved successfully</response>
+        /// <response code="401">Unauthorized - email parameter is missing or empty</response>
+        /// <response code="404">No active ban found for the specified user</response>
+        /// <response code="500">Internal server error</response>
+        [HttpGet("lock-out/review")]
+        public async Task<IActionResult> ReviewLockoutAsync([FromQuery] string email)
+        {
+
+            var result = await _userServices.GetUserBanInfoAsync(email);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    data = result.Data
+                });
+        }
+
+        /// <summary>
         /// Unlocks a banned or suspended user account
         /// </summary>
         /// <remarks>
@@ -357,7 +451,6 @@ namespace Controllers.Controllers.Admin
                     errors = result.Errors,
                     data = result.Data
                 });
-
         }
     }
 }

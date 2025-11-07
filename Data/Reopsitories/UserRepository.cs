@@ -197,9 +197,17 @@ namespace Data.Reopsitories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<List<BanRecord>> GetExpiredBans(CancellationToken cancellation)
-            => await _context.BanRecords
-                .Where(b => b.IsActive && b.BannedUntil.HasValue && b.BannedUntil <= DateTime.UtcNow)
-                .ToListAsync(cancellation);
+        public async Task<ReviewUserBanResponses> GetUserBanInfoAsync(string email)
+            =>  await _context.BanRecords
+                .Where(b => b.User.Email == email && b.IsActive)
+                .Select(b => new ReviewUserBanResponses
+                {
+                    UserName = b.User.UserName,
+                    Reason = b.Reason,
+                    BannedAt = b.BannedAt,
+                    BannedUntil = b.BannedUntil ?? DateTime.MaxValue,
+                    BannedBy = b.Admin.UserName
+                })
+                .FirstOrDefaultAsync();
     }
 }

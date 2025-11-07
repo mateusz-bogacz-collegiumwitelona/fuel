@@ -776,5 +776,42 @@ namespace Services.Services
                 );
             }
         }
+
+        public async Task<Result<ReviewUserBanResponses>> GetUserBanInfoAsync(string email)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(email) || string.IsNullOrWhiteSpace(email))
+                {
+                    _logger.LogWarning("Unauthorize: email is null or empty.");
+                    return Result<ReviewUserBanResponses>.Bad(
+                        "Unauthorize.",
+                        StatusCodes.Status401Unauthorized,
+                        new List<string> { "Email is null or empty" }
+                        );
+                }
+                var banInfo = await _userRepository.GetUserBanInfoAsync(email);
+                if (banInfo == null)
+                {
+                    _logger.LogWarning("No ban information found for user with email {Email}.", email);
+                    return Result<ReviewUserBanResponses>.Bad(
+                        "No ban information found for the user.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "NoBanInfoFound" }
+                        );
+                }
+                return Result<ReviewUserBanResponses>.Good(
+                    "Ban information retrieved successfully.",
+                    StatusCodes.Status200OK,
+                    banInfo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving ban info for user with email {Email}.", email);
+                return Result<ReviewUserBanResponses>.Bad(
+                    "An unexpected error occurred.",
+                    StatusCodes.Status500InternalServerError);
+            }
+        }
     }
 }
