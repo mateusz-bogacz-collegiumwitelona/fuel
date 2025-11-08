@@ -2,15 +2,15 @@
 using Data.Helpers;
 using Data.Interfaces;
 using Data.Models;
+using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
-using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography;
-using DTO.Requests;
+
 namespace Data.Repositories
 {
     public class PriceProposalRepository : IPriceProposalRepository
@@ -210,6 +210,29 @@ namespace Data.Repositories
                     CreatedAt = pp.CreatedAt
                 })
                 .ToListAsync();
+
+        public async Task<List<GetUserAllProposalPricesResponse>> GetUserAllProposalPricesAsync(Guid userId)
+            => await _context.PriceProposals
+                .Include(pp => pp.User)
+                .Include(pp => pp.FuelType)
+                .Include(pp => pp.Station)
+                    .ThenInclude(s => s.Brand)
+                .Include(pp => pp.Station)
+                    .ThenInclude(s => s.Address)
+            .Where(pp => pp.User.Id == userId)
+            .Select(pp => new GetUserAllProposalPricesResponse
+            {
+                BrandName = pp.Station.Brand.Name,
+                Street = pp.Station.Address.Street,
+                HouseNumber = pp.Station.Address.HouseNumber,
+                City = pp.Station.Address.City,
+                FuelName = pp.FuelType.Name,
+                FuelCode = pp.FuelType.Code,
+                ProposedPrice = pp.ProposedPrice,
+                Status = pp.Status.ToString(),
+                CreatedAt = pp.CreatedAt
+            })
+            .ToListAsync();
 
     }
 }

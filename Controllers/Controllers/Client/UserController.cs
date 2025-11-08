@@ -17,10 +17,13 @@ namespace Controllers.Controllers.Client
     public class UserController : ControllerBase
     {
         private readonly IUserServices _userServices;
-
-        public UserController(IUserServices userServices)
+        private readonly IPriceProposalServices _priceProposalServices;
+        public UserController(
+            IUserServices userServices,
+            IPriceProposalServices priceProposalServices)
         {
             _userServices = userServices;
+            _priceProposalServices = priceProposalServices;
         }
 
         /// <summary>
@@ -129,6 +132,175 @@ namespace Controllers.Controllers.Client
         {
             var result = await _userServices.GetUserInfoAsync(email);
 
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Get all price proposals submitted by a specific user
+        /// </summary>
+        /// <remarks>
+        /// Returns a paginated list of all price proposals submitted by a user identified by email address.
+        /// This endpoint may require admin privileges depending on your authorization configuration.
+        /// 
+        /// Example request:
+        /// <code>
+        /// GET /api/user/user@example.pl/price-proposal?PageNumber=3&amp;PageSize=3
+        /// </code>
+        /// 
+        /// Example response:
+        /// <code>
+        /// {
+        ///   "items": [
+        ///     {
+        ///       "brandName": "Shell",
+        ///       "street": "aleja Aleksandra Brücknera",
+        ///       "houseNumber": "53",
+        ///       "city": "Wrocław",
+        ///       "fuelName": "PB95",
+        ///       "fuelCode": "PB95",
+        ///       "proposedPrice": 4.16,
+        ///       "status": "Pending",
+        ///       "createdAt": "2025-11-08T18:04:10.789819Z"
+        ///     },
+        ///     {
+        ///       "brandName": "LPG",
+        ///       "street": "Stanisławowska",
+        ///       "houseNumber": "26",
+        ///       "city": "Brzóze",
+        ///       "fuelName": "ON",
+        ///       "fuelCode": "ON",
+        ///       "proposedPrice": 5.65,
+        ///       "status": "Pending",
+        ///       "createdAt": "2025-11-08T18:04:10.842193Z"
+        ///     },
+        ///     {
+        ///       "brandName": "Orlen",
+        ///       "street": "Danuty Siedzikówny \"Inki\"",
+        ///       "houseNumber": "16",
+        ///       "city": "Iłża",
+        ///       "fuelName": "PB95",
+        ///       "fuelCode": "PB95",
+        ///       "proposedPrice": 5.01,
+        ///       "status": "Pending",
+        ///       "createdAt": "2025-11-08T18:04:10.866675Z"
+        ///     }
+        ///   ],
+        ///   "pageNumber": 3,
+        ///   "pageSize": 3,
+        ///   "totalCount": 9,
+        ///   "totalPages": 3,
+        ///   "hasPreviousPage": true,
+        ///   "hasNextPage": false
+        /// }
+        /// </code>
+        /// 
+        /// Notes:
+        /// - Email parameter must be URL-encoded (e.g., user@example.pl becomes user%40example.pl)
+        /// - Returns all proposals regardless of status (Pending, Approved, Rejected)
+        /// - Default pagination: PageNumber=1, PageSize=10
+        /// - If PageNumber exceeds totalPages, the last page is returned automatically
+        /// - Returns empty items array if user has not submitted any proposals
+        /// </remarks>
+        /// <param name="email">Email address of the user whose proposals to retrieve</param>
+        /// <response code="200">Price proposals retrieved successfully (may be empty list)</response>
+        /// <response code="400">Invalid email or user not found</response>
+        /// <response code="401">Unauthorized - invalid or missing authentication</response>
+        /// <response code="500">Server error - something went wrong while processing the request</response>
+        [HttpGet("{email}/price-proposal")]
+        public async Task<IActionResult> GetUserPriceProposals([FromRoute] string email, [FromQuery] GetPaggedRequest pagged)
+        {
+            var result = await _priceProposalServices.GetUserAllProposalPricesAsync(email, pagged);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Get all price proposals submitted by the currently authenticated user
+        /// </summary>
+        /// <remarks>
+        /// Returns a paginated list of all price proposals that the authenticated user has submitted.
+        /// Requires authentication.
+        /// 
+        /// Example request:
+        /// <code>
+        /// GET /api/user/me/price-proposal?PageNumber=1&amp;PageSize=10
+        /// </code>
+        /// 
+        /// Example response:
+        /// <code>
+        /// {
+        ///   "items": [
+        ///     {
+        ///       "brandName": "Orlen",
+        ///       "street": "Piotra Mocka",
+        ///       "houseNumber": "3",
+        ///       "city": "Mosina",
+        ///       "fuelName": "ON",
+        ///       "fuelCode": "ON",
+        ///       "proposedPrice": 4.05,
+        ///       "status": "Pending",
+        ///       "createdAt": "2025-11-08T18:04:10.198868Z"
+        ///     },
+        ///     {
+        ///       "brandName": "Shell",
+        ///       "street": "Jana Pawła II",
+        ///       "houseNumber": "12",
+        ///       "city": "Poznań",
+        ///       "fuelName": "PB98",
+        ///       "fuelCode": "PB98",
+        ///       "proposedPrice": 4.06,
+        ///       "status": "Pending",
+        ///       "createdAt": "2025-11-08T18:04:10.592618Z"
+        ///     }...
+        ///   ],
+        ///   "pageNumber": 1,
+        ///   "pageSize": 10,
+        ///   "totalCount": 9,
+        ///   "totalPages": 1,
+        ///   "hasPreviousPage": false,
+        ///   "hasNextPage": false
+        /// }
+        /// </code>
+        /// 
+        /// Notes:
+        /// - Requires user to be authenticated (valid JWT token)
+        /// - Returns all proposals regardless of status (Pending, Approved, Rejected)
+        /// - Default pagination: PageNumber=1, PageSize=10
+        /// - If PageNumber exceeds totalPages, the last page is returned automatically
+        /// - Returns empty items array if user has not submitted any proposals
+        /// </remarks>
+        /// <response code="200">Price proposals retrieved successfully (may be empty list)</response>
+        /// <response code="401">User not authenticated or invalid token</response>
+        /// <response code="500">Server error - something went wrong while processing the request</response>
+        [HttpGet("me/price-proposal")]
+        public async Task<IActionResult> GetUserPriceProposals([FromQuery] GetPaggedRequest pagged)
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            if (string.IsNullOrEmpty(email))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User not authenticated"
+                });
+
+            }
+
+            var result = await _priceProposalServices.GetUserAllProposalPricesAsync(email, pagged);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

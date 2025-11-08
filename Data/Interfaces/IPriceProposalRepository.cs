@@ -16,5 +16,6 @@ namespace Data.Interfaces
             string extension);
         Task<GetPriceProposalResponse> GetPriceProposal(string photoToken);
         Task<List<GetStationPriceProposalResponse>> GetStationPriceProposalsAsync(FindStationRequest request);
+        Task<List<GetUserAllProposalPricesResponse>> GetUserAllProposalPricesAsync(Guid userId);
     }
 }
