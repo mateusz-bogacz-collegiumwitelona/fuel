@@ -32,7 +32,7 @@ namespace Controllers.Controllers.Client
         ///
         /// Example request:
         /// ```http
-        /// GET /api/user
+        /// GET /api/user/me
         /// ```
         ///
         /// Example response:
@@ -61,8 +61,8 @@ namespace Controllers.Controllers.Client
         /// <response code="401">User not authenticated or email not found in token</response>
         /// <response code="404">User not found</response>
         /// <response code="500">Unexpected server error</response>
-        [HttpGet]
-        public async Task<IActionResult> GetUserByEmailAsync()
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentUserAsync()
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
 
@@ -78,6 +78,57 @@ namespace Controllers.Controllers.Client
             
             var result = await _userServices.GetUserInfoAsync(email);
             
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Retrieve information about the another user.
+        /// </summary>
+        /// <remarks>
+        /// Description: Returns detailed information about another registred user, including their profile data and proposal statistics.
+        ///
+        /// Example request:
+        /// ```http
+        /// GET api/user/user2%40example.pl
+        /// ```
+        ///
+        /// Example response:
+        /// ```json
+        /// {
+        ///   "userName": "JohnDoe",
+        ///   "email": "user@example.pl",
+        ///   "proposalStatistics": {
+        ///     "totalProposals": 42,
+        ///     "approvedProposals": 30,
+        ///     "rejectedProposals": 12,
+        ///     "acceptedRate": 71,
+        ///     "updatedAt": "2025-10-17T12:34:56Z"
+        ///   },
+        ///   "createdAt": "2024-01-15T10:30:00Z"
+        /// }
+        /// ```
+        ///
+        /// Notes:
+        /// - Both User and Admin roles have access to this endpoint.
+        /// - Returns complete user profile including nested proposal statistics.
+        /// - `acceptedRate` in proposal statistics is calculated as percentage of approved proposals.
+        /// </remarks>
+        /// <response code="200">User information successfully retrieved</response>
+        /// <response code="401">User not authenticated or email not found in token</response>
+        /// <response code="404">User not found</response>
+        /// <response code="500">Unexpected server error</response>
+        [HttpGet("{email}")]
+        public async Task<IActionResult> GetUserByEmailAsync([FromRoute] string email)
+        {
+            var result = await _userServices.GetUserInfoAsync(email);
+
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new
