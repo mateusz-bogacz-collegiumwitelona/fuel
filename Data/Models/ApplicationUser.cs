@@ -20,5 +20,9 @@ namespace Data.Models
         public ICollection<BanRecord> BansGiven { get; set; }
 
         public ICollection<BanRecord> UnbansGiven { get; set; }
+
+        public ICollection<ReportUserRecord> ReportsMade { get; set; }
+        public ICollection<ReportUserRecord> ReportsReceived { get; set; }
+        public ICollection<ReportUserRecord> ReportsReviewed { get; set; }
     }
 }

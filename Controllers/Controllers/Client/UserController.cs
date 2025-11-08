@@ -18,12 +18,15 @@ namespace Controllers.Controllers.Client
     {
         private readonly IUserServices _userServices;
         private readonly IPriceProposalServices _priceProposalServices;
+        private readonly IReportService _reportService;
         public UserController(
             IUserServices userServices,
-            IPriceProposalServices priceProposalServices)
+            IPriceProposalServices priceProposalServices,
+            IReportService reportService)
         {
             _userServices = userServices;
             _priceProposalServices = priceProposalServices;
+            _reportService = reportService;
         }
 
         /// <summary>
@@ -78,9 +81,9 @@ namespace Controllers.Controllers.Client
                 });
 
             }
-            
+
             var result = await _userServices.GetUserInfoAsync(email);
-            
+
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new
@@ -471,8 +474,6 @@ namespace Controllers.Controllers.Client
         /// Example request:
         /// ```http
         /// POST /api/user/change-password
-        /// Content-Type: application/json
-        ///
         /// {
         ///   "currentPassword": "OldPass123!",
         ///   "newPassword": "NewPass456!",
@@ -636,6 +637,106 @@ namespace Controllers.Controllers.Client
                 {
                     success = true,
                     message = result.Message
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Report another user for inappropriate behavior or content.
+        /// </summary>
+        /// <remarks>
+        /// **Description:**  
+        /// Creates a new user report record in the system.  
+        /// The email of the reporting user (notifier) is automatically extracted from the JWT token.  
+        /// The report contains the email of the reported user and a detailed description of the reason.
+        ///
+        /// **Example request:**
+        /// ```http
+        /// POST /api/user/report
+        ///
+        /// {
+        ///   "reportedEmail": "user2@example.pl",
+        ///   "reason": "User has been repeatedly sending spam messages in chat rooms for the past few days."
+        /// }
+        /// ```
+        ///
+        /// **Example response (success):**
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "User reported successfully",
+        ///   "data": true
+        /// }
+        /// ```
+        ///
+        /// **Example response (error - user tries to report themselves):**
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "You cannot report yourself",
+        ///   "errors": ["ValidationError"]
+        /// }
+        /// ```
+        ///
+        /// **Example response (error - reported user not found):**
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Reported user not found",
+        ///   "errors": ["NotFound"]
+        /// }
+        /// ```
+        ///
+        /// **Example response (error - unauthorized):**
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "User not authenticated",
+        ///   "errors": ["Unauthorized"]
+        /// }
+        /// ```
+        ///
+        /// **Notes:**
+        /// - The notifier's email is automatically extracted from the JWT token (no need to send it manually).
+        /// - The `reportedEmail` field must contain a valid, existing user email address.
+        /// - The `reason` field must be between **50 and 1000 characters** long and describe the reason for reporting.
+        /// - Reports about administrators are automatically rejected.
+        /// - A user cannot report themselves.
+        /// - The report is stored with the status **Pending** until reviewed by an administrator.
+        /// </remarks>
+        /// <param name="request">The report request containing the reported user's email and a description of the reason.</param>
+        /// <response code="200">Report successfully created.</response>
+        /// <response code="400">Validation error — missing fields, invalid email format, or self-report attempt.</response>
+        /// <response code="401">User not authenticated or missing JWT token.</response>
+        /// <response code="404">Reported user or notifier not found.</response>
+        /// <response code="500">Internal server error or database operation failed.</response>
+
+        [HttpPost("report")]
+        public async Task<IActionResult> ReportUserAsync([FromBody] ReportRequest request)
+        {
+            var notifierEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(notifierEmail))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User not authenticated"
+                });
+            }
+
+            var result = await _reportService.ReportUserAsync(notifierEmail, request);
+
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
                 })
                 : StatusCode(result.StatusCode, new
                 {

@@ -157,57 +157,29 @@ namespace Data.Reopsitories
             return list;
         }
 
-        public async Task<bool> AddBanRecordAsync(ApplicationUser user, ApplicationUser admin, SetLockoutForUserRequest request )
+        
+        
+
+        public async Task<bool> ReportUserAsync(
+            ApplicationUser reported, 
+            ApplicationUser reportedBy, 
+            string reason)
         {
-            var ban = new BanRecord
+            var report = new ReportUserRecord
             {
                 Id = Guid.NewGuid(),
-                UserId = user.Id,
-                User = user,
-                Reason = request.Reason,
-                BannedAt = DateTime.UtcNow,
-                BannedUntil = request.Days.HasValue ? DateTime.UtcNow.AddDays(request.Days.Value) : null,
-                IsActive = true,
-                AdminId = admin.Id,
-                Admin = admin
+                ReportedUserId = reported.Id,
+                ReportedUser = reported,
+                ReportingUserId = reportedBy.Id,
+                ReportingUser = reportedBy,
+                Description = reason,
+                CreatedAt = DateTime.UtcNow,
+                Status = Data.Enums.ReportStatusEnum.Pending
             };
 
-            await _context.BanRecords.AddAsync(ban);
-
+            await _context.ReportUserRecords.AddAsync(report);
             var result = await _context.SaveChangesAsync();
             return result > 0;
         }
-
-        public async Task DeactivateActiveBansAsync(Guid userId, Guid unbannedByAdminId)
-        {
-            var activeBans = await _context.BanRecords
-                .Where(b => b.UserId == userId && b.IsActive)
-                .ToListAsync();
-
-            if (!activeBans.Any())
-                return; 
-
-            foreach (var ban in activeBans)
-            {
-                ban.IsActive = false;
-                ban.UnbannedAt = DateTime.UtcNow;
-                ban.UnbannedByAdminId = unbannedByAdminId;
-            }
-
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task<ReviewUserBanResponses> GetUserBanInfoAsync(string email)
-            =>  await _context.BanRecords
-                .Where(b => b.User.Email == email && b.IsActive)
-                .Select(b => new ReviewUserBanResponses
-                {
-                    UserName = b.User.UserName,
-                    Reason = b.Reason,
-                    BannedAt = b.BannedAt,
-                    BannedUntil = b.BannedUntil ?? DateTime.MaxValue,
-                    BannedBy = b.Admin.UserName
-                })
-                .FirstOrDefaultAsync();
     }
 }

@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Data.Context
 {
@@ -20,6 +22,7 @@ namespace Data.Context
         public DbSet<ProposalStatistic> ProposalStatistics { get; set; } 
         public DbSet<StationAddress> StationAddress { get; set; }
         public DbSet<BanRecord> BanRecords { get; set; }
+        public DbSet<ReportUserRecord> ReportUserRecords { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -114,6 +117,24 @@ namespace Data.Context
                 .HasOne(b => b.UnbannedByAdmin)
                 .WithMany(u => u.UnbansGiven)
                 .HasForeignKey(b => b.UnbannedByAdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ReportUserRecord>()
+                .HasOne(r => r.ReportingUser)
+                .WithMany(u => u.ReportsMade)
+                .HasForeignKey(r => r.ReportingUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ReportUserRecord>()
+                .HasOne(r => r.ReportedUser)
+                .WithMany(u => u.ReportsReceived)
+                .HasForeignKey(r => r.ReportedUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ReportUserRecord>()
+                .HasOne(r => r.ReviewedByAdmin)
+                .WithMany(u => u.ReportsReviewed)
+                .HasForeignKey(r => r.ReviewedByAdminId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<StationAddress>()

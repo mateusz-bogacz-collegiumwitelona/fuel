@@ -16,10 +16,12 @@ namespace Controllers.Controllers.Admin
     public class UserController : ControllerBase
     {
         private readonly IUserServices _userServices;
+        private readonly IBanService _banService;
 
-        public UserController(IUserServices userServices)
+        public UserController(IUserServices userServices, IBanService banService)
         {
             _userServices = userServices;
+            _banService = banService;
         }
 
 
@@ -266,7 +268,7 @@ namespace Controllers.Controllers.Admin
 
             }
 
-            var result = await _userServices.LockoutUserAsync(adminEmail, request);
+            var result = await _banService.LockoutUserAsync(adminEmail, request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, new
                 {
@@ -360,7 +362,7 @@ namespace Controllers.Controllers.Admin
         public async Task<IActionResult> ReviewLockoutAsync([FromQuery] string email)
         {
 
-            var result = await _userServices.GetUserBanInfoAsync(email);
+            var result = await _banService.GetUserBanInfoAsync(email);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, new
                 {
@@ -436,7 +438,7 @@ namespace Controllers.Controllers.Admin
                     message = "User not authenticated"
                 });
             }
-            var result = await _userServices.UnlockUserAsync(adminEmail, userEmail);
+            var result = await _banService.UnlockUserAsync(adminEmail, userEmail);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, new
                 {

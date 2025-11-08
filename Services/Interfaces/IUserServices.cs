@@ -14,8 +14,5 @@ namespace Services.Interfaces
         Task<Result<IdentityResult>> DeleteUserAsyc(string email, DeleteAccountRequest request);
         Task<Result<PagedResult<GetUserListResponse>>> GetUserListAsync(GetPaggedRequest pagged, TableRequest request);
         Task<Result<IdentityResult>> ChangeUserRoleAsync(string email, string newRole);
-        Task<Result<IdentityResult>> LockoutUserAsync(string adminEmail, SetLockoutForUserRequest request);
-        Task<Result<IdentityResult>> UnlockUserAsync(string adminEmail, string userEmail);
-        Task<Result<ReviewUserBanResponses>> GetUserBanInfoAsync(string email);
     }
 }
