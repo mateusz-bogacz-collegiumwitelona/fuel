@@ -9,7 +9,7 @@ namespace Services.Interfaces
         Task<Result<List<GetStationsResponse>>> GetAllStationsForMapAsync(GetStationsRequest request);
         Task<Result<List<GetStationsResponse>>> GetNearestStationAsync(double latitude, double longitude,int? count);
         Task<Result<PagedResult<GetStationListResponse>>> GetStationListAsync(GetStationListRequest request);
-        Task<Result<GetStationListResponse>> GetStationProfileAsync(GetStationProfileRequest request);
+        Task<Result<GetStationListResponse>> GetStationProfileAsync(FindStationRequest request);
         Task<Result<PagedResult<GetStationListForAdminResponse>>> GetStationsListForAdminAsync(GetPaggedRequest pagged, TableRequest request);
         Task<Result<bool>> EditStationAsync(EditStationRequest request);
         Task<Result<GetStationInfoForEditResponse>> GetStationInfoForEdit(FindStationRequest request);

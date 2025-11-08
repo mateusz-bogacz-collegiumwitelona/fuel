@@ -453,20 +453,15 @@ namespace Contlollers.Controllers.Client
         /// <remarks>
         /// Description  
         /// Returns complete information about a specific fuel station, including address, coordinates, brand name, and current fuel prices.  
-        /// The station is identified based on the provided address (street, house number, city, postal code).  
+        /// The station is identified based on the provided information (brand, street, house number, city).  
         ///
-        /// Example request body  
-        /// ```json
-        /// {
-        ///   "street": "Ignacego Domejki",
-        ///   "houseNumber": "1a",
-        ///   "city": "Legnica",
-        ///   "postalCode": "59-220"
-        /// }
-        /// ```
+        /// Example request  
+        /// <code>
+        /// GET api/station/profile?BrandName=Orlen&amp;Street=Ignacego%20Domejki&amp;HouseNumber=1a&amp;City=Legnica
+        /// </code>
         ///
         /// Example response  
-        /// ```json
+        /// <code>
         /// {
         ///   "brandName": "Orlen",
         ///   "street": "Ignacego Domejki",
@@ -503,20 +498,26 @@ namespace Contlollers.Controllers.Client
         ///     }
         ///   ]
         /// }
-        /// ```
+        /// </code>
         ///
         /// Notes  
-        /// - All request parameters are **required** for the search (street, houseNumber, city, postalCode).  
-        /// - If no station matches the provided data, a `404` response is returned.  
-        /// - The coordinate system used is **WGS84** (latitude, longitude).  
-        /// - The `fuelPrice` list may contain multiple entries depending on the available fuel types.  
+        /// - All request parameters are required for the search (brandName, street, houseNumber, city).  
+        /// - If no station matches the provided data, a 404 response is returned.  
+        /// - The coordinate system used is WGS84 (latitude, longitude).  
+        /// - The fuelPrice list may contain multiple entries depending on the available fuel types.  
+        /// - Search is case-insensitive for all parameters.  
         ///
         /// </remarks>
+        /// <param name="BrandName">Brand name of the station</param>
+        /// <param name="Street">Street name where the station is located</param>
+        /// <param name="HouseNumber">House number of the station</param>
+        /// <param name="City">City where the station is located</param>
         /// <response code="200">Station profile successfully retrieved</response>
-        /// <response code="404">No matching station found or validation error</response>
+        /// <response code="400">Validation error — one or more required parameters are missing or empty</response>
+        /// <response code="404">No matching station found</response>
         /// <response code="500">Server error — something went wrong while processing the request</response>
-        [HttpPost("profile")]
-        public async Task<IActionResult> GetStationProfileAsync(GetStationProfileRequest request)
+        [HttpGet("profile")]
+        public async Task<IActionResult> GetStationProfileAsync([FromQuery]FindStationRequest request)
         {
             var result = await _stationServices.GetStationProfileAsync(request);
             return result.IsSuccess

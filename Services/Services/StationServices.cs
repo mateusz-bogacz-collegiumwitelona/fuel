@@ -236,10 +236,20 @@ namespace Services.Services
             }
         }
 
-        public async Task<Result<GetStationListResponse>> GetStationProfileAsync(GetStationProfileRequest request)
+        public async Task<Result<GetStationListResponse>> GetStationProfileAsync(FindStationRequest request)
         {
             try
             {
+                if (string.IsNullOrEmpty(request.BrandName))
+                {
+                    _logger.LogWarning("Brand name cannot be empty");
+                    return Result<GetStationListResponse>.Bad(
+                        "Validation error",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Brand name cannot be empty" }
+                        );
+                }
+
                 if (string.IsNullOrEmpty(request.Street))
                 {
                     _logger.LogWarning("Street cannot be empty");
@@ -267,16 +277,6 @@ namespace Services.Services
                         "Validation error",
                         StatusCodes.Status400BadRequest,
                         new List<string> { "City cannot be empty" }
-                        );
-                }
-
-                if (string.IsNullOrEmpty(request.PostalCode))
-                {
-                    _logger.LogWarning("Postal code cannot be empty");
-                    return Result<GetStationListResponse>.Bad(
-                        "Validation error",
-                        StatusCodes.Status400BadRequest,
-                        new List<string> { "Postal code cannot be empty" }
                         );
                 }
 

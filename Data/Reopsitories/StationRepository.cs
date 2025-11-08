@@ -173,7 +173,7 @@ namespace Data.Reopsitories
         }
         
 
-        public async Task<GetStationListResponse> GetStationProfileAsync(GetStationProfileRequest request)
+        public async Task<GetStationListResponse> GetStationProfileAsync(FindStationRequest request)
         {
             var station = await _context.Stations
                 .Include(s => s.Brand)
@@ -181,10 +181,10 @@ namespace Data.Reopsitories
                 .Include(s => s.FuelPrice)
                     .ThenInclude(fp => fp.FuelType)
                 .FirstOrDefaultAsync(s =>
-                    s.Address.Street == request.Street &&
-                    s.Address.HouseNumber == request.HouseNumber &&
-                    s.Address.City == request.City &&
-                    s.Address.PostalCode == request.PostalCode
+                    s.Brand.Name.ToLower() == request.BrandName.ToLower() &&
+                    s.Address.Street.ToLower() == request.Street.ToLower() &&
+                    s.Address.HouseNumber.ToLower() == request.HouseNumber.ToLower() &&
+                    s.Address.City.ToLower() == request.City.ToLower()
                 );
 
             if (station == null) return null;
@@ -566,5 +566,6 @@ namespace Data.Reopsitories
                 throw;
             }
         } 
+
     }
 }
