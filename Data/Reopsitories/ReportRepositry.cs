@@ -1,5 +1,7 @@
 ﻿using Data.Context;
+using Data.Enums;
 using Data.Models;
+using DTO.Responses;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -32,12 +34,30 @@ namespace Data.Reopsitories
                 ReportingUser = notifier,
                 Description = reason,
                 CreatedAt = DateTime.UtcNow,
-                Status = Data.Enums.ReportStatusEnum.Pending
+                Status = ReportStatusEnum.Pending
             };
 
             await _context.ReportUserRecords.AddAsync(report);
             var result = await _context.SaveChangesAsync();
             return result > 0;
         }
+
+        public async Task<List<UserReportsRespnse>> GetUserReportAsync(Guid id)
+            => await _context.ReportUserRecords
+            .Where(ru =>
+                ru.ReportedUserId == id &&
+                ru.Status == ReportStatusEnum.Pending
+            )
+            .OrderBy(ru => ru.CreatedAt)
+            .Select(ru => new UserReportsRespnse
+            {
+                UserName = ru.ReportedUser.UserName,
+                UserEmail = ru.ReportedUser.Email,
+                Reason = ru.Description,
+                Staus = ru.Status.ToString(),
+                CreatedAt = ru.CreatedAt
+            })
+            .ToListAsync();
+
     }
 }

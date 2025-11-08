@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Helpers;
 using Services.Interfaces;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
 namespace Controllers.Controllers.Admin
@@ -17,11 +18,15 @@ namespace Controllers.Controllers.Admin
     {
         private readonly IUserServices _userServices;
         private readonly IBanService _banService;
-
-        public UserController(IUserServices userServices, IBanService banService)
+        private readonly IReportService _reportService;
+        public UserController(
+            IUserServices userServices, 
+            IBanService banService,
+            IReportService reportService)
         {
             _userServices = userServices;
             _banService = banService;
+            _reportService = reportService;
         }
 
 
@@ -439,6 +444,92 @@ namespace Controllers.Controllers.Admin
                 });
             }
             var result = await _banService.UnlockUserAsync(adminEmail, userEmail);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    data = result.Data
+                });
+        }
+
+        /// <summary>
+        /// Retrieves a paginated list of pending user reports for a specific user
+        /// </summary>
+        /// <param name="email">Email address of the reported user</param>
+        /// <param name="pagged">Pagination parameters (PageNumber and PageSize)</param>
+        /// <returns>A paginated list of pending reports for the specified user</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET /api/report/list?email=user@example.com&amp;PageNumber=1&amp;PageSize=10
+        ///
+        /// This endpoint returns only reports with **"Pending"** status.
+        /// Reports are ordered by creation date (oldest first).
+        /// 
+        /// **Query Parameters:**
+        /// - `email` (required): Email of the reported user whose reports you want to retrieve
+        /// - `PageNumber` (optional): Page number to retrieve (default: 1, minimum: 1)
+        /// - `PageSize` (optional): Number of items per page (default: 10, minimum: 1)
+        /// 
+        /// **Response Structure:**
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "User reports retrieved successfully",
+        ///   "data": {
+        ///     "items": [
+        ///       {
+        ///         "userName": "reportedUser123",
+        ///         "userEmail": "reported@example.com",
+        ///         "reason": "Spam or inappropriate content",
+        ///         "status": "Pending",
+        ///         "createdAt": "2025-11-08T10:30:00Z"
+        ///       }
+        ///     ],
+        ///     "pageNumber": 1,
+        ///     "pageSize": 10,
+        ///     "totalCount": 15,
+        ///     "totalPages": 2,
+        ///     "hasPreviousPage": false,
+        ///     "hasNextPage": true
+        ///   }
+        /// }
+        /// ```
+        /// 
+        /// **Error Response Example:**
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Reported user not found",
+        ///   "errors": ["NotFound"],
+        ///   "data": null
+        /// }
+        /// ```
+        /// 
+        /// **Notes:**
+        /// - Only reports with "Pending" status are returned
+        /// - If the requested page number exceeds total pages, the last page is returned automatically
+        /// - An empty result (no reports) returns a 200 status with an empty items array
+        /// </remarks>
+        /// <response code="200">Returns the paginated list of user reports or empty list if no reports found</response>
+        /// <response code="400">If the email parameter is null or empty</response>
+        /// <response code="404">If the user with the specified email is not found</response>
+        /// <response code="500">If an internal server error occurs</response>
+        [HttpGet("report/list")]
+        public async Task<IActionResult> GetUserReportAsync(
+            [Required][FromQuery] string email, 
+            [FromQuery] GetPaggedRequest pagged)
+        {
+            var result = await _reportService.GetUserReportAsync(email, pagged);
+
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, new
                 {

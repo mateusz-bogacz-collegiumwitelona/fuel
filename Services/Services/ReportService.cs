@@ -1,5 +1,6 @@
 ﻿using Data.Models;
 using DTO.Requests;
+using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
@@ -140,5 +141,76 @@ namespace Services.Services
             }
         }
 
+        public async Task<Result<PagedResult<UserReportsRespnse>>> GetUserReportAsync(string email, GetPaggedRequest pagged)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(email))
+                {
+                    _logger.LogWarning("Reported email is null or empty");
+                    return Result<PagedResult<UserReportsRespnse>>.Bad(
+                        "Reported email is required",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "ValidationError" }
+                        );
+                }
+
+                var user = await _userManager.FindByEmailAsync(email);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("Reported user with email {Email} not found.", email);
+                    return Result<PagedResult<UserReportsRespnse>>.Bad(
+                        "Reported user not found",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "NotFound" }
+                        );
+                }
+
+                var result = await _reportRepositry.GetUserReportAsync(user.Id);
+
+                if (result == null)
+                {
+                    _logger.LogWarning("No stations found in the database.");
+
+                    var emptyPage = new PagedResult<UserReportsRespnse>
+                    {
+                        Items = new List<UserReportsRespnse>(),
+                        PageNumber = pagged.PageNumber ?? 1,
+                        PageSize = pagged.PageSize ?? 10,
+                        TotalCount = 0,
+                        TotalPages = 0
+                    };
+
+                    return Result<PagedResult<UserReportsRespnse>>.Good(
+                        "No stations found.",
+                        StatusCodes.Status200OK,
+                        emptyPage);
+                }
+
+                int pageNumber = pagged.PageNumber ?? 1;
+                int pageSize = pagged.PageSize ?? 10;
+
+                var pagedResult = result.ToPagedResult(pageNumber, pageSize);
+
+                if (pagedResult.PageNumber > pagedResult.TotalPages && pagedResult.TotalPages > 0)
+                    pagedResult = result.ToPagedResult(pagedResult.TotalPages, pageSize);
+
+                return Result<PagedResult<UserReportsRespnse>>.Good(
+                    "Station retrieved successfully",
+                    StatusCodes.Status200OK,
+                    pagedResult
+                    );
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while retrieving user reposrts for admin: {ex.Message} | {ex.InnerException}");
+                return Result<PagedResult<UserReportsRespnse>>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" });
+            }
+        }
     }
 }
