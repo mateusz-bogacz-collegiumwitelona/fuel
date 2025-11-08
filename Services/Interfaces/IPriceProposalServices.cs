@@ -8,5 +8,6 @@ namespace Services.Interfaces
     {
         Task<Result<string>> AddNewProposalAsync(string email, AddNewPriceProposalRequest request);
         Task<Result<GetPriceProposalResponse>> GetPriceProposal(string photoToken);
+        Task<Result<PagedResult<GetStationPriceProposalResponse>>> GetStationPriceProposalsAsync(GetPaggedRequest pagged, FindStationRequest request);
     }
 }

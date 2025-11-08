@@ -19,5 +19,6 @@ namespace Data.Interfaces
         Task<bool> DeleteStationAsync(FindStationRequest request);
 
 
+
     }
 }

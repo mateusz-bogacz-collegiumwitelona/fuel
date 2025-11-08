@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography;
+using DTO.Requests;
 namespace Data.Repositories
 {
     public class PriceProposalRepository : IPriceProposalRepository
@@ -183,5 +184,32 @@ namespace Data.Repositories
                 CreatedAt = proposal.CreatedAt
             };
         }
+
+        public async Task<List<GetStationPriceProposalResponse>> GetStationPriceProposalsAsync(FindStationRequest request)
+            => await _context.PriceProposals
+                .Include(pp => pp.User)
+                .Include(pp => pp.FuelType)
+                .Include(pp => pp.Station)
+                    .ThenInclude(s => s.Brand)
+                .Include(pp => pp.Station)
+                    .ThenInclude(s => s.Address)
+                .Where(pp =>
+                    pp.Station.Brand.Name == request.BrandName &&
+                    pp.Station.Address.Street == request.Street &&
+                    pp.Station.Address.HouseNumber == request.HouseNumber &&
+                    pp.Station.Address.City == request.City &&
+                    pp.Status == Enums.PriceProposalStatus.Pending)
+                .Select(pp => new GetStationPriceProposalResponse
+                {
+                    UserName = pp.User.UserName,
+                    Email = pp.User.Email,
+                    FuelName = pp.FuelType.Name,
+                    FuelCode = pp.FuelType.Code,
+                    ProposedPrice = pp.ProposedPrice,
+                    Status = pp.Status.ToString(),
+                    CreatedAt = pp.CreatedAt
+                })
+                .ToListAsync();
+
     }
 }

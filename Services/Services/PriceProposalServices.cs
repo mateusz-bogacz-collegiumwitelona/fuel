@@ -192,5 +192,54 @@ namespace Services.Services
                     new List<string> { $"{ex.Message} | {ex.InnerException}" });
             }
         }
+
+        public async Task<Result<PagedResult<GetStationPriceProposalResponse>>> GetStationPriceProposalsAsync(GetPaggedRequest pagged, FindStationRequest request)
+        {
+            try
+            {
+                var result = await _priceProposalRepository.GetStationPriceProposalsAsync(request);
+
+                if (result == null || !result.Any())
+                {
+                    _logger.LogWarning("No stations found in the database.");
+
+                    var emptyPage = new PagedResult<GetStationPriceProposalResponse>
+                    {
+                        Items = new List<GetStationPriceProposalResponse>(),
+                        PageNumber = pagged.PageNumber ?? 1,
+                        PageSize = pagged.PageSize ?? 10,
+                        TotalCount = 0,
+                        TotalPages = 0
+                    };
+
+                    return Result<PagedResult<GetStationPriceProposalResponse>>.Good(
+                        "No stations found.",
+                        StatusCodes.Status200OK,
+                        emptyPage);
+                }
+
+                int pageNumber = pagged.PageNumber ?? 1;
+                int pageSize = pagged.PageSize ?? 10;
+
+                var pagedResult = result.ToPagedResult(pageNumber, pageSize);
+
+                if (pagedResult.PageNumber > pagedResult.TotalPages && pagedResult.TotalPages > 0)
+                    pagedResult = result.ToPagedResult(pagedResult.TotalPages, pageSize);
+
+                return Result<PagedResult<GetStationPriceProposalResponse>>.Good(
+                    "Station retrieved successfully",
+                    StatusCodes.Status200OK,
+                    pagedResult
+                    );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while retrieving station price proposals: {ex.Message} | {ex.InnerException}");
+                return Result<PagedResult<GetStationPriceProposalResponse>>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" });
+            }
+        }
     }
 }

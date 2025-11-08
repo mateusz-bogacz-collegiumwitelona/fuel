@@ -371,55 +371,87 @@ namespace Data.Seeder
         {
             try
             {
+
                 var stations = await _context.Stations.ToListAsync();
+
                 var users = await _userManager.GetUsersInRoleAsync("User");
+
                 var fuelsTypes = await _context.FuelTypes.ToListAsync();
 
                 if (stations.Count == 0 || users.Count == 0 || fuelsTypes.Count == 0)
                 {
-                    throw new Exception("Stations, Users or FuelTypes data is missing. Please seed them first.");
+                    throw new Exception($"Missing data - Stations: {stations.Count}, Users: {users.Count}, FuelTypes: {fuelsTypes.Count}. Please seed them first.");
                 }
+
+                int addedCount = 0;
+                int skippedCount = 0;
 
                 foreach (var station in stations)
                 {
-                    if (!_context.PriceProposals.Any(pp => pp.StationId == station.Id))
+                    bool exists = await _context.PriceProposals
+                        .AnyAsync(pp => pp.StationId == station.Id);
+
+                    if (!exists)
                     {
                         var user = users[_random.Next(users.Count)];
+                        var fuelType = fuelsTypes[_random.Next(fuelsTypes.Count)];
+
                         var priceProposal = new PriceProposal
                         {
                             Id = Guid.NewGuid(),
                             UserId = user.Id,
                             StationId = station.Id,
-                            PhotoUrl = " ",
-                            FuelTypeId = fuelsTypes[_random.Next(fuelsTypes.Count)].Id,
-                            ProposedPrice = Math.Round(Math.Abs((decimal)(_random.NextDouble() * (7.0 - 4.0) + 4.0)), 2),
+                            FuelTypeId = fuelType.Id,
+                            ProposedPrice = Math.Round((decimal)(_random.NextDouble() * (7.0 - 4.0) + 4.0), 2),
+                            PhotoUrl = $"https://example.com/photos/{Guid.NewGuid()}.jpg", 
+                            PhotoToken = Guid.NewGuid().ToString("N").Substring(0, 32), 
                             Status = PriceProposalStatus.Pending,
                             CreatedAt = DateTime.UtcNow
                         };
 
                         _context.PriceProposals.Add(priceProposal);
+                        addedCount++;
+
+                        Console.WriteLine($"Added proposal for station {station.Id}, fuel: {fuelType.Code}, price: {priceProposal.ProposedPrice}");
                     }
                     else
                     {
-                        Console.WriteLine($"PriceProposial for station {station.Id} already exists.");
-
+                        skippedCount++;
+                        Console.WriteLine($"PriceProposal for station {station.Id} already exists - skipping");
                     }
                 }
 
-                int result = await _context.SaveChangesAsync();
-
-                if (result <= 0)
+                if (addedCount > 0)
                 {
-                    throw new Exception("Failed to seed PriceProposials");
+                    Console.WriteLine($"Saving {addedCount} new proposals to database...");
+                    int result = await _context.SaveChangesAsync();
+
+                    if (result <= 0)
+                    {
+                        throw new Exception("SaveChangesAsync returned 0 - no records were saved");
+                    }
+
+                    Console.WriteLine($"PriceProposals seeded successfully: {result} added, {skippedCount} skipped");
                 }
                 else
                 {
-                    Console.WriteLine("PriceProposials seeded successfully");
+                    Console.WriteLine($"No new proposals to add. {skippedCount} already exist.");
+                }
+            }
+            catch (DbUpdateException dbEx)
+            {
+                Console.WriteLine($"Database error while seeding price proposals: {dbEx.Message}");
+                Console.WriteLine($"Inner exception: {dbEx.InnerException?.Message}");
+                if (dbEx.InnerException != null)
+                {
+                    Console.WriteLine($"Stack trace: {dbEx.InnerException.StackTrace}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"An error occurred while seeding price proposials: {ex.Message} | {ex.InnerException}");
+                Console.WriteLine($"An error occurred while seeding price proposals: {ex.Message}");
+                Console.WriteLine($"Inner exception: {ex.InnerException?.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
             }
         }
 

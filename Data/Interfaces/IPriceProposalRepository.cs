@@ -1,4 +1,5 @@
 ﻿using Data.Models;
+using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 
@@ -14,5 +15,6 @@ namespace Data.Interfaces
             IFormFile photo,
             string extension);
         Task<GetPriceProposalResponse> GetPriceProposal(string photoToken);
+        Task<List<GetStationPriceProposalResponse>> GetStationPriceProposalsAsync(FindStationRequest request);
     }
 }
