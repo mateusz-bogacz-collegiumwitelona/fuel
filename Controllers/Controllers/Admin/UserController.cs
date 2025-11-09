@@ -171,7 +171,7 @@ namespace Controllers.Controllers.Admin
         /// <response code="404">User or role not found</response>
         /// <response code="500">Internal server error</response>
 
-        [HttpPut("change-role")]
+        [HttpPatch("change-role")]
         public async Task<IActionResult> ChangeUserRoleAsync([FromQuery] string email, [FromQuery] string newRole)
         {
             var result = await _userServices.ChangeUserRoleAsync(email, newRole);
@@ -636,7 +636,7 @@ namespace Controllers.Controllers.Admin
         /// <response code="403">If the user is not an admin</response>
         /// <response code="404">If report, user, or admin not found</response>
         /// <response code="500">If an internal server error occurs</response>
-        [HttpPut("report/change-status")]
+        [HttpPatch("report/change-status")]
         public async Task<IActionResult> ChangeReportStatusAsync([FromBody] ChangeReportStatusRequest request)
         {
             var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value;

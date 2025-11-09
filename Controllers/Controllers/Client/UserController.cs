@@ -13,7 +13,6 @@ namespace Controllers.Controllers.Client
     [Route("api/user")]
     [ApiController]
     [EnableCors("AllowClient")]
-    [Authorize(Roles = "User,Admin")]
     public class UserController : ControllerBase
     {
         private readonly IUserServices _userServices;
@@ -354,7 +353,7 @@ namespace Controllers.Controllers.Client
         /// <response code="400">Validation error - userName is null, empty, or whitespace</response>
         /// <response code="401">User not authenticated or email not found in token</response>
         /// <response code="500">Failed to change username or unexpected server error</response>
-        [HttpPost("change-name")]
+        [HttpPatch("change-name")]
         public async Task<IActionResult> ChangeUserNameAsync(string userName)
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
@@ -431,7 +430,7 @@ namespace Controllers.Controllers.Client
         /// <response code="404">User with the current email doesn't exist</response>
         /// <response code="409">Email already in use by another user</response>
         /// <response code="500">Failed to change email or unexpected server error</response>
-        [HttpPost("change-email")]
+        [HttpPatch("change-email")]
         public async Task<IActionResult> ChangeUserEmailAsync(
             [Required(ErrorMessage = "Email is required")]
             [EmailAddress(ErrorMessage = "Invalid email format")]
@@ -520,7 +519,7 @@ namespace Controllers.Controllers.Client
         /// <response code="401">User not authenticated or email not found in token</response>
         /// <response code="404">User with the email doesn't exist</response>
         /// <response code="500">Failed to change password or unexpected server error</response>
-        [HttpPost("change-password")]
+        [HttpPatch("change-password")]
         public async Task<IActionResult> ChangeUserPasswordAsync(ChangePasswordRequest request)
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value;

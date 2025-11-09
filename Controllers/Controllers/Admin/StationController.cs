@@ -161,7 +161,7 @@ namespace Controllers.Controllers.Admin
         /// <response code="403">Forbidden - Admin role required</response>
         /// <response code="500">Internal server error</response>
 
-        [HttpPut("edit")]
+        [HttpPatch("edit")]
         public async Task<IActionResult> EditStationAsync([FromBody] EditStationRequest request)
         {
             var result = await _stationServices.EditStationAsync(request);

@@ -142,7 +142,7 @@ namespace Controllers.Controllers.Admin
         /// <response code="404">Brand not found</response>
         /// <response code="500">Server error during update</response>
 
-        [HttpPut("edit/{oldName}")]
+        [HttpPatch("edit/{oldName}")]
         public async Task<IActionResult> EditBrandAsync( string oldName, [FromQuery] string newName)
         {
             var result = await _brandServices.EditBrandAsync(oldName, newName);

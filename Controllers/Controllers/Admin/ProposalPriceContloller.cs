@@ -230,7 +230,7 @@ namespace Controllers.Controllers.Admin
         /// <response code="404">Price proposal not found or not in Pending status</response>
         /// <response code="409">Conflict - proposal has already been reviewed</response>
         /// <response code="500">Internal server error or database transaction failed</response>
-        [HttpPost("change-status/{token}")]
+        [HttpPatch("change-status/{token}")]
         public async Task<IActionResult> ChangePriceProposalStatus([FromRoute]string token, [FromQuery]bool isAccepted)
         {
             var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value;
