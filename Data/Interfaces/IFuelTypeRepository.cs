@@ -17,5 +17,6 @@ namespace Data.Interfaces
         Task<List<GetFuelTypeResponses>> GetFuelsTypeListAsync(TableRequest request);
         Task<bool> AddFuelTypeAsync(string name, string code);
         Task<bool> EditFuelTypeAsync(FuelType fuelType, string? name, string? code);
+        Task<bool> DeleteFuelTypeAsync(FuelType fuelType);
     }
 }

@@ -120,5 +120,12 @@ namespace Data.Reopsitories
 
             return result > 0;
         }
+
+        public async Task<bool> DeleteFuelTypeAsync(FuelType fuelType)
+        {
+            _context.Remove(fuelType);
+            var result = await _context.SaveChangesAsync();
+            return result > 0;
+        }
     }
 }

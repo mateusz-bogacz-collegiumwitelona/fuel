@@ -266,5 +266,69 @@ namespace Controllers.Controllers.Admin
                     Data = result.Data
                 });
         }
+
+        /// <summary>
+        /// Deletes a fuel type from the system by its code.
+        /// </summary>
+        /// <remarks>
+        /// This endpoint allows an admin to delete a fuel type identified by its unique code.  
+        /// **Important:** All related `FuelPrice` and `PriceProposal` records will also be deleted due to cascade delete.  
+        ///
+        /// Example request:  
+        /// ```http
+        /// DELETE /api/admin/fuel-type/delete?code=PB95
+        /// ```
+        ///
+        /// Example response — Successful deletion:  
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "Fuel type deleted successfully.",
+        ///   "data": true
+        /// }
+        /// ```
+        ///
+        /// Example response — Fuel type not found:  
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Fuel type does not exist.",
+        ///   "errors": ["Fuel type with code PB95 does not exist."],
+        ///   "data": false
+        /// }
+        /// ```
+        ///
+        /// Example response — Validation error (code empty):  
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "ValidationError",
+        ///   "errors": ["CodeIsNullOrEmpty"],
+        ///   "data": false
+        /// }
+        /// ```
+        ///
+        /// Notes:  
+        /// - `code` is a required query parameter identifying the fuel type to delete.  
+        /// - Deletion is permanent in the current implementation.
+        /// </remarks>
+        /// <response code="200">Fuel type deleted successfully</response>
+        /// <response code="400">Validation error (missing or empty code)</response>
+        /// <response code="404">Fuel type not found</response>
+        /// <response code="500">Server error during deletion</response>
+        [HttpDelete("delete")]
+        public async Task<IActionResult> DeleteFuelTypeAsync([FromQuery] string code)
+        {
+            var result = await _fuelTypeServices.DeleteFuelTypeAsync(code);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    Data = result.Data
+                });
+        }
     }
 }

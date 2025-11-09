@@ -240,12 +240,67 @@ namespace Services.Services
                 return Result<bool>.Good(
                     "Fuel type edited successfully.",
                     StatusCodes.Status200OK,
-                    true
+                    result
                 );
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"An error occurred while editing fuel type: {ex.Message} | {ex.InnerException}");
+                return Result<bool>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" }
+                );
+            }
+        }
+
+        public async Task<Result<bool>> DeleteFuelTypeAsync(string code)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(code))
+                {
+                    _logger.LogWarning("Fuel code is null or empty");
+                    return Result<bool>.Bad(
+                        "ValidationError",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "CodeIsNullOrEmpty" }
+                    );
+                }
+
+                var fuelType = await _fuelTypeRepository.FindFuelTypeByCodeAsync(code);
+
+                if (fuelType == null)
+                {
+                    _logger.LogWarning("Fuel type with code {code} does not exist.", code);
+                    return Result<bool>.Bad(
+                        "Fuel type does not exist.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { $"Fuel type with code {code} does not exist." }
+                    );
+                }
+
+                var result = await _fuelTypeRepository.DeleteFuelTypeAsync(fuelType);
+
+                if (!result)
+                {
+                    _logger.LogError("Cannot Delete This Fuel Type");
+                    return Result<bool>.Bad(
+                        "Cannot Delete This Fuel Type.",
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { $"InternalServerError." }
+                    );
+                }
+
+                return Result<bool>.Good(
+                    "Fuel type deleted successfully.",
+                    StatusCodes.Status200OK,
+                    result
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while deleting fuel type: {ex.Message} | {ex.InnerException}");
                 return Result<bool>.Bad(
                     "An error occurred while processing your request.",
                     StatusCodes.Status500InternalServerError,

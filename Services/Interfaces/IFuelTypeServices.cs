@@ -10,5 +10,6 @@ namespace Services.Interfaces
         Task<Result<PagedResult<GetFuelTypeResponses>>> GetFuelsTypeListAsync(GetPaggedRequest pagged, TableRequest request);
         Task<Result<bool>> AddFuelTypeAsync(AddFuelTypeRequest request);
         Task<Result<bool>> EditFuelTypeAsync(EditFuelTypeRequest request);
+        Task<Result<bool>> DeleteFuelTypeAsync(string code);
     }
 }
