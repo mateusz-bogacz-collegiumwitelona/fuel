@@ -20,7 +20,7 @@ namespace Controllers.Controllers.Admin
         private readonly IBanService _banService;
         private readonly IReportService _reportService;
         public UserController(
-            IUserServices userServices, 
+            IUserServices userServices,
             IBanService banService,
             IReportService reportService)
         {
@@ -525,10 +525,130 @@ namespace Controllers.Controllers.Admin
         /// <response code="500">If an internal server error occurs</response>
         [HttpGet("report/list")]
         public async Task<IActionResult> GetUserReportAsync(
-            [Required][FromQuery] string email, 
+            [Required][FromQuery] string email,
             [FromQuery] GetPaggedRequest pagged)
         {
             var result = await _reportService.GetUserReportAsync(email, pagged);
+
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    data = result.Data
+                });
+        }
+
+        /// <summary>
+        /// Changes the status of a user report (accept with ban or reject)
+        /// </summary>
+        /// <param name="request">Report status change details</param>
+        /// <returns>Result of the status change operation</returns>
+        /// <remarks>
+        /// Sample request for ACCEPTING a report (bans the user):
+        ///
+        ///     PUT /api/admin/user/report/change-status
+        ///     {
+        ///       "isAccepted": true,
+        ///       "reportedUserEmail": "spammer@example.com",
+        ///       "reportingUserEmail": "victim@example.com",
+        ///       "reportCreatedAt": "2025-11-08T10:30:45.1234567Z",
+        ///       "reason": "Multiple spam reports confirmed",
+        ///       "days": 7
+        ///     }
+        ///
+        /// Sample request for REJECTING a report:
+        ///
+        ///     PUT /api/admin/user/report/change-status
+        ///     {
+        ///       "isAccepted": false,
+        ///       "reportedUserEmail": "user@example.com",
+        ///       "reportingUserEmail": "reporter@example.com",
+        ///       "reportCreatedAt": "2025-11-08T10:30:45.1234567Z"
+        ///     }
+        ///
+        /// **Request Body Fields:**
+        /// 
+        /// - **`isAccepted`** (required, boolean):
+        ///   - `true` = Accept the report and ban the user
+        ///   - `false` = Reject the report (no action taken)
+        /// 
+        /// - **`reportedUserEmail`** (required, string):
+        ///   - Email address of the user who was reported
+        ///   - Must be a valid email format
+        /// 
+        /// - **`reportingUserEmail`** (required, string):
+        ///   - Email address of the user who made the report
+        ///   - Must be a valid email format
+        /// 
+        /// - **`reportCreatedAt`** (required, datetime):
+        ///   - Exact timestamp when the report was created
+        ///   - Use the value from the report list endpoint
+        ///   - Format: ISO 8601 (e.g., "2025-11-08T10:30:45.1234567Z")
+        ///   - This field, combined with emails, uniquely identifies the report
+        /// 
+        /// - **`reason`** (optional, string):
+        ///   - Admin's reason for the ban
+        ///   - **REQUIRED when `isAccepted` is `true`**
+        ///   - Ignored when `isAccepted` is `false`
+        ///   - This will be included in the ban notification email sent to the user
+        /// 
+        /// - **`days`** (optional, integer):
+        ///   - Duration of the ban in days
+        ///   - Only applies when `isAccepted` is `true`
+        ///   - `null` or not provided = permanent ban
+        ///   - Positive number (e.g., 7) = temporary ban for that many days
+        ///   - Ignored when `isAccepted` is `false`
+        /// 
+        /// ---
+        /// 
+        /// **When accepting (isAccepted: true):**
+        /// - ALL pending reports for the reported user automatically become "Accepted"
+        /// - Creates a ban record in the database
+        /// - Locks out the user's account (sets LockoutEnd in Identity)
+        /// - Sends a ban notification email to the reported user
+        /// - The `reason` field is **REQUIRED** - validation will fail without it
+        /// - All accepted reports will be linked to the created ban record
+        /// 
+        /// **When rejecting (isAccepted: false):**
+        /// - Only THIS specific report's status changes to "Rejected"
+        /// - Other pending reports for the same user remain unchanged
+        /// - No ban is created
+        /// - User account remains active
+        /// - The `reason` and `days` fields are ignored
+        /// 
+        /// **Notes:**
+        /// - The combination of `reportedUserEmail`, `reportingUserEmail`, and `reportCreatedAt` uniquely identifies a specific report
+        /// - Only reports with "Pending" status can be processed
+        /// - Attempting to process an already reviewed report will return a 400 error
+        /// - Only users with the "Admin" role can use this endpoint
+        /// </remarks>
+        /// <response code="200">Report status changed successfully</response>
+        /// <response code="400">If validation fails or required fields are missing</response>
+        /// <response code="403">If the user is not an admin</response>
+        /// <response code="404">If report, user, or admin not found</response>
+        /// <response code="500">If an internal server error occurs</response>
+        [HttpPut("report/change-status")]
+        public async Task<IActionResult> ChangeReportStatusAsync([FromBody] ChangeReportStatusRequest request)
+        {
+            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(adminEmail))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User not authenticated"
+                });
+            }
+
+            var result = await _reportService.ChangeReportStatusAsync(adminEmail, request);
 
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, new

@@ -9,7 +9,6 @@ namespace Data.Enums
     public enum ReportStatusEnum
     {
         Pending,
-        Reviewed,
         Accepted,
         Rejected
     }

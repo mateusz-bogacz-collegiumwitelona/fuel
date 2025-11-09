@@ -1,5 +1,6 @@
 ﻿using DTO.Requests;
 using DTO.Responses;
+using Microsoft.AspNetCore.Identity;
 using Services.Helpers;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,7 @@ namespace Services.Interfaces
     public interface IReportService
     {
         Task<Result<bool>> ReportUserAsync(string notifierEmail, ReportRequest request);
-        Task<Result<PagedResult<UserReportsRespnse>>> GetUserReportAsync(string email, GetPaggedRequest pagged);
+        Task<Result<PagedResult<UserReportsResponse>>> GetUserReportAsync(string email, GetPaggedRequest pagged);
+        Task<Result<IdentityResult>> ChangeReportStatusAsync(string adminEmail, ChangeReportStatusRequest request);
     }
 }

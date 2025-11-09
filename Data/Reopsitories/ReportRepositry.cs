@@ -3,21 +3,19 @@ using Data.Enums;
 using Data.Models;
 using DTO.Responses;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Data.Reopsitories
 {
     public class ReportRepositry : IReportRepositry
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<ReportRepositry> _logger;
 
-        public ReportRepositry(ApplicationDbContext context)
+        public ReportRepositry(ApplicationDbContext context, ILogger<ReportRepositry> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<bool> ReportUserAsync(
@@ -42,22 +40,119 @@ namespace Data.Reopsitories
             return result > 0;
         }
 
-        public async Task<List<UserReportsRespnse>> GetUserReportAsync(Guid id)
+        public async Task<List<UserReportsResponse>> GetUserReportAsync(Guid id)
             => await _context.ReportUserRecords
+            .Include(ru => ru.ReportedUser)
+            .Include(ru => ru.ReportingUser) 
             .Where(ru =>
                 ru.ReportedUserId == id &&
                 ru.Status == ReportStatusEnum.Pending
             )
             .OrderBy(ru => ru.CreatedAt)
-            .Select(ru => new UserReportsRespnse
+            .Select(ru => new UserReportsResponse
             {
-                UserName = ru.ReportedUser.UserName,
-                UserEmail = ru.ReportedUser.Email,
+                ReportedUserName = ru.ReportedUser.UserName,
+                ReportedUserEmail = ru.ReportedUser.Email,
+                ReportingUserName = ru.ReportingUser.UserName,
+                ReportingUserEmail = ru.ReportingUser.Email,
                 Reason = ru.Description,
-                Staus = ru.Status.ToString(),
+                Status = ru.Status.ToString(),  
                 CreatedAt = ru.CreatedAt
             })
             .ToListAsync();
 
+        public async Task<bool> ChangeRepostStatusToAcceptedAsync(
+            Guid reportedUserId,
+            Guid reportingUserId,
+            ApplicationUser admin,
+            DateTime createdAt)
+        {
+            var thisReport = await _context.ReportUserRecords
+                .FirstOrDefaultAsync(ru =>
+                    ru.ReportedUserId == reportedUserId &&
+                    ru.ReportingUserId == reportingUserId &&
+                    ru.CreatedAt == createdAt &&
+                    ru.Status == ReportStatusEnum.Pending
+                );
+
+            if (thisReport == null)
+            {
+                _logger.LogWarning(
+                    "Report not found for ReportedUserId: {ReportedUserId}, ReportingUserId: {ReportingUserId}, CreatedAt: {CreatedAt}",
+                    reportedUserId, reportingUserId, createdAt
+                );
+                return false;
+            }
+
+            DateTime now = DateTime.UtcNow;
+
+            thisReport.Status = ReportStatusEnum.Accepted;
+            thisReport.ReviewedByAdmin = admin;
+            thisReport.ReviewedByAdminId = admin.Id;
+            thisReport.ReviewedAt = now;
+
+            var otherPendingReports = await _context.ReportUserRecords
+                .Where(ru =>
+                    ru.ReportedUserId == reportedUserId &&
+                    ru.Status == ReportStatusEnum.Pending &&
+                    ru.Id != thisReport.Id 
+                )
+                .ToListAsync();
+
+            foreach (var report in otherPendingReports)
+            {
+                report.Status = ReportStatusEnum.Accepted;
+                report.ReviewedByAdmin = admin; 
+                report.ReviewedByAdminId = admin.Id; 
+                report.ReviewedAt = now; 
+            }
+
+            var result = await _context.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Admin {AdminId} accepted report for user {ReportedUserId}. Total {Count} reports accepted.",
+                admin.Id, reportedUserId, otherPendingReports.Count + 1
+            );
+
+            return result > 0;
+        }
+
+        public async Task<bool> ChangeRepostStatusToRejectAsync(
+            Guid reportedUserId,
+            Guid reportingUserId,
+            ApplicationUser admin,
+            DateTime createdAt)
+        {
+            var thisReport = await _context.ReportUserRecords
+                .FirstOrDefaultAsync(ru =>
+                    ru.ReportedUserId == reportedUserId &&
+                    ru.ReportingUserId == reportingUserId &&
+                    ru.CreatedAt == createdAt &&
+                    ru.Status == ReportStatusEnum.Pending
+                );
+
+            if (thisReport == null)
+            {
+                _logger.LogWarning(
+                    "Report not found for ReportedUserId: {ReportedUserId}, ReportingUserId: {ReportingUserId}, CreatedAt: {CreatedAt}",
+                    reportedUserId, reportingUserId, createdAt
+                );
+                return false;
+            }
+
+            thisReport.Status = ReportStatusEnum.Rejected;
+            thisReport.ReviewedByAdmin = admin;
+            thisReport.ReviewedByAdminId = admin.Id;
+            thisReport.ReviewedAt = DateTime.UtcNow;
+
+            var result = await _context.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Admin {AdminId} rejected report for user {ReportedUserId} created at {CreatedAt}.",
+                admin.Id, reportedUserId, createdAt
+            );
+
+            return result > 0;
+        }
     }
 }
