@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using DTO.Requests;
+using DTO.Responses;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
+using Services.Services;
 
 namespace Controllers.Controllers.Admin
 {
@@ -16,6 +19,51 @@ namespace Controllers.Controllers.Admin
         public ProposalPriceContloller(IPriceProposalServices priceProposalServices)
         {
             _priceProposalServices = priceProposalServices;
+        }
+
+        /// <summary>
+        /// Retrieves a paginated list of pending price proposals with optional search and sorting.
+        /// </summary>
+        /// <param name="pagged">Pagination parameters (page number and page size)</param>
+        /// <param name="request">Table filtering and sorting parameters</param>
+        /// <returns>A paginated list of price proposals</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET /api/priceproposal/list?PageNumber=1&amp;PageSize=10&amp;Search=benzyna&amp;SortBy=createdat&amp;SortDirection=desc
+        ///
+        /// Available sort fields:
+        /// - username - Sort by user who created the proposal
+        /// - brandname - Sort by gas station brand name
+        /// - street - Sort by station street address
+        /// - housenumber - Sort by station house number
+        /// - city - Sort by station city
+        /// - fuelname - Sort by fuel type name
+        /// - fuelcode - Sort by fuel type code
+        /// - proposedprice - Sort by proposed price value
+        /// - createdat - Sort by creation date (default)
+        ///
+        /// Sort directions: asc (ascending) or desc (descending)
+        ///
+        /// Search will filter results across all displayed fields including username, brand name, address, fuel type, and price.
+        /// </remarks>
+        /// <response code="200">Returns the paginated list of price proposals</response>
+        /// <response code="400">If the request parameters are invalid</response>
+        /// <response code="500">If an internal server error occurs</response>
+        [HttpGet("list")]
+        public async Task<IActionResult> GetAllPriceProposal([FromQuery] GetPaggedRequest pagged, [FromQuery] TableRequest request)
+        {
+            var result = await _priceProposalServices.GetAllPriceProposal(pagged, request);
+
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    Data = result.Data
+                });
         }
 
         /// <summary>

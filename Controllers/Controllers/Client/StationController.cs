@@ -11,7 +11,6 @@ namespace Contlollers.Controllers.Client
     [Route("api/station")]
     [ApiController]
     [EnableCors("AllowClient")]
-    [Authorize(Roles = "User,Admin")]
     public class StationController : ControllerBase
     {
         private readonly IStationServices _stationServices;
@@ -610,83 +609,6 @@ namespace Contlollers.Controllers.Client
             }
 
             var result = await _priceProposalServices.AddNewProposalAsync(email ,request);
-            return result.IsSuccess
-                ? StatusCode(result.StatusCode, result.Data)
-                : StatusCode(result.StatusCode, new
-                {
-                    success = false,
-                    message = result.Message,
-                    errors = result.Errors
-                });
-        }
-
-        /// <summary>
-        /// Get all pending price proposals for a specific fuel station
-        /// </summary>
-        /// <remarks>
-        /// Returns a paginated list of pending price proposals submitted by users for a specific station.
-        /// The station is identified by brand name, street, house number, and city.
-        /// Only proposals with status "Pending" are returned.
-        /// 
-        /// Example request:
-        /// <code>
-        /// GET /api/station/price-proposal/show-all?BrandName=Orlen&amp;Street=Ignacego%20Domejki&amp;HouseNumber=1a&amp;City=Legnica&amp;PageNumber=1&amp;PageSize=10
-        /// </code>
-        /// 
-        /// Example response:
-        /// <code>
-        /// {
-        ///   "items": [
-        ///     {
-        ///       "userName": "User",
-        ///       "email": "user@example.pl",
-        ///       "fuelName": "LPG",
-        ///       "fuelCode": "LPG",
-        ///       "proposedPrice": 5.21,
-        ///       "status": "Pending",
-        ///       "createdAt": "2025-11-08T18:04:10.70895Z"
-        ///     }
-        ///   ],
-        ///   "pageNumber": 1,
-        ///   "pageSize": 10,
-        ///   "totalCount": 1,
-        ///   "totalPages": 1,
-        ///   "hasPreviousPage": false,
-        ///   "hasNextPage": false
-        /// }
-        /// </code>
-        /// 
-        /// Notes:
-        /// - All station identification parameters (BrandName, Street, HouseNumber, City) are required
-        /// - Only proposals with status "Pending" are included in the results
-        /// - If PageNumber exceeds totalPages, the last page is returned automatically
-        /// - Default pagination: PageNumber=1, PageSize=10
-        /// - Returns empty items array if no proposals match the criteria
-        /// - hasPreviousPage and hasNextPage indicate if there are more pages available
-        /// </remarks>
-        /// <response code="200">Price proposals retrieved successfully (may be empty list)</response>
-        /// <response code="400">Validation error - missing or invalid parameters</response>
-        /// <response code="500">Server error - something went wrong while processing the request</response>
-        [HttpGet("price-proposal/show-all")]
-        public async Task<IActionResult> GetStationPriceProposalsAsync(
-            [FromQuery] FindStationPriceProposalRequest query
-            )
-        {
-            var request = new FindStationRequest
-            {
-                BrandName = query.BrandName,
-                Street = query.Street,
-                HouseNumber = query.HouseNumber,
-                City = query.City
-            };
-
-            var pagged = new GetPaggedRequest
-            {
-                PageNumber = query.PageNumber,
-                PageSize = query.PageSize
-            };
-
-            var result = await _priceProposalServices.GetStationPriceProposalsAsync(pagged, request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new
