@@ -294,7 +294,8 @@ namespace Data.Seeder
                             Id = Guid.NewGuid(),
                             Name = fuel.Name,
                             Code = fuel.Code,
-                            CreatedAt = DateTime.UtcNow
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
                         });
                     }
                     else

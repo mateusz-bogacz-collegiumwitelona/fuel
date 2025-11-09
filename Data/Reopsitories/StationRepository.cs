@@ -458,7 +458,7 @@ namespace Data.Reopsitories
                     City = s.Address.City,
                     Latitude = s.Address.Location.Y,
                     Longitude = s.Address.Location.X,
-                    FuelType = s.FuelPrice.Select(fp => new AddFuelTypeRequest
+                    FuelType = s.FuelPrice.Select(fp => new FindFuelTypeRequest
                     {
                         Code = fp.FuelType.Code,
                         Price = fp.Price

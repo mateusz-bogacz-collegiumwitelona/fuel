@@ -11,6 +11,6 @@ namespace DTO.Responses
         public string City { get; set; }
         public double Latitude { get; set; }
         public double Longitude { get; set; }
-        public List<AddFuelTypeRequest> FuelType { get; set; } = new();
+        public List<FindFuelTypeRequest> FuelType { get; set; } = new();
     }
 }

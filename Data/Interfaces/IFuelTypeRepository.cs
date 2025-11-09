@@ -1,5 +1,6 @@
 ﻿using Data.Models;
 using DTO.Requests;
+using DTO.Responses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,8 +11,10 @@ namespace Data.Interfaces
 {
     public interface IFuelTypeRepository
     {
-        Task<FuelType> FindFuelTypeByNameAsync(string fuelType);
+        Task<FuelType> FindFuelTypeByCodeAsync(string fuelType);
         Task<List<string>> GetAllFuelTypeCodesAsync();
-        Task<List<AddFuelTypeRequest>> GetStaionFuelTypes(Guid stationId);
+        Task<List<FindFuelTypeRequest>> GetStaionFuelTypes(Guid stationId);
+        Task<List<GetFuelTypeResponses>> GetFuelsTypeListAsync(TableRequest request);
+        Task<bool> AddFuelTypeAsync(string name, string code);
     }
 }

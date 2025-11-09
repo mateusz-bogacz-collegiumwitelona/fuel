@@ -11,7 +11,7 @@ namespace DTO.Requests
         public string Street { get; set; } = string.Empty;
         public string HouseNumber { get; set; } = string.Empty;
         public string City { get; set; } = string.Empty;
-        public string FuelType { get; set; }
+        public string FuelTypeCode { get; set; }
 
         /// proposal info
         [Required(ErrorMessage = "Photo is required")]

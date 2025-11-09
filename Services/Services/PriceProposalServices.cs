@@ -59,15 +59,15 @@ namespace Services.Services
 
                 foreach (var code in vuelTypeCodes)
                 {
-                    if (string.Equals(code, request.FuelType, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(code, request.FuelTypeCode, StringComparison.OrdinalIgnoreCase))
                     {
-                        request.FuelType = code;
+                        request.FuelTypeCode = code;
                         break;
                     }
 
-                    if (!vuelTypeCodes.Contains(request.FuelType))
+                    if (!vuelTypeCodes.Contains(request.FuelTypeCode))
                     {
-                        _logger.LogWarning("Invalid fuel type provided: {FuelType}", request.FuelType);
+                        _logger.LogWarning("Invalid fuel type provided: {FuelType}", request.FuelTypeCode);
                         return Result<string>.Bad(
                             "Validation error",
                             StatusCodes.Status400BadRequest,
@@ -76,7 +76,7 @@ namespace Services.Services
                     }
                 }
 
-                var fuelType = await _fuelTypeRepository.FindFuelTypeByNameAsync(request.FuelType);
+                var fuelType = await _fuelTypeRepository.FindFuelTypeByCodeAsync(request.FuelTypeCode);
 
                 if (request.Photo.Length > ContentConstants.FILE_SIZE_CONST)
                 {

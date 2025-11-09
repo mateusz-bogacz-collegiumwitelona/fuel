@@ -4,10 +4,10 @@ namespace DTO.Requests
 {
     public class AddFuelTypeRequest
     {
-        [Required(ErrorMessage = "Code is required")]
-        public string Code { get; set; }
+        [Required(ErrorMessage = "Name name is required")]
+        public string Name { get; set; }
 
-        [Range(0.01, double.MaxValue, ErrorMessage = "Price must be greater than zero.")]
-        public decimal Price { get; set; }
+        [Required(ErrorMessage = "Code name is required")]
+        public string Code { get; set; }
     }
 }
