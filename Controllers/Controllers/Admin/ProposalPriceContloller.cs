@@ -46,6 +46,46 @@ namespace Controllers.Controllers.Admin
         /// Sort directions: asc (ascending) or desc (descending)
         ///
         /// Search will filter results across all displayed fields including username, brand name, address, fuel type, and price.
+        ///
+        /// Sample response:
+        ///
+        ///     {
+        ///       "items": [
+        ///         {
+        ///           "userName": "User3",
+        ///           "brandName": "Moya",
+        ///           "street": "Poznańska",
+        ///           "houseNumber": "112",
+        ///           "city": "Łowicz",
+        ///           "fuelName": "E85",
+        ///           "fuelCode": "E85",
+        ///           "proposedPrice": 4.74,
+        ///           "status": "Pending",
+        ///           "photoToken": "930f26dd200141bcac45416fe745696f",
+        ///           "createdAt": "2025-11-09T16:57:26.402333Z"
+        ///         },
+        ///         {
+        ///           "userName": "User6",
+        ///           "brandName": "Circle K",
+        ///           "street": "Adamówek",
+        ///           "houseNumber": "16",
+        ///           "city": "Ozorków",
+        ///           "fuelName": "LPG",
+        ///           "fuelCode": "LPG",
+        ///           "proposedPrice": 6.78,
+        ///           "status": "Pending",
+        ///           "photoToken": "ff5355b9e6a44011851bf58252aff58f",
+        ///           "createdAt": "2025-11-09T16:57:26.420039Z"
+        ///         }
+        ///       ],
+        ///       "pageNumber": 1,
+        ///       "pageSize": 10,
+        ///       "totalCount": 25,
+        ///       "totalPages": 3,
+        ///       "hasPreviousPage": false,
+        ///       "hasNextPage": true
+        ///     }
+        ///
         /// </remarks>
         /// <response code="200">Returns the paginated list of price proposals</response>
         /// <response code="400">If the request parameters are invalid</response>
