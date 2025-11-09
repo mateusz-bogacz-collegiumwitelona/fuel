@@ -5,9 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DTO.Responses
+namespace DTO.Requests
 {
-    public class FindFuelTypeRequest
+    public class FindFuelRequest
     {
         [Required(ErrorMessage = "Code is required")]
         public string Code { get; set; }

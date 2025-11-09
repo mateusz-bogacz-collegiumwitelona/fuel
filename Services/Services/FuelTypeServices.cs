@@ -166,5 +166,92 @@ namespace Services.Services
             }
         }
 
+        public async Task<Result<bool>> EditFuelTypeAsync(EditFuelTypeRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.OldCode))
+                {
+                    _logger.LogWarning("Old fuel code is null or white spaces");
+                    return Result<bool>.Bad(
+                        "ValidationError",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "OldCodeIsNullOrWhiteSpaces" }
+                    );
+                }
+
+                if (string.IsNullOrEmpty(request.NewName) && string.IsNullOrEmpty(request.NewCode))
+                {
+                    _logger.LogWarning("No new values provided for update");
+                    return Result<bool>.Bad(
+                        "ValidationError",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "At least one of NewName or NewCode must be provided." }
+                    );
+                }
+
+                var existingFuelType = await _fuelTypeRepository.FindFuelTypeByCodeAsync(request.OldCode);
+                if (existingFuelType == null)
+                {
+                    _logger.LogWarning("Fuel type with code {code} does not exist.", request.OldCode);
+                    return Result<bool>.Bad(
+                        "Fuel type does not exist.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { $"Fuel type with code {request.OldCode} does not exist." }
+                    );
+                }
+
+                string? newCode = request.NewCode?.Replace(" ", "").ToUpperInvariant();
+                string? newName = request.NewName != null
+                    ? string.Join(' ',
+                        request.NewName
+                            .Trim()
+                            .ToLower()
+                            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(w => char.ToUpper(w[0]) + w.Substring(1)))
+                    : null;
+
+                if (!string.IsNullOrEmpty(newCode) && newCode != existingFuelType.Code)
+                {
+                    var codeTaken = await _fuelTypeRepository.FindFuelTypeByCodeAsync(newCode);
+                    if (codeTaken != null)
+                    {
+                        _logger.LogWarning("Fuel type with code {code} already exists.", newCode);
+                        return Result<bool>.Bad(
+                            "Fuel type already exists.",
+                            StatusCodes.Status409Conflict,
+                            new List<string> { $"Fuel type with code {newCode} already exists." }
+                        );
+                    }
+                }
+
+                var result = await _fuelTypeRepository.EditFuelTypeAsync(existingFuelType, newName, newCode);
+
+                if (!result)
+                {
+                    _logger.LogError("Failed to edit fuel type in the database.");
+                    return Result<bool>.Bad(
+                        "Failed to edit fuel type.",
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { "An error occurred while editing the fuel type in the database." }
+                    );
+                }
+
+                return Result<bool>.Good(
+                    "Fuel type edited successfully.",
+                    StatusCodes.Status200OK,
+                    true
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while editing fuel type: {ex.Message} | {ex.InnerException}");
+                return Result<bool>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" }
+                );
+            }
+        }
     }
 }

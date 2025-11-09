@@ -165,7 +165,7 @@ namespace Controllers.Controllers.Admin
         /// <response code="401">Unauthorized — Admin role required</response>
         /// <response code="500">Server error while adding the fuel type</response>
         [HttpPost("add")]
-        public async Task<IActionResult> AddFuelTypeAsync([FromBody]AddFuelTypeRequest request)
+        public async Task<IActionResult> AddFuelTypeAsync([FromBody] AddFuelTypeRequest request)
         {
             var result = await _fuelTypeServices.AddFuelTypeAsync(request);
             return result.IsSuccess
@@ -179,6 +179,92 @@ namespace Controllers.Controllers.Admin
                 });
         }
 
-
+        /// <summary>
+        /// Edit an existing fuel type (name and/or code).
+        /// </summary>
+        /// <remarks>
+        /// Updates an existing fuel type identified by its <b>OldCode</b>.  
+        /// You can modify one or both of the following fields: <b>NewName</b> and <b>NewCode</b>.  
+        /// 
+        /// The request automatically enforces formatting rules:
+        /// - <b>NewCode</b> → spaces removed, converted to uppercase (e.g., "pb95" → "PB95")  
+        /// - <b>NewName</b> → each word capitalized (e.g., "olej napedowy" → "Olej Napędowy")
+        ///
+        /// Example request:
+        /// ```http
+        /// PATCH /api/admin/fuel-type/edit
+        /// Content-Type: application/json
+        ///
+        /// {
+        ///   "oldCode": "PB95",
+        ///   "newName": "Benzyna Premium 95",
+        ///   "newCode": "PB95P"
+        /// }
+        /// ```
+        ///
+        /// Example successful response:
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "Fuel type edited successfully.",
+        ///   "data": true
+        /// }
+        /// ```
+        ///
+        /// Example response – Validation error:
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "ValidationError",
+        ///   "errors": [ "At least one of NewName or NewCode must be provided." ],
+        ///   "data": false
+        /// }
+        /// ```
+        ///
+        /// Example response – Conflict (code already exists):
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Fuel type already exists.",
+        ///   "errors": [ "Fuel type with code PB98 already exists." ],
+        ///   "data": false
+        /// }
+        /// ```
+        ///
+        /// Example response – Not found:
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Fuel type does not exist.",
+        ///   "errors": [ "Fuel type with code PB90 does not exist." ],
+        ///   "data": false
+        /// }
+        /// ```
+        ///
+        /// Notes:
+        /// - If <b>NewCode</b> already exists, a 409 Conflict is returned.
+        /// - If <b>OldCode</b> is invalid or not found, a 404 Not Found is returned.
+        /// - You must provide at least one of <b>NewName</b> or <b>NewCode</b>.
+        /// - The <b>UpdatedAt</b> field is refreshed automatically upon success.
+        /// </remarks>
+        /// <response code="200">Fuel type edited successfully</response>
+        /// <response code="400">Validation error (missing or invalid fields)</response>
+        /// <response code="404">Fuel type with provided OldCode not found</response>
+        /// <response code="409">Conflict – new fuel code already exists</response>
+        /// <response code="500">Server error during edit operation</response>
+        [HttpPatch("edit")]
+        public async Task<IActionResult> EditFuelTypeAsync([FromBody] EditFuelTypeRequest request)
+        {
+            var result = await _fuelTypeServices.EditFuelTypeAsync(request);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    Data = result.Data
+                });
+        }
     }
 }

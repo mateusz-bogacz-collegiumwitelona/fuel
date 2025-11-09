@@ -28,11 +28,11 @@ namespace Data.Reopsitories
         public async Task<List<string>> GetAllFuelTypeCodesAsync()
             => await _context.FuelTypes.Select(ft => ft.Code).ToListAsync();
 
-        public async Task<List<FindFuelTypeRequest>> GetStaionFuelTypes(Guid stationId)
+        public async Task<List<FindFuelRequest>> GetStaionFuelTypes(Guid stationId)
             => await _context.FuelPrices
                 .Where(fp => fp.StationId == stationId)
                 .Include(fp => fp.FuelType)
-                .Select(fp => new FindFuelTypeRequest
+                .Select(fp => new FindFuelRequest
                 {
                     Code = fp.FuelType.Code,
                     Price = fp.Price
@@ -98,6 +98,26 @@ namespace Data.Reopsitories
             
             var result = await _context.SaveChangesAsync();
             
+            return result > 0;
+        }
+
+        public async Task<bool> EditFuelTypeAsync(FuelType fuelType, string? name, string? code )
+        {
+            if(!string.IsNullOrEmpty(name))
+            {
+                fuelType.Name = name;
+                fuelType.UpdatedAt = DateTime.UtcNow;
+            }
+
+            if (!string.IsNullOrEmpty(code))
+            {
+                fuelType.Code = code;
+                fuelType.UpdatedAt = DateTime.UtcNow;
+            }
+
+
+            var result = await _context.SaveChangesAsync();
+
             return result > 0;
         }
     }

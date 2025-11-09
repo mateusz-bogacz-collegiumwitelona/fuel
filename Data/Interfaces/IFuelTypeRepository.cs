@@ -13,8 +13,9 @@ namespace Data.Interfaces
     {
         Task<FuelType> FindFuelTypeByCodeAsync(string fuelType);
         Task<List<string>> GetAllFuelTypeCodesAsync();
-        Task<List<FindFuelTypeRequest>> GetStaionFuelTypes(Guid stationId);
+        Task<List<FindFuelRequest>> GetStaionFuelTypes(Guid stationId);
         Task<List<GetFuelTypeResponses>> GetFuelsTypeListAsync(TableRequest request);
         Task<bool> AddFuelTypeAsync(string name, string code);
+        Task<bool> EditFuelTypeAsync(FuelType fuelType, string? name, string? code);
     }
 }
