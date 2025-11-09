@@ -162,8 +162,8 @@ namespace Controllers.Controllers.Admin
                 });
         }
 
-        [HttpPost("change-status")]
-        public async Task<IActionResult> ChangePriceProposalStatus([FromBody]ChangePriceProposalStatusRequest request)
+        [HttpPost("change-status/{photoToken}")]
+        public async Task<IActionResult> ChangePriceProposalStatus([FromRoute]string photoToken, [FromQuery]bool isAccepted)
         {
             var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value;
             if (string.IsNullOrEmpty(adminEmail))
@@ -175,7 +175,7 @@ namespace Controllers.Controllers.Admin
                 });
             }
 
-            var result = await _priceProposalServices.ChangePriceProposalStatus(adminEmail, request);
+            var result = await _priceProposalServices.ChangePriceProposalStatus(adminEmail, isAccepted, photoToken);
 
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)

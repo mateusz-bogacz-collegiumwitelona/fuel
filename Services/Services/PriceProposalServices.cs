@@ -312,7 +312,7 @@ namespace Services.Services
             }
         }
 
-        public async Task<Result<bool>> ChangePriceProposalStatus(string adminEmail, ChangePriceProposalStatusRequest request)
+        public async Task<Result<bool>> ChangePriceProposalStatus(string adminEmail, bool isAccepted, string photoToken)
         {
             try
             {
@@ -334,53 +334,62 @@ namespace Services.Services
                         new List<string> { "User is not authorized to perform this action." });
                 }
 
-                var user = await _userManager.FindByEmailAsync(request.UserEmail);
-                if (user == null)
+               var priceProposal = await _priceProposalRepository.FindPriceProposal(photoToken);
+
+                if (priceProposal == null)
                 {
-                    _logger.LogWarning("User not found: {Email}", request.UserEmail);
+                    _logger.LogWarning(
+                        "Price proposal with PhotoToken: {PhotoToken} not found.",
+                        photoToken);
                     return Result<bool>.Bad(
-                        "User not found",
-                        StatusCodes.Status404NotFound,
-                        new List<string> { "User not found with the provided email." });
+                        "Price proposal not found",
+                        StatusCodes.Status404NotFound);
+                }
+
+                if (priceProposal.ReviewedBy != null)
+                {
+                    _logger.LogWarning("Price proposal {ProposalId} was already reviewed by {ReviewerId}",
+                        priceProposal.Id, priceProposal.ReviewedBy);
+                    return Result<bool>.Bad(
+                        "This proposal has already been reviewed",
+                        StatusCodes.Status409Conflict);
                 }
 
                 var isChanged = await _priceProposalRepository.ChangePriceProposalStatus(
-                    request.IsAccepted,
-                    request.PhotoToken,
-                    request.NewPrice,
-                    user.Id,
+                    isAccepted,
+                    priceProposal,
                     admin);
 
                 if (!isChanged)
                 {
                     _logger.LogWarning(
                         "Price proposal not found or already processed. PhotoToken: {PhotoToken}",
-                        request.PhotoToken);
+                        photoToken);
                     return Result<bool>.Bad(
                         "Price proposal not found or already processed",
                         StatusCodes.Status404NotFound);
                 }
 
                 var isUpdated = await _proposalStatisticRepository.UpdateTotalProposalsAsync(
-                    request.IsAccepted,
-                    user.Id);
+                    isAccepted,
+                    priceProposal.User.Id);
 
                 if (!isUpdated)
                 {
                     _logger.LogWarning(
                         "Failed to update statistics for user {UserId}, but proposal status was changed",
-                        user.Id);
+                        priceProposal.User.Id);
                 }
 
                 return Result<bool>.Good(
-                    $"Price proposal {(request.IsAccepted ? "accepted" : "rejected")} successfully",
+                    $"Price proposal {(isAccepted ? "accepted" : "rejected")} successfully",
                     StatusCodes.Status200OK,
                     true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error changing price proposal status for PhotoToken: {PhotoToken}",
-                    request.PhotoToken);
+                    photoToken);
                 return Result<bool>.Bad(
                     "An error occurred while processing your request.",
                     StatusCodes.Status500InternalServerError,

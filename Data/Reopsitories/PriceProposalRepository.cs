@@ -180,6 +180,7 @@ namespace Data.Repositories
                 FuelType = proposal.FuelType.Name,
                 ProposedPrice = proposal.ProposedPrice,
                 PhotoUrl = photoUrl,
+                Token = proposal.PhotoToken,
                 CreatedAt = proposal.CreatedAt
             };
         }
@@ -282,35 +283,14 @@ namespace Data.Repositories
         }
 
         public async Task<bool> ChangePriceProposalStatus(
-    bool isAccepted,
-    string photoToken,
-    decimal newPrice,
-    Guid userId,
-    ApplicationUser admin)
+            bool isAccepted,
+            PriceProposal priceProposal,
+            ApplicationUser admin)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
-                // Załaduj proposal z relacjami (potrzebne do logowania w przypadku błędu)
-                var priceProposal = await _context.PriceProposals
-                    .Include(pp => pp.Station)
-                        .ThenInclude(s => s.Brand)
-                    .Include(pp => pp.Station)
-                        .ThenInclude(s => s.Address)
-                    .Include(pp => pp.FuelType)
-                    .FirstOrDefaultAsync(pp =>
-                        pp.PhotoToken == photoToken &&
-                        pp.UserId == userId &&
-                        pp.Status == Enums.PriceProposalStatus.Pending);
-
-                if (priceProposal == null)
-                {
-                    _logger.LogWarning(
-                        "Price proposal not found or already processed. PhotoToken: {PhotoToken}, UserId: {UserId}",
-                        photoToken, userId);
-                    return false;
-                }
 
                 if (isAccepted)
                 {
@@ -322,7 +302,7 @@ namespace Data.Repositories
                     if (stationFuelPrice == null)
                     {
                         _logger.LogInformation(
-                            "Creating new fuel price for station {Brand} in {City} for fuel {FuelType}",
+                            "Creating new fuel price for {Brand} in {City} - {FuelType}",
                             priceProposal.Station.Brand.Name,
                             priceProposal.Station.Address.City,
                             priceProposal.FuelType.Name);
@@ -332,7 +312,7 @@ namespace Data.Repositories
                             Id = Guid.NewGuid(),
                             StationId = priceProposal.StationId,
                             FuelTypeId = priceProposal.FuelTypeId,
-                            Price = newPrice,
+                            Price = priceProposal.ProposedPrice,
                             ValidFrom = DateTime.UtcNow,
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
@@ -341,7 +321,7 @@ namespace Data.Repositories
                     }
                     else
                     {
-                        stationFuelPrice.Price = newPrice;
+                        stationFuelPrice.Price = priceProposal.ProposedPrice;
                         stationFuelPrice.ValidFrom = DateTime.UtcNow;
                         stationFuelPrice.UpdatedAt = DateTime.UtcNow;
                     }
@@ -350,7 +330,7 @@ namespace Data.Repositories
 
                     _logger.LogInformation(
                         "Accepted price proposal {ProposalId}. New price: {Price} PLN for {FuelType} at {Brand} in {City}",
-                        priceProposal.Id, newPrice, priceProposal.FuelType.Name,
+                        priceProposal.Id, priceProposal.ProposedPrice, priceProposal.FuelType.Name,
                         priceProposal.Station.Brand.Name, priceProposal.Station.Address.City);
                 }
                 else
@@ -359,7 +339,7 @@ namespace Data.Repositories
 
                     _logger.LogInformation(
                         "Rejected price proposal {ProposalId} from user {UserId}",
-                        priceProposal.Id, userId);
+                        priceProposal.Id, priceProposal.User.Id);
                 }
 
                 priceProposal.ReviewedBy = admin.Id;
@@ -375,9 +355,18 @@ namespace Data.Repositories
                 await transaction.RollbackAsync();
                 _logger.LogError(ex,
                     "Error changing price proposal status. PhotoToken: {PhotoToken}, UserId: {UserId}",
-                    photoToken, userId);
+                    priceProposal.PhotoToken, priceProposal.User.Id);
                 throw;
             }
         }
+
+        public async Task<PriceProposal> FindPriceProposal(string token)
+            =>  await  _context.PriceProposals
+                    .Include(pp => pp.User)
+                    .Include(pp => pp.Station.Brand)
+                    .Include(pp => pp.Station.Address)
+                    .Include(pp => pp.FuelType)
+                    .FirstOrDefaultAsync(pp =>
+                        pp.PhotoToken == token && pp.Status == Enums.PriceProposalStatus.Pending);
     }
 }

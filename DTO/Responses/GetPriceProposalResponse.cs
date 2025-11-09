@@ -16,6 +16,7 @@ namespace DTO.Responses
         public string PostalCode { get; set; } 
         public string FuelType { get; set; }
         public decimal ProposedPrice { get; set; }
+        public string Token { get; set; }
         public string PhotoUrl { get; set; }
         public DateTime CreatedAt { get; set; }
     }
