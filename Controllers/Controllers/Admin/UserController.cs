@@ -204,6 +204,7 @@ namespace Controllers.Controllers.Admin
         /// - Email notification sent to banned user with ban details
         /// - Complete ban audit trail with admin information
         /// - Protection against banning admin accounts
+        /// - After giving ban for user his report recor has been clear (status = Accepted)
         /// 
         /// **Ban Types:**
         /// - **Temporary Ban**: Specify `days` parameter (e.g., 7, 30, 90)

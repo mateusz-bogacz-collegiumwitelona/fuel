@@ -17,19 +17,22 @@ namespace Services.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private EmailSender _email;
+        private readonly IReportRepositry _reportRepositry;
 
         public BanService(
             IBanRepository banRepository,
             ILogger<BanService> logger,
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole<Guid>> roleManager,
-            EmailSender email)
+            EmailSender email,
+            IReportRepositry reportRepositry)
         {
             _banRepository = banRepository;
             _logger = logger;
             _userManager = userManager;
             _roleManager = roleManager;
             _email = email;
+            _reportRepositry = reportRepositry;
         }
 
         public async Task<Result<IdentityResult>> LockoutUserAsync(string adminEmail, SetLockoutForUserRequest request)
@@ -143,6 +146,8 @@ namespace Services.Services
                     );
 
                 if (!sendEmail) _logger.LogWarning("Failed to send lockout email to {Email}, but user was banned successfully", user.Email);
+
+                await _reportRepositry.ClearReports(user.Id, admin);
 
                 _logger.LogInformation("User {Email} banned successfully. {BanType}",
                     request.Email,

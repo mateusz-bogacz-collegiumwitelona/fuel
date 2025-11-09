@@ -8,5 +8,6 @@ namespace Data.Models
         Task<List<UserReportsResponse>> GetUserReportAsync(Guid id);
         Task<bool> ChangeRepostStatusToAcceptedAsync(Guid reportedUserId, Guid reportingUserId, ApplicationUser admin, DateTime createdAt);
         Task<bool> ChangeRepostStatusToRejectAsync(Guid userId, Guid reportedUserId, ApplicationUser admin, DateTime createdAt);
+        Task ClearReports(Guid userId, ApplicationUser admin);
     }
 }

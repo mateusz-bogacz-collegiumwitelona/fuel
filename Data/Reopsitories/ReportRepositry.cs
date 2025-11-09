@@ -4,6 +4,7 @@ using Data.Models;
 using DTO.Responses;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using NRedisStack.Search.Aggregation;
 
 namespace Data.Reopsitories
 {
@@ -153,6 +154,22 @@ namespace Data.Reopsitories
             );
 
             return result > 0;
+        }
+
+        public async Task ClearReports(Guid userId, ApplicationUser admin)
+        {
+            var reports = await _context.ReportUserRecords
+                .Where(ru => ru.ReportedUserId == userId && ru.Status == ReportStatusEnum.Pending)
+                .ToListAsync();
+
+            foreach (var report in reports)
+            {
+                report.Status = ReportStatusEnum.Accepted;
+                report.ReviewedByAdmin = admin;
+                report.ReviewedByAdminId = admin.Id;
+                report.ReviewedAt = DateTime.UtcNow;
+            }
+            await _context.SaveChangesAsync();
         }
     }
 }
