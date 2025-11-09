@@ -62,7 +62,7 @@ namespace Controllers.Controllers.Admin
         ///           "fuelCode": "E85",
         ///           "proposedPrice": 4.74,
         ///           "status": "Pending",
-        ///           "photoToken": "930f26dd200141bcac45416fe745696f",
+        ///           "token": "930f26dd200141bcac45416fe745696f",
         ///           "createdAt": "2025-11-09T16:57:26.402333Z"
         ///         },
         ///         {
@@ -75,7 +75,7 @@ namespace Controllers.Controllers.Admin
         ///           "fuelCode": "LPG",
         ///           "proposedPrice": 6.78,
         ///           "status": "Pending",
-        ///           "photoToken": "ff5355b9e6a44011851bf58252aff58f",
+        ///           "token": "ff5355b9e6a44011851bf58252aff58f",
         ///           "createdAt": "2025-11-09T16:57:26.420039Z"
         ///         }
         ///       ],
@@ -136,7 +136,7 @@ namespace Controllers.Controllers.Admin
         ///
         /// Notes
         /// - `photoUrl` is a temporary presigned URL valid for 1 hour (3600 seconds) from generation.
-        /// - `photoToken` is a unique identifier assigned to each price proposal for secure access.
+        /// - `token` is a unique identifier assigned to each price proposal for secure access.
         /// - `proposedPrice` is the fuel price in PLN per liter submitted by the user.
         /// - `createdAt` is the timestamp (UTC) when the proposal was submitted.
         /// - The photo token does not expose internal database IDs for security purposes.
@@ -162,8 +162,8 @@ namespace Controllers.Controllers.Admin
                 });
         }
 
-        [HttpPost("change-status/{photoToken}")]
-        public async Task<IActionResult> ChangePriceProposalStatus([FromRoute]string photoToken, [FromQuery]bool isAccepted)
+        [HttpPost("change-status/{token}")]
+        public async Task<IActionResult> ChangePriceProposalStatus([FromRoute]string token, [FromQuery]bool isAccepted)
         {
             var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value;
             if (string.IsNullOrEmpty(adminEmail))
@@ -175,7 +175,7 @@ namespace Controllers.Controllers.Admin
                 });
             }
 
-            var result = await _priceProposalServices.ChangePriceProposalStatus(adminEmail, isAccepted, photoToken);
+            var result = await _priceProposalServices.ChangePriceProposalStatus(adminEmail, isAccepted, token);
 
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)

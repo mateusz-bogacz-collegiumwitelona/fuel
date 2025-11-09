@@ -60,7 +60,7 @@ namespace Data.Repositories
                     FuelType = fuelType,
                     CreatedAt = DateTime.UtcNow,
                     Status = Data.Enums.PriceProposalStatus.Pending,
-                    PhotoToken = photoToken
+                    Token = photoToken
                 };
 
                 var contentType = extension.ToLower() switch
@@ -156,7 +156,7 @@ namespace Data.Repositories
                 .Include(b => b.Station)
                     .ThenInclude(s => s.Address)
                 .Include(pp => pp.FuelType)
-                .FirstOrDefaultAsync(pp => pp.PhotoToken == photoToken);
+                .FirstOrDefaultAsync(pp => pp.Token == photoToken);
 
             if (proposal == null)
             {
@@ -180,7 +180,7 @@ namespace Data.Repositories
                 FuelType = proposal.FuelType.Name,
                 ProposedPrice = proposal.ProposedPrice,
                 PhotoUrl = photoUrl,
-                Token = proposal.PhotoToken,
+                Token = proposal.Token,
                 CreatedAt = proposal.CreatedAt
             };
         }
@@ -265,7 +265,7 @@ namespace Data.Repositories
             var result = await query
                 .Select(pp => new GetStationPriceProposalResponse
                 {
-                    PhotoToken = pp.PhotoToken,
+                    Token = pp.Token,
                     UserName = pp.User.UserName,
                     BrandName = pp.Station.Brand.Name,
                     Street = pp.Station.Address.Street,
@@ -355,7 +355,7 @@ namespace Data.Repositories
                 await transaction.RollbackAsync();
                 _logger.LogError(ex,
                     "Error changing price proposal status. PhotoToken: {PhotoToken}, UserId: {UserId}",
-                    priceProposal.PhotoToken, priceProposal.User.Id);
+                    priceProposal.Token, priceProposal.User.Id);
                 throw;
             }
         }
@@ -367,6 +367,6 @@ namespace Data.Repositories
                     .Include(pp => pp.Station.Address)
                     .Include(pp => pp.FuelType)
                     .FirstOrDefaultAsync(pp =>
-                        pp.PhotoToken == token && pp.Status == Enums.PriceProposalStatus.Pending);
+                        pp.Token == token && pp.Status == Enums.PriceProposalStatus.Pending);
     }
 }

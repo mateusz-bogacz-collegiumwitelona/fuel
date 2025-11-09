@@ -403,7 +403,7 @@ namespace Data.Seeder
                         FuelTypeId = fuelType.Id,
                         ProposedPrice = Math.Round((decimal)(_random.NextDouble() * (7.0 - 4.0) + 4.0), 2),
                         PhotoUrl = $"proposals/{Guid.NewGuid()}.jpg",
-                        PhotoToken = Guid.NewGuid().ToString("N"),
+                        Token = Guid.NewGuid().ToString("N"),
                         Status = PriceProposalStatus.Pending,
                         CreatedAt = DateTime.UtcNow.AddDays(-_random.Next(0, 30))
                     };

@@ -20,7 +20,7 @@ namespace Data.Models
         public string PhotoUrl { get; set; }
         public PriceProposalStatus Status { get; set; }
 
-        public string PhotoToken { get; set; }
+        public string Token { get; set; }
 
         public Guid? ReviewedBy { get; set; }
         public ApplicationUser Reviewer { get; set; }

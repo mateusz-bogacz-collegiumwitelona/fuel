@@ -154,11 +154,11 @@ namespace Services.Services
             }
         }
 
-        public async Task<Result<GetPriceProposalResponse>> GetPriceProposal(string photoToken)
+        public async Task<Result<GetPriceProposalResponse>> GetPriceProposal(string token)
         {
             try
             {
-                if (string.IsNullOrEmpty(photoToken))
+                if (string.IsNullOrEmpty(token))
                 {
                     _logger.LogWarning("Photo token is null or empty.");
                     return Result<GetPriceProposalResponse>.Bad(
@@ -168,11 +168,12 @@ namespace Services.Services
                         );
                 }
 
-                var response = await _priceProposalRepository.GetPriceProposal(photoToken);
+                var response = await _priceProposalRepository.GetPriceProposal(token);
 
                 if (response == null)
                 {
-                    _logger.LogWarning("Price proposal with photo token {PhotoToken} not found.", photoToken);
+                    _logger.LogWarning("Price proposal with photo token {token} not found.", 
+                        token);
                     return Result<GetPriceProposalResponse>.Bad(
                         "Not found",
                         StatusCodes.Status404NotFound,
@@ -188,7 +189,7 @@ namespace Services.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"An error occurred while retrieving price proposal with photo token {photoToken}: {ex.Message} | {ex.InnerException}");
+                _logger.LogError(ex, $"An error occurred while retrieving price proposal with photo token {token}: {ex.Message} | {ex.InnerException}");
                 return Result<GetPriceProposalResponse>.Bad(
                     "An error occurred while processing your request.",
                     StatusCodes.Status500InternalServerError,
@@ -312,7 +313,7 @@ namespace Services.Services
             }
         }
 
-        public async Task<Result<bool>> ChangePriceProposalStatus(string adminEmail, bool isAccepted, string photoToken)
+        public async Task<Result<bool>> ChangePriceProposalStatus(string adminEmail, bool isAccepted, string token)
         {
             try
             {
@@ -334,13 +335,14 @@ namespace Services.Services
                         new List<string> { "User is not authorized to perform this action." });
                 }
 
-               var priceProposal = await _priceProposalRepository.FindPriceProposal(photoToken);
+               var priceProposal = await _priceProposalRepository.FindPriceProposal(
+                   token);
 
                 if (priceProposal == null)
                 {
                     _logger.LogWarning(
-                        "Price proposal with PhotoToken: {PhotoToken} not found.",
-                        photoToken);
+                        "Price proposal with token: {token} not found.",
+                        token);
                     return Result<bool>.Bad(
                         "Price proposal not found",
                         StatusCodes.Status404NotFound);
@@ -363,8 +365,8 @@ namespace Services.Services
                 if (!isChanged)
                 {
                     _logger.LogWarning(
-                        "Price proposal not found or already processed. PhotoToken: {PhotoToken}",
-                        photoToken);
+                        "Price proposal not found or already processed. token: {token}",
+                        token);
                     return Result<bool>.Bad(
                         "Price proposal not found or already processed",
                         StatusCodes.Status404NotFound);
@@ -388,8 +390,8 @@ namespace Services.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error changing price proposal status for PhotoToken: {PhotoToken}",
-                    photoToken);
+                _logger.LogError(ex, "Error changing price proposal status for token: {token}",
+                    token);
                 return Result<bool>.Bad(
                     "An error occurred while processing your request.",
                     StatusCodes.Status500InternalServerError,
