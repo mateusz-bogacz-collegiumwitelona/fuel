@@ -162,6 +162,74 @@ namespace Controllers.Controllers.Admin
                 });
         }
 
+        /// <summary>
+        /// Accept or reject a pending price proposal submitted by a user.
+        /// </summary>
+        /// <remarks>
+        /// Allows an administrator to review and change the status of a price proposal.
+        /// 
+        /// **When a proposal is accepted:**
+        /// - The fuel price at the station is created or updated with the proposed price
+        /// - The proposal status changes to Accepted
+        /// - The user's proposal statistics are updated (approved count and points increase)
+        /// 
+        /// **When a proposal is rejected:**
+        /// - The proposal status changes to Rejected
+        /// - The user's proposal statistics are updated (rejected count increases)
+        /// - No changes are made to station fuel prices
+        /// 
+        /// **Important Notes:**
+        /// - Only proposals with Pending status can be reviewed
+        /// - Each proposal can only be reviewed once (idempotent operation)
+        /// - Admin email is automatically extracted from JWT token
+        /// - The operation uses database transactions to ensure data consistency
+        /// 
+        /// Example request (Accept):
+        /// ```
+        /// POST /api/proposals/change-status/abc123token?isAccepted=true
+        /// ```
+        /// 
+        /// Example request (Reject):
+        /// ```
+        /// POST /api/proposals/change-status/abc123token?isAccepted=false
+        /// ```
+        /// 
+        /// Example success response (200 OK):
+        /// ```json
+        /// {
+        ///   "message": "Price proposal accepted successfully",
+        ///   "data": true
+        /// }
+        /// ```
+        /// 
+        /// Example error response - already reviewed (409 Conflict):
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "This proposal has already been reviewed",
+        ///   "errors": []
+        /// }
+        /// ```
+        /// 
+        /// Example error response - not found (404 Not Found):
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Price proposal not found",
+        ///   "errors": []
+        /// }
+        /// ```
+        /// </remarks>
+        /// <param name="token">Unique token identifying the price proposal to review</param>
+        /// <param name="isAccepted">True to accept the proposal, false to reject it</param>
+        /// <returns>Operation result indicating success or failure</returns>
+        /// <response code="200">Proposal status changed successfully</response>
+        /// <response code="400">Invalid token or missing parameters</response>
+        /// <response code="401">Unauthorized - valid JWT token with Admin role required</response>
+        /// <response code="403">Forbidden - Admin role required</response>
+        /// <response code="404">Price proposal not found or not in Pending status</response>
+        /// <response code="409">Conflict - proposal has already been reviewed</response>
+        /// <response code="500">Internal server error or database transaction failed</response>
         [HttpPost("change-status/{token}")]
         public async Task<IActionResult> ChangePriceProposalStatus([FromRoute]string token, [FromQuery]bool isAccepted)
         {

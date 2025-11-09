@@ -80,6 +80,65 @@ namespace Contlollers.Controllers.Client
                 });
         }
 
+        /// <summary>
+        /// Retrieve a paginated list of top users ranked by their proposal points.
+        /// </summary>
+        /// <remarks>
+        /// Returns users ranked by their total points (earned from approved proposals), with support for pagination.
+        /// Users are sorted in descending order by points. If no pagination parameters are provided, defaults to page 1 with 10 items per page.
+        ///
+        /// Example request
+        /// ```http
+        /// GET /api/proposals/top-users?PageNumber=1&amp;PageSize=10
+        /// ```
+        ///
+        /// Example response
+        /// ```json
+        /// {
+        ///   "items": [
+        ///     {
+        ///       "userName": "User1",
+        ///       "totalProposals": 20,
+        ///       "approvedProposals": 12,
+        ///       "rejectedProposals": 8,
+        ///       "acceptedRate": 60,
+        ///       "points": 12
+        ///     },
+        ///     {
+        ///       "userName": "User6",
+        ///       "totalProposals": 18,
+        ///       "approvedProposals": 11,
+        ///       "rejectedProposals": 7,
+        ///       "acceptedRate": 61,
+        ///       "points": 11
+        ///     },
+        ///     {
+        ///       "userName": "User8",
+        ///       "totalProposals": 12,
+        ///       "approvedProposals": 11,
+        ///       "rejectedProposals": 1,
+        ///       "acceptedRate": 91,
+        ///       "points": 11
+        ///     }
+        ///   ],
+        ///   "pageNumber": 1,
+        ///   "pageSize": 10,
+        ///   "totalCount": 3,
+        ///   "totalPages": 1
+        /// }
+        /// ```
+        ///
+        /// Notes:
+        /// - Users are ranked by total points earned from approved proposals
+        /// - `acceptedRate` represents the percentage of approved proposals out of total proposals
+        /// - Default pagination: PageNumber = 1, PageSize = 10
+        /// - If requested page number exceeds total pages, the last available page is returned
+        /// - Empty list is returned if no users have proposal statistics
+        /// </remarks>
+        /// <param name="request">Pagination parameters (PageNumber and PageSize)</param>
+        /// <response code="200">Top users list successfully retrieved (may be empty)</response>
+        /// <response code="400">Invalid pagination parameters</response>
+        /// <response code="500">Unexpected server error</response>
         [HttpGet("top-users")]
         public async Task<IActionResult> GetTopUserListAsync([FromQuery] GetPaggedRequest request)
         {

@@ -134,7 +134,7 @@ namespace Controllers.Controllers.Admin
         /// 
         /// **Sample request:**
         /// 
-        ///     PUT /api/admin/user/change-role?email=user@example.pl&newRole=Admin
+        ///     PUT /api/admin/user/change-role?email=user@example.pl&amp;newRole=Admin
         /// 
         /// **Sample success response (200 OK):**
         /// 
