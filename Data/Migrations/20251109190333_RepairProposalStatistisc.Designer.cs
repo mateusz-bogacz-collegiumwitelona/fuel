@@ -3,6 +3,7 @@ using System;
 using Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251109190333_RepairProposalStatistisc")]
+    partial class RepairProposalStatistisc
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -291,6 +294,9 @@ namespace Data.Migrations
                     b.Property<Guid?>("ReviewedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("ReviewerId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("StationId")
                         .HasColumnType("uuid");
 
@@ -304,7 +310,7 @@ namespace Data.Migrations
 
                     b.HasIndex("FuelTypeId");
 
-                    b.HasIndex("ReviewedBy");
+                    b.HasIndex("ReviewerId");
 
                     b.HasIndex("StationId");
 
@@ -642,8 +648,9 @@ namespace Data.Migrations
 
                     b.HasOne("Data.Models.ApplicationUser", "Reviewer")
                         .WithMany()
-                        .HasForeignKey("ReviewedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("ReviewerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("Data.Models.Station", "Station")
                         .WithMany("PriceProposal")

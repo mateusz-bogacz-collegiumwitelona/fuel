@@ -89,66 +89,50 @@ namespace Data.Reopsitories
             return true;
         }
 
-        public async Task<bool> UpdateTotalProposalsAsync(bool proposial, string email)
+        public async Task<bool> UpdateTotalProposalsAsync(bool isAccepted, Guid userId)
         {
-            try
+            var userProposalStats = await _context.ProposalStatistics
+                .FirstOrDefaultAsync(ps => ps.UserId == userId);
+
+            if (userProposalStats == null)
             {
-                var user = await _userManager.FindByEmailAsync(email);
-
-                if (user == null)
-                {
-                    _logger.LogWarning("User with email {Email} not found.", email);
-                    return false;
-                }
-
-                var userProposialStats = _context.ProposalStatistics
-                    .FirstOrDefault(ps => ps.UserId == user.Id);
-
-                if (userProposialStats == null)
-                {
-                    _logger.LogWarning("No proposal statistics found for user with email {Email}.", email);
-                    return false;
-                }
-
-                int newTotalProposals = (userProposialStats.TotalProposals ?? 0) + 1;
-                userProposialStats.TotalProposals = newTotalProposals;
-
-                if (proposial)
-                {
-                    int newApprovedProposals = (userProposialStats.ApprovedProposals ?? 0) + 1;
-                    userProposialStats.ApprovedProposals = newApprovedProposals;
-                }
-                else
-                {
-                    int newRejectedProposals = (userProposialStats.RejectedProposals ?? 0) + 1;
-                    userProposialStats.RejectedProposals = newRejectedProposals;
-                }
-
-                int newAcceptedRate = userProposialStats.TotalProposals > 0
-                    ? (int)(((double)userProposialStats.ApprovedProposals / userProposialStats.TotalProposals) * 100)
-                    : 0;
-
-                userProposialStats.AcceptedRate = newAcceptedRate;
-
-                userProposialStats.UpdatedAt = DateTime.UtcNow;
-
-                int isSaved = await _context.SaveChangesAsync();
-
-                if (isSaved <= 0)
-                {
-                    _logger.LogError("Failed to update proposal statistics for user with email {Email}.", email);
-                    return false;
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while updating proposal statistics for user with email {Email}.", email);
+                _logger.LogWarning("No proposal statistics found for user {UserId}", userId);
                 return false;
             }
-        }
 
+            userProposalStats.TotalProposals = (userProposalStats.TotalProposals ?? 0) + 1;
+
+            if (isAccepted)
+            {
+                userProposalStats.ApprovedProposals = (userProposalStats.ApprovedProposals ?? 0) + 1;
+                userProposalStats.Points = (userProposalStats.Points ?? 0) + 1;
+            }
+            else
+            {
+                userProposalStats.RejectedProposals = (userProposalStats.RejectedProposals ?? 0) + 1;
+            }
+
+            userProposalStats.AcceptedRate = userProposalStats.TotalProposals > 0
+                ? (int)(((double)(userProposalStats.ApprovedProposals ?? 0) / userProposalStats.TotalProposals.Value) * 100)
+                : 0;
+
+            userProposalStats.UpdatedAt = DateTime.UtcNow;
+
+
+            int savedCount = await _context.SaveChangesAsync();
+
+            if (savedCount <= 0)
+            {
+                _logger.LogError("Failed to update proposal statistics for user {UserId}", userId);
+                return false;
+            }
+
+            _logger.LogInformation(
+                "Updated statistics for user {UserId}: Total={Total}, Approved={Approved}, Rate={Rate}%",
+                userId, userProposalStats.TotalProposals, userProposalStats.ApprovedProposals, userProposalStats.AcceptedRate);
+
+            return true;
+        }
         public async Task<List<TopUserResponse>> GetTopUserListAsync()
          => await _context.ProposalStatistics
                 .OrderByDescending(ps => ps.Points)

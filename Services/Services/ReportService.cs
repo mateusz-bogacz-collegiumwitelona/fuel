@@ -1,5 +1,5 @@
-﻿using Data.Models;
-using Data.Reopsitories;
+﻿using Data.Interfaces;
+using Data.Models;
 using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;

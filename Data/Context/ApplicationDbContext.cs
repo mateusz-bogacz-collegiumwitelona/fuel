@@ -65,6 +65,12 @@ namespace Data.Context
                 .HasForeignKey(pp => pp.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            builder.Entity<PriceProposal>()
+                .HasOne(pp => pp.Reviewer)
+                .WithMany()
+                .HasForeignKey(pp => pp.ReviewedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
             builder.Entity<Brand>()
                 .HasMany(b => b.Station)
                 .WithOne(s => s.Brand)

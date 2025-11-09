@@ -280,5 +280,104 @@ namespace Data.Repositories
 
             return result;
         }
+
+        public async Task<bool> ChangePriceProposalStatus(
+    bool isAccepted,
+    string photoToken,
+    decimal newPrice,
+    Guid userId,
+    ApplicationUser admin)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // Załaduj proposal z relacjami (potrzebne do logowania w przypadku błędu)
+                var priceProposal = await _context.PriceProposals
+                    .Include(pp => pp.Station)
+                        .ThenInclude(s => s.Brand)
+                    .Include(pp => pp.Station)
+                        .ThenInclude(s => s.Address)
+                    .Include(pp => pp.FuelType)
+                    .FirstOrDefaultAsync(pp =>
+                        pp.PhotoToken == photoToken &&
+                        pp.UserId == userId &&
+                        pp.Status == Enums.PriceProposalStatus.Pending);
+
+                if (priceProposal == null)
+                {
+                    _logger.LogWarning(
+                        "Price proposal not found or already processed. PhotoToken: {PhotoToken}, UserId: {UserId}",
+                        photoToken, userId);
+                    return false;
+                }
+
+                if (isAccepted)
+                {
+                    var stationFuelPrice = await _context.FuelPrices
+                        .FirstOrDefaultAsync(fp =>
+                            fp.StationId == priceProposal.StationId &&
+                            fp.FuelTypeId == priceProposal.FuelTypeId);
+
+                    if (stationFuelPrice == null)
+                    {
+                        _logger.LogInformation(
+                            "Creating new fuel price for station {Brand} in {City} for fuel {FuelType}",
+                            priceProposal.Station.Brand.Name,
+                            priceProposal.Station.Address.City,
+                            priceProposal.FuelType.Name);
+
+                        stationFuelPrice = new FuelPrice
+                        {
+                            Id = Guid.NewGuid(),
+                            StationId = priceProposal.StationId,
+                            FuelTypeId = priceProposal.FuelTypeId,
+                            Price = newPrice,
+                            ValidFrom = DateTime.UtcNow,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        _context.FuelPrices.Add(stationFuelPrice);
+                    }
+                    else
+                    {
+                        stationFuelPrice.Price = newPrice;
+                        stationFuelPrice.ValidFrom = DateTime.UtcNow;
+                        stationFuelPrice.UpdatedAt = DateTime.UtcNow;
+                    }
+
+                    priceProposal.Status = Enums.PriceProposalStatus.Accepted;
+
+                    _logger.LogInformation(
+                        "Accepted price proposal {ProposalId}. New price: {Price} PLN for {FuelType} at {Brand} in {City}",
+                        priceProposal.Id, newPrice, priceProposal.FuelType.Name,
+                        priceProposal.Station.Brand.Name, priceProposal.Station.Address.City);
+                }
+                else
+                {
+                    priceProposal.Status = Enums.PriceProposalStatus.Rejected;
+
+                    _logger.LogInformation(
+                        "Rejected price proposal {ProposalId} from user {UserId}",
+                        priceProposal.Id, userId);
+                }
+
+                priceProposal.ReviewedBy = admin.Id;
+                priceProposal.ReviewedAt = DateTime.UtcNow;
+
+                var savedCount = await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return savedCount > 0;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex,
+                    "Error changing price proposal status. PhotoToken: {PhotoToken}, UserId: {UserId}",
+                    photoToken, userId);
+                throw;
+            }
+        }
     }
 }

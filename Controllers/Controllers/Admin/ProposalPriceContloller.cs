@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
 using Services.Services;
+using System.Security.Claims;
 
 namespace Controllers.Controllers.Admin
 {
@@ -146,9 +147,35 @@ namespace Controllers.Controllers.Admin
         /// <response code="404">Price proposal not found with the provided photo token.</response>
         /// <response code="500">Unexpected server error occurred while processing the request.</response>
         [HttpGet("{token}")]
-        public async Task<IActionResult> GetPriceProposal(string token)
+        public async Task<IActionResult> GetPriceProposal([FromRoute]string token)
         {
             var result = await _priceProposalServices.GetPriceProposal(token);
+
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    Data = result.Data
+                });
+        }
+
+        [HttpPost("change-status")]
+        public async Task<IActionResult> ChangePriceProposalStatus([FromBody]ChangePriceProposalStatusRequest request)
+        {
+            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(adminEmail))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User not authenticated"
+                });
+            }
+
+            var result = await _priceProposalServices.ChangePriceProposalStatus(adminEmail, request);
 
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)

@@ -19,19 +19,23 @@ namespace Services.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IStationRepository _stationRepository;
         private readonly IFuelTypeRepository _fuelTypeRepository;
+        private readonly IProposalStatisticRepository _proposalStatisticRepository;
 
         public PriceProposalServices(
             IPriceProposalRepository priceProposalRepository,
             ILogger<PriceProposalServices> logger,
             UserManager<ApplicationUser> userManager,
             IStationRepository stationRepository,
-            IFuelTypeRepository fuelTypeRepository)
+            IFuelTypeRepository fuelTypeRepository,
+            IProposalStatisticRepository proposalStatisticRepository
+            )
         {
             _priceProposalRepository = priceProposalRepository;
             _logger = logger;
             _userManager = userManager;
             _stationRepository = stationRepository;
             _fuelTypeRepository = fuelTypeRepository;
+            _proposalStatisticRepository = proposalStatisticRepository;
         }
 
         public async Task<Result<string>> AddNewProposalAsync(string email, AddNewPriceProposalRequest request)
@@ -52,7 +56,7 @@ namespace Services.Services
                 }
 
                 var vuelTypeCodes = await _fuelTypeRepository.GetAllFuelTypeCodesAsync();
-                
+
                 foreach (var code in vuelTypeCodes)
                 {
                     if (string.Equals(code, request.FuelType, StringComparison.OrdinalIgnoreCase))
@@ -305,6 +309,82 @@ namespace Services.Services
                     "An error occurred while processing your request.",
                     StatusCodes.Status500InternalServerError,
                     new List<string> { $"{ex.Message} | {ex.InnerException}" });
+            }
+        }
+
+        public async Task<Result<bool>> ChangePriceProposalStatus(string adminEmail, ChangePriceProposalStatusRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(adminEmail))
+                {
+                    return Result<bool>.Bad(
+                        "Admin email is required",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Admin email cannot be null or empty." });
+                }
+
+                var admin = await _userManager.FindByEmailAsync(adminEmail);
+                if (admin == null || !await _userManager.IsInRoleAsync(admin, "Admin"))
+                {
+                    _logger.LogWarning("Unauthorized access attempt by {Email}", adminEmail);
+                    return Result<bool>.Bad(
+                        "Unauthorized",
+                        StatusCodes.Status401Unauthorized,
+                        new List<string> { "User is not authorized to perform this action." });
+                }
+
+                var user = await _userManager.FindByEmailAsync(request.UserEmail);
+                if (user == null)
+                {
+                    _logger.LogWarning("User not found: {Email}", request.UserEmail);
+                    return Result<bool>.Bad(
+                        "User not found",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "User not found with the provided email." });
+                }
+
+                var isChanged = await _priceProposalRepository.ChangePriceProposalStatus(
+                    request.IsAccepted,
+                    request.PhotoToken,
+                    request.NewPrice,
+                    user.Id,
+                    admin);
+
+                if (!isChanged)
+                {
+                    _logger.LogWarning(
+                        "Price proposal not found or already processed. PhotoToken: {PhotoToken}",
+                        request.PhotoToken);
+                    return Result<bool>.Bad(
+                        "Price proposal not found or already processed",
+                        StatusCodes.Status404NotFound);
+                }
+
+                var isUpdated = await _proposalStatisticRepository.UpdateTotalProposalsAsync(
+                    request.IsAccepted,
+                    user.Id);
+
+                if (!isUpdated)
+                {
+                    _logger.LogWarning(
+                        "Failed to update statistics for user {UserId}, but proposal status was changed",
+                        user.Id);
+                }
+
+                return Result<bool>.Good(
+                    $"Price proposal {(request.IsAccepted ? "accepted" : "rejected")} successfully",
+                    StatusCodes.Status200OK,
+                    true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error changing price proposal status for PhotoToken: {PhotoToken}",
+                    request.PhotoToken);
+                return Result<bool>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message });
             }
         }
     }

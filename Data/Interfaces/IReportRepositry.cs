@@ -1,6 +1,7 @@
-﻿using DTO.Responses;
+﻿using Data.Models;
+using DTO.Responses;
 
-namespace Data.Models
+namespace Data.Interfaces
 {
     public interface IReportRepositry
     {

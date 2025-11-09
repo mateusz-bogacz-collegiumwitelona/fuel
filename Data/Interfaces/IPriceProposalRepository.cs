@@ -17,5 +17,6 @@ namespace Data.Interfaces
         Task<GetPriceProposalResponse> GetPriceProposal(string photoToken);
         Task<List<GetUserAllProposalPricesResponse>> GetUserAllProposalPricesAsync(Guid userId);
         Task<List<GetStationPriceProposalResponse>> GetAllPriceProposal(TableRequest request);
+        Task<bool> ChangePriceProposalStatus(bool isAccepted, string photoToken, decimal newPrice, Guid userId, ApplicationUser admin);
     }
 }

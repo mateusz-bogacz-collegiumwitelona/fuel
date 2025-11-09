@@ -1,7 +1,9 @@
 ﻿using Data.Interfaces;
+using Data.Models;
 using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;
@@ -12,13 +14,16 @@ namespace Services.Services
     {
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
         private readonly ILogger<ProposalStatisticServices> _logger;
-
+        private readonly UserManager<ApplicationUser> _userManager;
         public ProposalStatisticServices(
             IProposalStatisticRepository proposalStatisticRepository,
-            ILogger<ProposalStatisticServices> logger)
+            ILogger<ProposalStatisticServices> logger,
+            UserManager<ApplicationUser> userManager
+            )
         {
             _proposalStatisticRepository = proposalStatisticRepository;
             _logger = logger;
+            _userManager = userManager;
         }
         public async Task<Result<GetProposalStatisticResponse>> GetUserProposalStatisticResponse(string email)
         {
@@ -132,7 +137,19 @@ namespace Services.Services
                     );
                 }
 
-                var isUpdated = await _proposalStatisticRepository.UpdateTotalProposalsAsync(proposial, email);
+                var user = await _userManager.FindByEmailAsync(email);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("User with email {Email} not found.", email);
+                    return Result<bool>.Bad(
+                        "User Not Found",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "User does not exist" }
+                    );
+                }
+
+                var isUpdated = await _proposalStatisticRepository.UpdateTotalProposalsAsync(proposial, user.Id);
 
                 if (!isUpdated)
                 {
