@@ -1,4 +1,5 @@
 ﻿using Data.Context;
+using Data.Helpers;
 using Data.Interfaces;
 using Data.Models;
 using DTO.Requests;
@@ -40,49 +41,28 @@ namespace Data.Reopsitories
                 .ToListAsync();
 
         public async Task<List<GetFuelTypeResponses>> GetFuelsTypeListAsync(TableRequest request)
-        {
-            var query = _context.FuelTypes.AsNoTracking().AsQueryable();
-
-            if (!string.IsNullOrEmpty(request.Search))
-            {
-                string searchLower = request.Search.ToLower();
-                query = query.Where(ft => ft.Name.ToLower().Contains(searchLower) ||
-                                          ft.Code.ToLower().Contains(searchLower));
-            }
-
-            var sortMap = new Dictionary<string, Expression<Func<FuelType, object>>>
-            {
-                { "name", ft => ft.Name },
-                { "code", ft => ft.Code },
-                { "createdat", ft => ft.CreatedAt },
-                { "updatedat", ft => ft.UpdatedAt }
-            };
-
-            if (!string.IsNullOrEmpty(request.SortBy) &&
-                sortMap.ContainsKey(request.SortBy.ToLower()))
-            {
-                var sortExpr = sortMap[request.SortBy.ToLower()];
-                query = request.SortDirection?.ToLower() == "desc"
-                    ? query.OrderByDescending(sortExpr)
-                    : query.OrderBy(sortExpr);
-            }
-            else
-            {
-                query = query.OrderBy(ft => ft.Name);
-            }
-
-            var result = await query
-                .Select(ft => new GetFuelTypeResponses
+            => await new TableQueryBuilder<FuelType, GetFuelTypeResponses>(_context.FuelTypes, request)
+                .ApplySearch((q, search) =>
+                    q.Where(ft => ft.Name.ToLower().Contains(search) ||
+                                  ft.Code.ToLower().Contains(search))
+                )
+                .ApplySort(
+                    new Dictionary<string, Expression<Func<FuelType, object>>>
+                    {
+                        { "name", ft => ft.Name },
+                        { "code", ft => ft.Code },
+                        { "createdat", ft => ft.CreatedAt },
+                        { "updatedat", ft => ft.UpdatedAt }
+                    },
+                    ft => ft.Name
+                )
+                .ProjectAndExecuteAsync(ft => new GetFuelTypeResponses
                 {
                     Name = ft.Name,
                     Code = ft.Code,
                     CreatedAt = ft.CreatedAt,
                     UpdatedAt = ft.UpdatedAt
-                })
-                .ToListAsync();
-
-            return result;
-        }
+                });
 
         public async Task<bool> AddFuelTypeAsync(string name, string code)
         {

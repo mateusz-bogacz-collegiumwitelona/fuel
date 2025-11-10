@@ -209,61 +209,43 @@ namespace Data.Repositories
             .ToListAsync();
 
         public async Task<List<GetStationPriceProposalResponse>> GetAllPriceProposal(TableRequest request)
-        {
-            var query = _context.PriceProposals
-                .Include(pp => pp.User)
-                .Include(pp => pp.FuelType)
-                .Include(pp => pp.Station)
-                    .ThenInclude(s => s.Brand)
-                .Include(pp => pp.Station)
-                    .ThenInclude(s => s.Address)
-                .Where(pp => pp.Status == Enums.PriceProposalStatus.Pending)
-                .AsNoTracking()
-                .AsQueryable();
-
-            if (!string.IsNullOrEmpty(request.Search))
-            {
-                string searchLower = request.Search.ToLower();
-                query = query.Where(pp =>
-                    pp.User.UserName.ToLower().Contains(searchLower) ||
-                    pp.Station.Brand.Name.ToLower().Contains(searchLower) ||
-                    pp.Station.Address.Street.ToLower().Contains(searchLower) ||
-                    pp.Station.Address.HouseNumber.ToLower().Contains(searchLower) ||
-                    pp.Station.Address.City.ToLower().Contains(searchLower) ||
-                    pp.FuelType.Name.ToLower().Contains(searchLower) ||
-                    pp.FuelType.Code.ToLower().Contains(searchLower) ||
-                    pp.ProposedPrice.ToString().ToLower().Contains(searchLower) ||
-                    pp.CreatedAt.ToString().ToLower().Contains(searchLower)
-                    );
-            }
-            var sortMap = new Dictionary<string, Func<PriceProposal, object>>
-            {
-                { "username", pp => pp.User.UserName },
-                { "brandname", pp => pp.Station.Brand.Name },
-                { "street", pp => pp.Station.Address.Street },
-                { "housenumber", pp => pp.Station.Address.HouseNumber },
-                { "city", pp => pp.Station.Address.City },
-                { "fuelname", pp => pp.FuelType.Name },
-                { "fuelcode", pp => pp.FuelType.Code },
-                { "proposedprice", pp => pp.ProposedPrice },
-                { "createdat", pp => pp.CreatedAt }
-            };
-
-            if (!string.IsNullOrEmpty(request.SortBy) &&
-                sortMap.ContainsKey(request.SortBy.ToLower()))
-            {
-                var sortExpr = sortMap[request.SortBy.ToLower()];
-                query = request.SortDirection?.ToLower() == "desc"
-                    ? query.OrderByDescending(sortExpr).AsQueryable()
-                    : query.OrderBy(sortExpr).AsQueryable();
-            }
-            else
-            {
-                query = query.OrderBy(pp => pp.CreatedAt);
-            }
-
-            var result = await query
-                .Select(pp => new GetStationPriceProposalResponse
+            => await new TableQueryBuilder<PriceProposal, GetStationPriceProposalResponse>(_context.PriceProposals
+                    .Include(pp => pp.User)
+                    .Include(pp => pp.FuelType)
+                    .Include(pp => pp.Station)
+                        .ThenInclude(s => s.Brand)
+                    .Include(pp => pp.Station)
+                        .ThenInclude(s => s.Address)
+                    .Where(pp => pp.Status == Enums.PriceProposalStatus.Pending), request)
+                .ApplySearch((q, search) =>
+                    q.Where(pp =>
+                        pp.User.UserName.ToLower().Contains(search) ||
+                        pp.Station.Brand.Name.ToLower().Contains(search) ||
+                        pp.Station.Address.Street.ToLower().Contains(search) ||
+                        pp.Station.Address.HouseNumber.ToLower().Contains(search) ||
+                        pp.Station.Address.City.ToLower().Contains(search) ||
+                        pp.FuelType.Name.ToLower().Contains(search) ||
+                        pp.FuelType.Code.ToLower().Contains(search) ||
+                        pp.ProposedPrice.ToString().ToLower().Contains(search) ||
+                        pp.CreatedAt.ToString().ToLower().Contains(search)
+                    )
+                )
+                .ApplySort(
+                    new Dictionary<string, System.Linq.Expressions.Expression<Func<PriceProposal, object>>>
+                    {
+                        { "username", pp => pp.User.UserName },
+                        { "brandname", pp => pp.Station.Brand.Name },
+                        { "street", pp => pp.Station.Address.Street },
+                        { "housenumber", pp => pp.Station.Address.HouseNumber },
+                        { "city", pp => pp.Station.Address.City },
+                        { "fuelname", pp => pp.FuelType.Name },
+                        { "fuelcode", pp => pp.FuelType.Code },
+                        { "proposedprice", pp => pp.ProposedPrice },
+                        { "createdat", pp => pp.CreatedAt }
+                    },
+                    pp => pp.CreatedAt
+                )
+                .ProjectAndExecuteAsync(pp => new GetStationPriceProposalResponse
                 {
                     Token = pp.Token,
                     UserName = pp.User.UserName,
@@ -275,12 +257,9 @@ namespace Data.Repositories
                     FuelCode = pp.FuelType.Code,
                     ProposedPrice = pp.ProposedPrice,
                     Status = pp.Status.ToString(),
-                    CreatedAt = pp.CreatedAt
-                })
-                .ToListAsync();
+                    CreatedAt = pp.CreatedAt,
+                });
 
-            return result;
-        }
 
         public async Task<bool> ChangePriceProposalStatus(
             bool isAccepted,

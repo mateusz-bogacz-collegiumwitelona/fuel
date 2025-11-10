@@ -222,50 +222,30 @@ namespace Data.Reopsitories
                 );
 
         public async Task<List<GetStationListForAdminResponse>> GetStationsListForAdminAsync(TableRequest request)
-        {
-            var query = _context.Stations
-                .Include(s => s.Address)
-                .AsNoTracking()
-                .AsQueryable();
-
-            if (!string.IsNullOrEmpty(request.Search))
-            {
-                string searchLower = request.Search.ToLower();
-                query = query.Where(s => 
-                        s.Brand.Name.ToLower().Contains(searchLower) ||
-                        s.Address.Street.ToLower().Contains(searchLower) ||
-                        s.Address.HouseNumber.ToLower().Contains(searchLower) ||
-                        s.Address.City.ToLower().Contains(searchLower) ||
-                        s.Address.PostalCode.ToLower().Contains(searchLower)
-                    );
-            }
-
-            var sortMap = new Dictionary<string, Expression<Func<Station, object>>>
-            {
-                { "brnadname", s => s.Brand.Name },
-                { "street", s => s.Address.Street },
-                { "housenumber", s => s.Address.HouseNumber },
-                { "city", s => s.Address.City },
-                { "postalcode", s => s.Address.PostalCode },
-                { "createdat", s => s.CreatedAt },
-                { "updatedat", s => s.UpdatedAt }
-            };
-
-            if (!string.IsNullOrEmpty(request.SortBy) &&
-                sortMap.ContainsKey(request.SortBy.ToLower()))
-            {
-                var sortExpr = sortMap[request.SortBy.ToLower()];
-                query = request.SortDirection?.ToLower() == "desc"
-                    ? query.OrderByDescending(sortExpr)
-                    : query.OrderBy(sortExpr);
-            }
-            else
-            {
-                query = query.OrderBy(s => s.Brand.Name);
-            }
-
-           var result = await query
-                .Select(s => new GetStationListForAdminResponse
+            => await new TableQueryBuilder<Station, GetStationListForAdminResponse>(_context.Stations.Include(s => s.Address).Include(s => s.Brand), request)
+                .ApplySearch((q, search) =>
+                    q.Where(s =>
+                        s.Brand.Name.ToLower().Contains(search) ||
+                        s.Address.Street.ToLower().Contains(search) ||
+                        s.Address.HouseNumber.ToLower().Contains(search) ||
+                        s.Address.City.ToLower().Contains(search) ||
+                        s.Address.PostalCode.ToLower().Contains(search)
+                    )
+                )
+                .ApplySort(
+                    new Dictionary<string, Expression<Func<Station, object>>>
+                    {
+                        { "brandname", s => s.Brand.Name },
+                        { "street", s => s.Address.Street },
+                        { "housenumber", s => s.Address.HouseNumber },
+                        { "city", s => s.Address.City },
+                        { "postalcode", s => s.Address.PostalCode },
+                        { "createdat", s => s.CreatedAt },
+                        { "updatedat", s => s.UpdatedAt }
+                    },
+                    s => s.Brand.Name
+                )
+                .ProjectAndExecuteAsync(s => new GetStationListForAdminResponse
                 {
                     BrandName = s.Brand.Name,
                     Street = s.Address.Street,
@@ -274,11 +254,7 @@ namespace Data.Reopsitories
                     PostalCode = s.Address.PostalCode,
                     CreatedAt = s.CreatedAt,
                     UpdatedAt = s.UpdatedAt
-                })
-                .ToListAsync();
-
-            return result;
-        }
+                });
 
         public async Task<bool> IsStationExistAsync(string brandName, string street, string houseNumber, string city)
             => await _context.Stations.AnyAsync( s => 

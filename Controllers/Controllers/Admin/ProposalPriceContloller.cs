@@ -10,7 +10,7 @@ using System.Security.Claims;
 namespace Controllers.Controllers.Admin
 {
     [ApiController]
-    [Route("api/proposal")]
+    [Route("api/admin/proposal")]
     [EnableCors("AllowClient")]
     [Authorize(Roles = "Admin")]
     public class ProposalPriceContloller : ControllerBase
