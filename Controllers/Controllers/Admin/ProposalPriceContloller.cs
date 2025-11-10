@@ -4,8 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
-using Services.Services;
-using System.Security.Claims;
 
 namespace Controllers.Controllers.Admin
 {
@@ -13,7 +11,7 @@ namespace Controllers.Controllers.Admin
     [Route("api/admin/proposal")]
     [EnableCors("AllowClient")]
     [Authorize(Roles = "Admin")]
-    public class ProposalPriceContloller : ControllerBase
+    public class ProposalPriceContloller : AuthControllerBase
     {
         private readonly IPriceProposalServices _priceProposalServices;
 
@@ -233,15 +231,8 @@ namespace Controllers.Controllers.Admin
         [HttpPatch("change-status/{token}")]
         public async Task<IActionResult> ChangePriceProposalStatus([FromRoute]string token, [FromQuery]bool isAccepted)
         {
-            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value;
-            if (string.IsNullOrEmpty(adminEmail))
-            {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = "User not authenticated"
-                });
-            }
+            var (adminEmail, error) = GetAuthenticatedUser();
+            if (error != null) return error;
 
             var result = await _priceProposalServices.ChangePriceProposalStatus(adminEmail, isAccepted, token);
 

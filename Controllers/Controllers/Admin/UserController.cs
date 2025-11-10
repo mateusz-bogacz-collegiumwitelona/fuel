@@ -3,10 +3,8 @@ using DTO.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
-using Services.Helpers;
 using Services.Interfaces;
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 
 namespace Controllers.Controllers.Admin
 {
@@ -14,7 +12,7 @@ namespace Controllers.Controllers.Admin
     [Route("api/admin/user")]
     [EnableCors("AllowClient")]
     [Authorize(Roles = "Admin")]
-    public class UserController : ControllerBase
+    public class UserController : AuthControllerBase
     {
         private readonly IUserServices _userServices;
         private readonly IBanService _banService;
@@ -262,17 +260,8 @@ namespace Controllers.Controllers.Admin
         [HttpPost("lock-out")]
         public async Task<IActionResult> LockoutUserAsync(SetLockoutForUserRequest request)
         {
-            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value;
-
-            if (string.IsNullOrEmpty(adminEmail))
-            {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = "User not authenticated"
-                });
-
-            }
+            var (adminEmail, error) = GetAuthenticatedUser();
+            if (error != null) return error;
 
             var result = await _banService.LockoutUserAsync(adminEmail, request);
             return result.IsSuccess
@@ -435,15 +424,9 @@ namespace Controllers.Controllers.Admin
         [HttpPost("unlock")]
         public async Task<IActionResult> UnlockUserAsync([FromQuery] string userEmail)
         {
-            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value;
-            if (string.IsNullOrEmpty(adminEmail))
-            {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = "User not authenticated"
-                });
-            }
+            var (adminEmail, error) = GetAuthenticatedUser();
+            if (error != null) return error;
+
             var result = await _banService.UnlockUserAsync(adminEmail, userEmail);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, new
@@ -639,15 +622,8 @@ namespace Controllers.Controllers.Admin
         [HttpPatch("report/change-status")]
         public async Task<IActionResult> ChangeReportStatusAsync([FromBody] ChangeReportStatusRequest request)
         {
-            var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value;
-            if (string.IsNullOrEmpty(adminEmail))
-            {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = "User not authenticated"
-                });
-            }
+            var (adminEmail, error) = GetAuthenticatedUser();
+            if (error != null) return error;
 
             var result = await _reportService.ChangeReportStatusAsync(adminEmail, request);
 

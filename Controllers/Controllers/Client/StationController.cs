@@ -1,8 +1,7 @@
-﻿using DTO.Requests;
-using Microsoft.AspNetCore.Authorization;
+﻿using Controllers.Controllers;
+using DTO.Requests;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
-using Services.Helpers;
 using Services.Interfaces;
 using System.Security.Claims;
 
@@ -11,7 +10,7 @@ namespace Contlollers.Controllers.Client
     [Route("api/station")]
     [ApiController]
     [EnableCors("AllowClient")]
-    public class StationController : ControllerBase
+    public class StationController : AuthControllerBase
     {
         private readonly IStationServices _stationServices;
         private readonly IPriceProposalServices _priceProposalServices;
@@ -405,7 +404,6 @@ namespace Contlollers.Controllers.Client
                 });
         }
 
-
         /// <summary>
         /// Get all fuel station brands.
         /// </summary>
@@ -596,17 +594,8 @@ namespace Contlollers.Controllers.Client
         [HttpPost("price-proposal/add")]
         public async Task<IActionResult> AddNewPriceProposalAsync([FromForm] AddNewPriceProposalRequest request)
         {
-            var email = User.FindFirst(ClaimTypes.Email)?.Value;
-
-            if (string.IsNullOrEmpty(email))
-            {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = "User not authenticated"
-                });
-
-            }
+            var (email, error) = GetAuthenticatedUser();
+            if (error != null) return error;
 
             var result = await _priceProposalServices.AddNewProposalAsync(email ,request);
             return result.IsSuccess

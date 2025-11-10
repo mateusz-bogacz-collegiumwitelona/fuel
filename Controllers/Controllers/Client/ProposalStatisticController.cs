@@ -1,17 +1,15 @@
-﻿using DTO.Requests;
-using Microsoft.AspNetCore.Authorization;
+﻿using Controllers.Controllers;
+using DTO.Requests;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
-using System.Security.Claims;
 
 namespace Contlollers.Controllers.Client
 {
     [Route("api/proposal-statistic")]
     [ApiController]
     [EnableCors("AllowClient")]
-    [Authorize(Roles = "User,Admin")]
-    public class ProposalStatisticController : ControllerBase
+    public class ProposalStatisticController : AuthControllerBase
     {
         private readonly IProposalStatisticServices _proposalStatistic;
 
@@ -29,7 +27,7 @@ namespace Contlollers.Controllers.Client
         ///
         /// Example request
         /// ```http
-        /// GET /api/proposals/statistics
+        /// GET /api/proposals-statistics
         /// ```
         ///
         /// Example response
@@ -55,19 +53,11 @@ namespace Contlollers.Controllers.Client
         /// <response code="401">Unauthorize</response>
         /// <response code="404">User or statistics not found</response>
         /// <response code="500">Unexpected server error</response>
-        [HttpGet]
+        [HttpGet()]
         public async Task<IActionResult> GetUserProposalStatisticResponse()
         {
-            var email = User.FindFirst(ClaimTypes.Email)?.Value;
-
-            if (string.IsNullOrEmpty(email))
-            {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = "User not authenticated"
-                });
-            }
+            var (email, error) = GetAuthenticatedUser();
+            if (error != null) return error;
 
             var result = await _proposalStatistic.GetUserProposalStatisticResponse(email);
             return result.IsSuccess

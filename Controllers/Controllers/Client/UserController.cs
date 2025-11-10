@@ -1,19 +1,15 @@
 ﻿using DTO.Requests;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Services.Helpers;
 using Services.Interfaces;
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 
 namespace Controllers.Controllers.Client
 {
     [Route("api/user")]
     [ApiController]
     [EnableCors("AllowClient")]
-    public class UserController : ControllerBase
+    public class UserController : AuthControllerBase
     {
         private readonly IUserServices _userServices;
         private readonly IPriceProposalServices _priceProposalServices;
@@ -69,17 +65,8 @@ namespace Controllers.Controllers.Client
         [HttpGet("me")]
         public async Task<IActionResult> GetCurrentUserAsync()
         {
-            var email = User.FindFirst(ClaimTypes.Email)?.Value;
-
-            if (string.IsNullOrEmpty(email))
-            {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = "User not authenticated"
-                });
-
-            }
+            var (email, error) = GetAuthenticatedUser();
+            if (error != null) return error; 
 
             var result = await _userServices.GetUserInfoAsync(email);
 
@@ -290,7 +277,8 @@ namespace Controllers.Controllers.Client
         [HttpGet("me/price-proposal")]
         public async Task<IActionResult> GetUserPriceProposals([FromQuery] GetPaggedRequest pagged)
         {
-            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            var (email, error) = GetAuthenticatedUser();
+            if (error != null) return error;
 
             if (string.IsNullOrEmpty(email))
             {
@@ -356,17 +344,8 @@ namespace Controllers.Controllers.Client
         [HttpPatch("change-name")]
         public async Task<IActionResult> ChangeUserNameAsync(string userName)
         {
-            var email = User.FindFirst(ClaimTypes.Email)?.Value;
-
-            if (string.IsNullOrEmpty(email))
-            {
-
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = "User not authenticated"
-                });
-            }
+            var (email, error) = GetAuthenticatedUser();
+            if (error != null) return error;
 
             var result = await _userServices.ChangeUserNameAsync(email, userName);
             return result.IsSuccess
@@ -437,16 +416,8 @@ namespace Controllers.Controllers.Client
             string newEmail
             )
         {
-            var oldEmail = User.FindFirst(ClaimTypes.Email)?.Value;
-
-            if (string.IsNullOrEmpty(oldEmail))
-            {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = "User not authenticated"
-                });
-            }
+            var (oldEmail, error) = GetAuthenticatedUser();
+            if (error != null) return error;
 
             var result = await _userServices.ChangeUserEmailAsync(oldEmail, newEmail);
 
@@ -522,16 +493,8 @@ namespace Controllers.Controllers.Client
         [HttpPatch("change-password")]
         public async Task<IActionResult> ChangeUserPasswordAsync(ChangePasswordRequest request)
         {
-            var email = User.FindFirst(ClaimTypes.Email)?.Value;
-
-            if (string.IsNullOrEmpty(email))
-            {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = "User not authenticated"
-                });
-            }
+            var (email, error) = GetAuthenticatedUser();
+            if (error != null) return error;
 
             var result = await _userServices.ChangeUserPasswordAsync(email, request);
 
@@ -618,16 +581,8 @@ namespace Controllers.Controllers.Client
         [HttpDelete("delete")]
         public async Task<IActionResult> DeleteUserAsyc([FromBody] DeleteAccountRequest request)
         {
-            var email = User.FindFirst(ClaimTypes.Email)?.Value;
-
-            if (string.IsNullOrEmpty(email))
-            {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = "User not authenticated"
-                });
-            }
+            var (email, error) = GetAuthenticatedUser();
+            if (error != null) return error;
 
             var result = await _userServices.DeleteUserAsyc(email, request);
 
@@ -718,15 +673,8 @@ namespace Controllers.Controllers.Client
         [HttpPost("report")]
         public async Task<IActionResult> ReportUserAsync([FromBody] ReportRequest request)
         {
-            var notifierEmail = User.FindFirst(ClaimTypes.Email)?.Value;
-            if (string.IsNullOrEmpty(notifierEmail))
-            {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = "User not authenticated"
-                });
-            }
+            var (notifierEmail, error) = GetAuthenticatedUser();
+            if (error != null) return error;
 
             var result = await _reportService.ReportUserAsync(notifierEmail, request);
 
