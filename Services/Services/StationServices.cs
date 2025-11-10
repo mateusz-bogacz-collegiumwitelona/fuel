@@ -309,52 +309,7 @@ namespace Services.Services
         }
 
         public async Task<Result<PagedResult<GetStationListForAdminResponse>>> GetStationsListForAdminAsync(GetPaggedRequest pagged, TableRequest request)
-        {
-            try
-            {
-                var result = await _stationRepository.GetStationsListForAdminAsync(request);
-                if (result == null || !result.Any())
-                {
-                    _logger.LogWarning("No stations found in the database.");
-
-                    var emptyPage = new PagedResult<GetStationListForAdminResponse>
-                    {
-                        Items = new List<GetStationListForAdminResponse>(),
-                        PageNumber = pagged.PageNumber ?? 1,
-                        PageSize = pagged.PageSize ?? 10,
-                        TotalCount = 0,
-                        TotalPages = 0
-                    };
-
-                    return Result<PagedResult<GetStationListForAdminResponse>>.Good(
-                        "No stations found.",
-                        StatusCodes.Status200OK,
-                        emptyPage);
-                }
-
-                int pageNumber = pagged.PageNumber ?? 1;
-                int pageSize = pagged.PageSize ?? 10;
-
-                var pagedResult = result.ToPagedResult(pageNumber, pageSize);
-
-                if (pagedResult.PageNumber > pagedResult.TotalPages && pagedResult.TotalPages > 0)
-                    pagedResult = result.ToPagedResult(pagedResult.TotalPages, pageSize);
-
-                return Result<PagedResult<GetStationListForAdminResponse>>.Good(
-                    "Station retrieved successfully",
-                    StatusCodes.Status200OK,
-                    pagedResult
-                    );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"An error occurred while retrieving stations for admin: {ex.Message} | {ex.InnerException}");
-                return Result<PagedResult<GetStationListForAdminResponse>>.Bad(
-                    "An error occurred while processing your request.",
-                    StatusCodes.Status500InternalServerError,
-                    new List<string> { $"{ex.Message} | {ex.InnerException}" });
-            }
-        }
+            => await _stationRepository.GetStationsListForAdminAsync(request).ToPagedResultAsync(pagged, _logger, "stations");
 
         public async Task<Result<bool>> EditStationAsync(EditStationRequest request)
         {

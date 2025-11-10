@@ -23,55 +23,8 @@ namespace Services.Services
         }
 
         public async Task<Result<PagedResult<GetBrandDataResponse>>> GetBrandToListAsync(GetPaggedRequest pagged, TableRequest request)
-        {
-            try
-            {
-                var result = await _brandRepository.GetBrandToListAsync(request);
+            => await _brandRepository.GetBrandToListAsync(request).ToPagedResultAsync(pagged, _logger, "brand");
 
-                if (result == null || !result.Any())
-                {
-                    _logger.LogWarning("No brands found in the database.");
-
-                    var emptyPaged = new PagedResult<GetBrandDataResponse>
-                    {
-                        Items = new List<GetBrandDataResponse>(),
-                        PageNumber = pagged.PageNumber ?? 1,
-                        PageSize = pagged.PageSize ?? 10,
-                        TotalCount = 0,
-                        TotalPages = 0
-                    };
-
-                    return Result<PagedResult<GetBrandDataResponse>>.Good(
-                        "No brands found in the database",
-                        StatusCodes.Status200OK,
-                        emptyPaged
-                    );
-                }
-
-                int pageNumber = pagged.PageNumber ?? 1;
-                int pageSize = pagged.PageSize ?? 10;
-
-                var pagedResult = result.ToPagedResult(pageNumber, pageSize);
-
-                if (pagedResult.PageNumber > pagedResult.TotalPages && pagedResult.TotalPages > 0)
-                    pagedResult = result.ToPagedResult(pagedResult.TotalPages, pageSize);
-
-                return Result<PagedResult<GetBrandDataResponse>>.Good(
-                    "Brands retrieved successfully",
-                    StatusCodes.Status200OK,
-                    pagedResult
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while retrieving brands list.");
-                return Result<PagedResult<GetBrandDataResponse>>.Bad(
-                    "An error occurred while retrieving brands",
-                    StatusCodes.Status500InternalServerError,
-                    new List<string> { ex.Message }
-                );
-            }
-        }
         public async Task<Result<List<string>>> GetAllBrandsAsync()
         {
             try

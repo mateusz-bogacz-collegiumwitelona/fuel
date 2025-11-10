@@ -196,75 +196,30 @@ namespace Services.Services
                     new List<string> { $"{ex.Message} | {ex.InnerException}" });
             }
         }
+
         public async Task<Result<PagedResult<GetUserAllProposalPricesResponse>>> GetUserAllProposalPricesAsync(string email, GetPaggedRequest pagged)
         {
-            try
+            if (string.IsNullOrEmpty(email) || string.IsNullOrWhiteSpace(email))
             {
-                if (string.IsNullOrEmpty(email) || string.IsNullOrWhiteSpace(email))
-                {
-                    _logger.LogWarning("Unauthorize: email is null or empty.");
-                    return Result<PagedResult<GetUserAllProposalPricesResponse>>.Bad(
-                        "Unauthorize.",
-                        StatusCodes.Status401Unauthorized,
-                        new List<string> { "Email is null or empty" }
-                        );
-                }
-
-                var user = await _userManager.FindByEmailAsync(email);
-
-                if (user == null)
-                {
-                    _logger.LogWarning("User with email {Email} not found.", email);
-                    return Result<PagedResult<GetUserAllProposalPricesResponse>>.Bad(
-                        "Validation error",
-                        StatusCodes.Status400BadRequest,
-                        new List<string> { "User not found with the provided email." }
-                        );
-                }
-
-                var result = await _priceProposalRepository.GetUserAllProposalPricesAsync(user.Id);
-
-                if (result == null || !result.Any())
-                {
-                    _logger.LogWarning("No stations found in the database.");
-
-                    var emptyPage = new PagedResult<GetUserAllProposalPricesResponse>
-                    {
-                        Items = new List<GetUserAllProposalPricesResponse>(),
-                        PageNumber = pagged.PageNumber ?? 1,
-                        PageSize = pagged.PageSize ?? 10,
-                        TotalCount = 0,
-                        TotalPages = 0
-                    };
-
-                    return Result<PagedResult<GetUserAllProposalPricesResponse>>.Good(
-                        "No price proposal found.",
-                        StatusCodes.Status200OK,
-                        emptyPage);
-                }
-
-                int pageNumber = pagged.PageNumber ?? 1;
-                int pageSize = pagged.PageSize ?? 10;
-
-                var pagedResult = result.ToPagedResult(pageNumber, pageSize);
-
-                if (pagedResult.PageNumber > pagedResult.TotalPages && pagedResult.TotalPages > 0)
-                    pagedResult = result.ToPagedResult(pagedResult.TotalPages, pageSize);
-
-                return Result<PagedResult<GetUserAllProposalPricesResponse>>.Good(
-                    "User retrieved successfully",
-                    StatusCodes.Status200OK,
-                    pagedResult
-                    );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"An error occurred while retrieving user price proposals: {ex.Message} | {ex.InnerException}");
+                _logger.LogWarning("Unauthorize: email is null or empty.");
                 return Result<PagedResult<GetUserAllProposalPricesResponse>>.Bad(
-                    "An error occurred while processing your request.",
-                    StatusCodes.Status500InternalServerError,
-                    new List<string> { $"{ex.Message} | {ex.InnerException}" });
+                    "Unauthorize.",
+                    StatusCodes.Status401Unauthorized,
+                    new List<string> { "Email is null or empty" });
             }
+
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                _logger.LogWarning("User with email {Email} not found.", email);
+                return Result<PagedResult<GetUserAllProposalPricesResponse>>.Bad(
+                    "Validation error",
+                    StatusCodes.Status400BadRequest,
+                    new List<string> { "User not found with the provided email." });
+            }
+
+            return await _priceProposalRepository.GetUserAllProposalPricesAsync(user.Id)
+                .ToPagedResultAsync(pagged, _logger, "user price proposals");
         }
 
         public async Task<Result<PagedResult<GetStationPriceProposalResponse>>> GetAllPriceProposal(GetPaggedRequest pagged, TableRequest request)

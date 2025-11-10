@@ -1,7 +1,9 @@
 ﻿using Data.Interfaces;
+using Data.Reopsitories;
 using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;
@@ -53,54 +55,7 @@ namespace Services.Services
         }
 
         public async Task<Result<PagedResult<GetFuelTypeResponses>>> GetFuelsTypeListAsync(GetPaggedRequest pagged, TableRequest request)
-        {
-            try
-            {
-                var result = await _fuelTypeRepository.GetFuelsTypeListAsync(request);
-
-                if (result == null || !result.Any())
-                {
-                    _logger.LogWarning("No brands found in the database.");
-
-                    var emptyPaged = new PagedResult<GetFuelTypeResponses>
-                    {
-                        Items = new List<GetFuelTypeResponses>(),
-                        PageNumber = pagged.PageNumber ?? 1,
-                        PageSize = pagged.PageSize ?? 10,
-                        TotalCount = 0,
-                        TotalPages = 0
-                    };
-
-                    return Result<PagedResult<GetFuelTypeResponses>>.Good(
-                        "No brands found in the database",
-                        StatusCodes.Status200OK,
-                        emptyPaged
-                    );
-                }
-
-                int pageNumber = pagged.PageNumber ?? 1;
-                int pageSize = pagged.PageSize ?? 10;
-
-                var pagedResult = result.ToPagedResult(pageNumber, pageSize);
-
-                if (pagedResult.PageNumber > pagedResult.TotalPages && pagedResult.TotalPages > 0)
-                    pagedResult = result.ToPagedResult(pagedResult.TotalPages, pageSize);
-
-                return Result<PagedResult<GetFuelTypeResponses>>.Good(
-                    "Brands retrieved successfully",
-                    StatusCodes.Status200OK,
-                    pagedResult
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"An error occurred while retrieving fuel types: {ex.Message} | {ex.InnerException}");
-                return Result<PagedResult<GetFuelTypeResponses>>.Bad(
-                    "An error occurred while processing your request.",
-                    StatusCodes.Status500InternalServerError,
-                    new List<string> { $"{ex.Message} | {ex.InnerException}" });
-            }
-        }
+            => await _fuelTypeRepository.GetFuelsTypeListAsync(request).ToPagedResultAsync(pagged, _logger, "fuel types");
 
         public async Task<Result<bool>> AddFuelTypeAsync(AddFuelTypeRequest request)
         {

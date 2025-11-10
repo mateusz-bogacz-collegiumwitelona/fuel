@@ -1,8 +1,13 @@
-﻿namespace Services.Helpers
+﻿using DTO.Requests;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
+
+namespace Services.Helpers
 {
     public static class PaginationExtensions
     {
-        public static PagedResult<T> ToPagedResult<T>(this IEnumerable<T> source, int pageNumber,int pageSize)
+        public static PagedResult<T> ToPagedResult<T>(this IEnumerable<T> source, int pageNumber, int pageSize)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
@@ -24,5 +29,63 @@
 
         public static PagedResult<T> ToPagedResult<T>(this List<T> source, int pageNumber, int pageSize)
             => ((IEnumerable<T>)source).ToPagedResult(pageNumber, pageSize);
+
+        public static async Task<Result<PagedResult<T>>> ToPagedResultAsync<T>(
+            this Task<List<T>> dataTask,
+            GetPaggedRequest pagged,
+            ILogger logger,
+            string entityName = "item"
+            )
+        {
+            try
+            {
+                var result = await dataTask;
+
+                if (result == null || !result.Any())
+                {
+                    logger.LogWarning($"No {entityName} found in the database.");
+                    var emptyPage = CreateEmptyPagedResult<T>(pagged);
+
+                    return Result<PagedResult<T>>.Good(
+                        $"No {entityName} found.",
+                        StatusCodes.Status200OK,
+                        emptyPage);
+                }
+
+                int pageNumber = pagged.PageNumber ?? 1;
+                int pageSize = pagged.PageSize ?? 10;
+
+                var pagedResult = result.ToPagedResult(pageNumber, pageSize);
+
+                if (pagedResult.PageNumber > pagedResult.TotalPages && pagedResult.TotalPages > 0)
+                    pagedResult = result.ToPagedResult(pagedResult.TotalPages, pageSize);
+
+                return Result<PagedResult<T>>.Good(
+                    $"{entityName} retrieved successfully",
+                    StatusCodes.Status200OK,
+                    pagedResult);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, $"An error occurred while retrieving {entityName}: {{Message}} | {{InnerException}}",
+                    ex.Message, ex.InnerException);
+
+                return Result<PagedResult<T>>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" });
+            }
+        }
+
+        private static PagedResult<T> CreateEmptyPagedResult<T>(GetPaggedRequest pagged)
+            => new PagedResult<T>
+            {
+                Items = new List<T>(),
+                PageNumber = pagged.PageNumber ?? 1,
+                PageSize = pagged.PageSize ?? 10,
+                TotalCount = 0,
+                TotalPages = 0
+            };
+        
     }
 }

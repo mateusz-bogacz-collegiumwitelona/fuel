@@ -410,52 +410,7 @@ namespace Services.Services
         }
 
         public async Task<Result<PagedResult<GetUserListResponse>>> GetUserListAsync(GetPaggedRequest pagged, TableRequest request)
-        {
-            try
-            {
-                var result = await _userRepository.GetUserListAsync(request);
-
-                if (result == null || !result.Any())
-                {
-                    _logger.LogWarning("No user found in the database.");
-
-                    var emptyPage = new PagedResult<GetUserListResponse>
-                    {
-                        Items = new List<GetUserListResponse>(),
-                        PageNumber = pagged.PageNumber ?? 1,
-                        PageSize = pagged.PageSize ?? 10,
-                        TotalCount = 0,
-                        TotalPages = 0
-                    };
-
-                    return Result<PagedResult<GetUserListResponse>>.Good(
-                        "No users found.",
-                        StatusCodes.Status200OK,
-                        emptyPage);
-                }
-
-                int pageNumber = pagged.PageNumber ?? 1;
-                int pageSize = pagged.PageSize ?? 10;
-
-                var pagedResult = result.ToPagedResult(pageNumber, pageSize);
-
-                if (pagedResult.PageNumber > pagedResult.TotalPages && pagedResult.TotalPages > 0)
-                    pagedResult = result.ToPagedResult(pagedResult.TotalPages, pageSize);
-
-                return Result<PagedResult<GetUserListResponse>>.Good(
-                    "Users retrieved successfully",
-                    StatusCodes.Status200OK,
-                    pagedResult
-                    );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while retrieving user list.");
-                return Result<PagedResult<GetUserListResponse>>.Bad(
-                    "An unexpected error occurred.",
-                    StatusCodes.Status500InternalServerError);
-            }
-        }
+            => await _userRepository.GetUserListAsync(request).ToPagedResultAsync(pagged, _logger, "users");
 
         public async Task<Result<IdentityResult>> ChangeUserRoleAsync(string email, string newRole)
         {
