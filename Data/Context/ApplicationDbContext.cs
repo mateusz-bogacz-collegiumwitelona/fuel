@@ -21,8 +21,12 @@ namespace Data.Context
         public DbSet<Station> Stations { get; set; }
         public DbSet<ProposalStatistic> ProposalStatistics { get; set; } 
         public DbSet<StationAddress> StationAddress { get; set; }
+
         public DbSet<BanRecord> BanRecords { get; set; }
         public DbSet<ReportUserRecord> ReportUserRecords { get; set; }
+
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -143,7 +147,19 @@ namespace Data.Context
                 .HasForeignKey(r => r.ReviewedByAdminId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Entity<StationAddress>()
+            builder.Entity<RefreshToken>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Token).IsUnique();
+                entity.HasIndex(e => e.UserId);
+
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+           builder.Entity<StationAddress>()
                 .Property(sa => sa.Location)
                 .HasColumnType("geometry(Point, 4326)");
         }

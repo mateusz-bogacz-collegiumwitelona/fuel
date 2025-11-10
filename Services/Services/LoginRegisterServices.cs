@@ -2,16 +2,16 @@
 using Data.Models;
 using DTO.Requests;
 using DTO.Responses;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using Services.Helpers;
 using Services.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace Services.Services
 {
@@ -25,6 +25,9 @@ namespace Services.Services
         private EmailSender _email;
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IHttpContextAccessor _httpContext;
+        private readonly IRefreshTokenRepository _refreshTokenRepository;
+        private readonly ITokenFactory _tokenFactory;
 
         public LoginRegisterServices(
             UserManager<ApplicationUser> userManager,
@@ -34,7 +37,10 @@ namespace Services.Services
             ILogger<LoginRegisterServices> logger,
             EmailSender email,
             IProposalStatisticRepository proposalStatisticRepository,
-            IUserRepository userRepository
+            IUserRepository userRepository,
+            IHttpContextAccessor httpContext,
+            IRefreshTokenRepository refreshTokenRepository,
+            ITokenFactory tokenFactory            
             )
         {
             _userManager = userManager;
@@ -44,11 +50,14 @@ namespace Services.Services
             _logger = logger;
             _email = email;
             _proposalStatisticRepository = proposalStatisticRepository;
+
             _userRepository = userRepository;
+            _httpContext = httpContext;
+            _refreshTokenRepository = refreshTokenRepository;
+            _tokenFactory = tokenFactory;
         }
 
-
-        public async Task<Result<LoginResponse>> HandleLoginAsync(DTO.Requests.LoginRequest request)
+        public async Task<Result<LoginResponse>> HandleLoginAsync(LoginRequest request)
         {
             try
             {
@@ -78,8 +87,8 @@ namespace Services.Services
                 var result = await _signInManager.PasswordSignInAsync(
                     user,
                     request.Password,
-                    true,
-                    false
+                    false,
+                    true
                     );
 
                 if (!result.Succeeded)
@@ -102,80 +111,38 @@ namespace Services.Services
                         );
                 }
 
-                var claims = new List<Claim>
+                var jwtToken = _tokenFactory.CreateJwtToken(user, roles);
+                var jwtToString = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+                var context = _httpContext.HttpContext;
+                var refreshToken = _tokenFactory.CreateRefreshToken(
+                    user.Id,
+                    context.Connection.RemoteIpAddress?.ToString(),
+                    context.Request.Headers["User-Agent"].ToString()
+                    );
+
+                await _refreshTokenRepository.AddAsync(refreshToken);
+                await _refreshTokenRepository.SaveChangesAsync();
+
+                SetAuthCookie(context, jwtToString, jwtToken.ValidTo, refreshToken);
+
+                context.Response.Headers.Append("X-Token-Expiry", jwtToken.ValidTo.ToString("o"));
+
+                _logger.LogInformation("Login successful for user {Email}.", request.Email);
+
+                var response = new LoginResponse
                 {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    new Claim(ClaimTypes.Email, user.Email ?? ""),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                    Message = "Login successful.",
+                    Email = user.Email,
+                    UserName = user.UserName,
+                    Roles = roles.ToList()
                 };
-
-                foreach (var role in roles)
-                {
-                    claims.Add(new Claim(ClaimTypes.Role, role));
-                }
-
-                var keyString = _configuration["Jwt:Key"];
-                var issuer = _configuration["Jwt:Issuer"];
-                var audience = _configuration["Jwt:Audience"];
-
-                if (string.IsNullOrWhiteSpace(keyString) ||
-                    string.IsNullOrWhiteSpace(issuer) ||
-                    string.IsNullOrWhiteSpace(audience))
-                {
-                    _logger.LogError("JWT configuration is missing or invalid.");
-                    return Result<LoginResponse>.Bad(
-                        "Internal server error.",
-                        StatusCodes.Status500InternalServerError,
-                        new List<string> { "JWT configuration is missing or invalid." }
-                        );
-                }
-
-                if (keyString.Length < 32)
-                {
-                    _logger.LogError("JWT key length is insufficient. It must be at least 16 characters long.");
-                    return Result<LoginResponse>.Bad(
-                        "Internal server error.",
-                        StatusCodes.Status500InternalServerError,
-                        new List<string> { "JWT key length is insufficient. It must be at least 16 characters long." }
-                        );
-                }
-
-                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
-                var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-                JwtSecurityToken token;
-
-                try
-                {
-                    token = new JwtSecurityToken(
-                                issuer: issuer,
-                                audience: audience,
-                                claims: claims,
-                                expires: DateTime.UtcNow.AddHours(3),
-                                signingCredentials: creds
-                            );
-                } catch (Exception tokenEx)
-                {
-                    _logger.LogError(tokenEx, "Error creating JWT token for user {Email}.", request.Email);
-                    return Result<LoginResponse>.Bad(
-                        "Internal server error.",
-                        StatusCodes.Status500InternalServerError,
-                        new List<string> { $"{tokenEx.Message} | {tokenEx.InnerException}" }
-                        );
-                }
-
-                var auth = new LoginResponse
-                {
-                    Token = new JwtSecurityTokenHandler().WriteToken(token),
-                    Expiration = token.ValidTo
-                };
-                _logger.LogInformation("JWT token successfully generated for user {Email}, expires at {Expiration}.", request.Email, token.ValidTo);
 
                 return Result<LoginResponse>.Good(
                     "Login successful.",
                     StatusCodes.Status200OK,
-                    auth
-                    );
+                    response
+                );
+
             }
             catch (Exception ex)
             {
@@ -185,6 +152,226 @@ namespace Services.Services
                     new List<string> { ex.Message }
                     );
             }
+        }
+
+        public async Task<Result<IdentityResult>> LogoutAsync()
+        {
+            try
+            {
+                await _signInManager.SignOutAsync();
+
+                var context = _httpContext.HttpContext;
+
+                var isDev = context.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment();
+
+                var cookieOptions = new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = !isDev,
+                    SameSite = isDev ? SameSiteMode.Lax : SameSiteMode.None,
+                    Path = "/"
+                };
+
+                context.Response.Cookies.Delete("jwt", cookieOptions);
+                context.Response.Cookies.Delete("refresh_token", cookieOptions);
+
+                _logger.LogInformation("User logged out successfully.");
+
+                return Result<IdentityResult>.Good("Logout successful.", StatusCodes.Status200OK);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred during logout.");
+                return Result<IdentityResult>.Bad(
+                    "An error occurred during logout.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message }
+                    );
+            }
+        }
+
+        public async Task<Result<LoginResponse>> HandleRefreshAsync()
+        {
+            try
+            {
+                var context = _httpContext.HttpContext;
+                var refreshTokenCookie = context.Request.Cookies["refresh_token"];
+
+                if (string.IsNullOrEmpty(refreshTokenCookie))
+                {
+                    _logger.LogWarning("Refresh token cookie is missing.");
+                    return Result<LoginResponse>.Bad(
+                        "Refresh token is missing.",
+                        StatusCodes.Status401Unauthorized
+                    );
+                }
+
+                var storedToken = await _refreshTokenRepository.GetByTokenAsync(refreshTokenCookie);
+                if (storedToken == null || storedToken.IsRevoked || storedToken.ExpiryDate <= DateTime.UtcNow)
+                {
+                    _logger.LogWarning("Invalid or expired refresh token.");
+                    return Result<LoginResponse>.Bad(
+                        "Invalid or expired refresh token.",
+                        StatusCodes.Status401Unauthorized
+                    );
+                }
+
+                var user = await _userManager.FindByIdAsync(storedToken.UserId.ToString());
+                if (user == null)
+                {
+                    _logger.LogWarning("User not found for the provided refresh token.");
+                    return Result<LoginResponse>.Bad(
+                        "User not found.",
+                        StatusCodes.Status404NotFound
+                    );
+                }
+
+                storedToken.IsRevoked = true;
+                storedToken.RevokedAt = DateTime.UtcNow;
+                var roles = await _userManager.GetRolesAsync(user);
+
+                if (roles == null || !roles.Any())
+                {
+                    _logger.LogWarning("User has no roles assigned.");
+                    return Result<LoginResponse>.Bad(
+                        "User has no roles assigned.",
+                        StatusCodes.Status403Forbidden
+                    );
+                }
+
+                var jwtToken = _tokenFactory.CreateJwtToken(user, roles);
+                var jwtToString = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+
+                var newRefreshToken = _tokenFactory.CreateRefreshToken(
+                    user.Id,
+                    context.Connection.RemoteIpAddress?.ToString(),
+                    context.Request.Headers["User-Agent"].ToString()
+                    );
+
+                await _refreshTokenRepository.UpdateAsync(storedToken);
+                await _refreshTokenRepository.AddAsync(newRefreshToken);
+                await _refreshTokenRepository.SaveChangesAsync();
+
+                SetAuthCookie(context, jwtToString, jwtToken.ValidTo, newRefreshToken);
+
+                context.Response.Headers.Append("X-Token-Expiry", jwtToken.ValidTo.ToString("o"));
+
+                var response = new LoginResponse
+                {
+                    Message = "Token refreshed successfully.",
+                    Email = user.Email,
+                    UserName = user.UserName,
+                    Roles = roles.ToList()
+                };
+
+                _logger.LogInformation("Refreshed token for user {Email}", user.Email);
+
+                return Result<LoginResponse>.Good(
+                    "Token refreshed.",
+                    StatusCodes.Status200OK,
+                    response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred during token refresh.");
+                return Result<LoginResponse>.Bad(
+                    "An error occurred during token refresh.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message }
+                    );
+            }
+        }
+
+        public async Task<Result<LoginResponse>> GetCurrentUserAsync(Guid userId)
+        {
+            try
+            {
+                if (userId == Guid.Empty)
+                {
+                    _logger.LogWarning("User ID is empty.");
+                    return Result<LoginResponse>.Bad(
+                        "User ID is required.",
+                        StatusCodes.Status400BadRequest
+                    );
+                }
+
+                var user = await _userManager.FindByIdAsync(userId.ToString());
+
+                if (user == null)
+                {
+                    _logger.LogWarning("User not found for the provided email.");
+                    return Result<LoginResponse>.Bad(
+                        "User not found.",
+                        StatusCodes.Status404NotFound
+                    );
+                }
+
+                var roles = await _userManager.GetRolesAsync(user);
+
+                if (roles == null || !roles.Any())
+                {
+                    _logger.LogWarning("User has no roles assigned.");
+                    return Result<LoginResponse>.Bad(
+                        "User has no roles assigned.",
+                        StatusCodes.Status403Forbidden
+                    );
+                }
+
+                var response = new LoginResponse
+                {
+                    Message = "User retrieved successfully.",
+                    Email = user.Email,
+                    UserName = user.UserName,
+                    Roles = roles.ToList()
+                };
+
+                _logger.LogInformation("Retrieved user {Email}", user.Email);
+
+                return Result<LoginResponse>.Good(
+                    "User retrieved successfully.",
+                    StatusCodes.Status200OK,
+                    response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving user.");
+                return Result<LoginResponse>.Bad(
+                    "An error occurred while retrieving user.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message }
+                    );
+            }
+        }
+
+        private void SetAuthCookie(HttpContext context, string token, DateTime expiry, RefreshToken refresh)
+        {
+            var isDev = context.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment();
+
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = !isDev,
+                SameSite = isDev ? SameSiteMode.Lax : SameSiteMode.None,
+                Path = "/"
+            };
+
+            context.Response.Cookies.Append("jwt", token, new CookieOptions
+            {
+                HttpOnly = cookieOptions.HttpOnly,
+                Secure = cookieOptions.Secure,
+                SameSite = cookieOptions.SameSite,
+                Expires = expiry,
+                Path = cookieOptions.Path
+            });
+
+            context.Response.Cookies.Append("refresh_token", refresh.Token, new CookieOptions
+            {
+                HttpOnly = cookieOptions.HttpOnly,
+                Secure = cookieOptions.Secure,
+                SameSite = cookieOptions.SameSite,
+                Expires = refresh.ExpiryDate,
+                Path = cookieOptions.Path
+            });
         }
 
         public async Task<Result<IdentityResult>> RegisterNewUserAsync(RegisterNewUserRequest request)

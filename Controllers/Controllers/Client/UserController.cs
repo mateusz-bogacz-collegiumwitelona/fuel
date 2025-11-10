@@ -566,7 +566,6 @@ namespace Controllers.Controllers.Client
         ///
         /// Notes:
         /// - User's email is automatically retrieved from JWT token claims.
-        /// - Both User and Admin roles have access to this endpoint.
         /// - Password and confirm password must match.
         /// - Password verification is required for security.
         /// - This action is permanent and cannot be undone.

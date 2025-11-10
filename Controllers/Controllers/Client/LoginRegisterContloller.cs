@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Internal;
 using Services.Interfaces;
+using System.Security.Claims;
 
 namespace contlollers.Controllers.Client
 {
@@ -21,12 +22,12 @@ namespace contlollers.Controllers.Client
         }
 
         /// <summary>
-        /// Authenticate user and return a JWT access token.
+        /// Authenticate user and set a secure HTTP-only cookie with JWT token.
         /// </summary>
         /// <remarks>
         /// Description
         /// Authenticates a user using their email and password.
-        /// If the credentials are valid, a JWT token is generated and returned.
+        /// If the credentials are valid, a JWT token is generated and stored in a secure HTTP-only cookie.
         /// 
         /// Example request body for user
         /// ```json
@@ -47,20 +48,29 @@ namespace contlollers.Controllers.Client
         /// Example response
         /// ```json
         /// {
-        ///   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-        ///   "expiration": "2025-10-17T12:34:56Z"
+        ///   "success": true,
+        ///   "message": "Login successful.",
+        ///   "data": {
+        ///     "message": "Login successful.",
+        ///     "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        ///     "email": "user@example.pl",
+        ///     "roles": ["User"]
+        ///   }
         /// }
         /// ```
         ///
         /// Notes
-        /// - The returned `token` should be sent in the `Authorization` header as:  
-        ///   `Bearer {token}`
-        /// - The `expiration` field represents the UTC time when the token becomes invalid.
+        /// - The JWT token is automatically stored in a secure HTTP-only cookie named `jwt`
+        /// - The cookie is sent automatically with subsequent requests - no manual handling required
+        /// - The cookie expires after 3 hours
+        /// - For frontend applications, ensure `withCredentials: true` is set in HTTP client (axios/fetch)
+        /// - For Swagger/Postman testing, you can still use Bearer token in Authorization header
         /// </remarks>
-        /// <response code="200">User successfully logged in</response>
+        /// <response code="200">User successfully logged in, JWT cookie set</response>
         /// <response code="401">Invalid email or password</response>
         /// <response code="403">User has no assigned roles</response>
         /// <response code="404">User with the given email not found</response>
+        /// <response code="423">Account locked due to multiple failed login attempts</response>
         /// <response code="500">Server error — something went wrong in the backend</response>
 
         [AllowAnonymous]
@@ -69,6 +79,191 @@ namespace contlollers.Controllers.Client
         {
             var result = await _login.HandleLoginAsync(request);
 
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Logout user and clear authentication cookie.
+        /// </summary>
+        /// <remarks>
+        /// Description
+        /// Logs out the currently authenticated user by clearing the JWT cookie and signing out from Identity.
+        /// 
+        /// Example response
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "Logout successful."
+        /// }
+        /// ```
+        ///
+        /// Notes
+        /// - This endpoint requires authentication (must have valid JWT cookie)
+        /// - The JWT cookie is removed from the browser
+        /// - User session is terminated on the server side
+        /// - After logout, protected endpoints will return 401 Unauthorized
+        /// </remarks>
+        /// <response code="200">User successfully logged out, JWT cookie cleared</response>
+        /// <response code="401">User is not authenticated</response>
+        /// <response code="500">Server error — something went wrong during logout</response>
+        [HttpPost("logout")]
+        public async Task <IActionResult> LogoutAsync()
+        {
+            var result = await _login.LogoutAsync();
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Refresh JWT and obtain a new access token.
+        /// </summary>
+        /// <remarks>
+        /// Description  
+        /// Generates a new JWT access token and refresh token based on the existing refresh token stored in cookies.  
+        /// The existing refresh token will be revoked and replaced with a new one.  
+        /// This endpoint does not require authentication via access token, but a valid refresh token cookie is mandatory.
+        ///
+        /// Example request  
+        /// ```http
+        /// POST /api/auth/refresh HTTP/1.1
+        /// Host: example.com
+        /// Cookie: refresh_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        /// ```
+        ///
+        /// Example response (success)  
+        /// ```json
+        /// {
+        ///   "message": "Token refreshed successfully.",
+        ///   "email": "john.dope@example.com",
+        ///   "userName": "JohnDope",
+        ///   "roles": ["User"]
+        /// }
+        /// ```
+        ///
+        /// Example response (missing or invalid refresh token)  
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "Refresh token is missing or invalid",
+        ///   "errors": []
+        /// }
+        /// ```
+        ///
+        /// Notes  
+        /// - Requires a valid refresh token in the `refresh_token` cookie.  
+        /// - The old refresh token will be revoked upon successful refresh.  
+        /// - Returns a new JWT access token and refresh token.  
+        /// - The `X-Token-Expiry` header contains the new JWT expiration date in ISO 8601 format.  
+        /// - Will return **401 Unauthorized** if the refresh token is missing, expired, or revoked.  
+        /// - Will return **403 Forbidden** if the user has no roles assigned.  
+        /// - Will return **404 Not Found** if the user associated with the refresh token does not exist.
+        /// </remarks>
+        /// <response code="200">Token refreshed successfully — new JWT and refresh token issued</response>
+        /// <response code="401">Unauthorized — refresh token missing, expired, or invalid</response>
+        /// <response code="403">Forbidden — user has no roles assigned</response>
+        /// <response code="404">Not Found — user not found for the provided refresh token</response>
+        /// <response code="500">Server error — unexpected exception occurred during refresh</response>
+        [HttpPost("refresh")]
+        public async Task<IActionResult> RefreshTokenAsync()
+        {
+            var result = await _login.HandleRefreshAsync();
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Retrieve information about the currently authenticated user.
+        /// </summary>
+        /// <remarks>
+        /// Description  
+        /// Returns detailed information about the user based on the JWT token provided in the `Authorization` header.  
+        /// This endpoint requires authentication — a valid bearer token must be included in the request.
+        /// 
+        /// Example request  
+        /// ```http
+        /// GET /api/auth/me HTTP/1.1
+        /// Host: example.com
+        /// Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        /// ```
+        ///
+        /// Example response (success)  
+        /// ```json
+        /// {
+        ///   "message": "User retrieved successfully.",
+        ///   "email": "john.dope@example.com",
+        ///   "userName": "JohnDope",
+        ///   "roles": ["User"]
+        /// }
+        /// ```
+        ///
+        /// Example response (unauthorized)  
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "User not authenticated"
+        /// }
+        /// ```
+        ///
+        /// Example response (not found)  
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "User not found.",
+        ///   "errors": []
+        /// }
+        /// ```
+        ///
+        /// Notes  
+        /// - Requires a valid JWT Bearer token in the request header.  
+        /// - The token must contain a valid user identifier (`ClaimTypes.NameIdentifier`).  
+        /// - Returns user information including username, email, and assigned roles.  
+        /// - Will return **401 Unauthorized** if the token is missing or invalid.  
+        /// - Will return **404 Not Found** if the user no longer exists in the system.
+        /// </remarks>
+        /// <response code="200">User retrieved successfully — user info returned</response>
+        /// <response code="401">Unauthorized — missing or invalid JWT token</response>
+        /// <response code="403">Forbidden — user has no roles assigned</response>
+        /// <response code="404">Not Found — user not found in database</response>
+        /// <response code="500">Server error — unexpected exception occurred</response>
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentUserAsync()
+        {
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var userGuid))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "User not authenticated"
+                });
+            }
+
+            var result = await _login.GetCurrentUserAsync(userGuid);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new
