@@ -1,6 +1,6 @@
 ﻿using DTO.Responses;
 
-namespace Data.FiltersSorting
+namespace Data.Helpers
 {
     public class UserFilterSorting
     {
