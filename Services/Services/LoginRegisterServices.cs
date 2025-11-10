@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json;
 
 namespace Services.Services
 {
@@ -694,6 +695,213 @@ namespace Services.Services
                 _logger.LogError(ex, "Exception occurred during password reset for: {Email}", request.Email);
                 return Result<IdentityResult>.Bad(
                     "An error occurred during password reset",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message }
+                );
+            }
+        }
+
+        //Social logins and registrations
+
+        public async Task<Result<LoginResponse>> RegisterWithFacebookTokenAsync(string accessToken, HttpContext httpContext)
+        {
+            try
+            {
+                var httpClient = new HttpClient();
+                var fbResponse = await httpClient.GetAsync(
+                    $"https://graph.facebook.com/me?fields=id,name,email&access_token={accessToken}"
+                );
+
+                if (!fbResponse.IsSuccessStatusCode)
+                {
+                    return Result<LoginResponse>.Bad(
+                        "Invalid Facebook token",
+                        StatusCodes.Status401Unauthorized
+                    );
+                }
+
+                var fbData = await JsonSerializer.DeserializeAsync<FacebookUserInfo>(
+                    await fbResponse.Content.ReadAsStreamAsync()
+                );
+
+                string email = fbData.Email;
+                string name = fbData.Name;
+
+                var safeUserName = new string(name.Where(char.IsLetterOrDigit).ToArray());
+
+                if (string.IsNullOrEmpty(email))
+                    return Result<LoginResponse>.Bad(
+                        "Email not provided by Facebook",
+                        StatusCodes.Status400BadRequest
+                    );
+
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user == null)
+                {
+                    user = new ApplicationUser
+                    {
+                        Id = Guid.NewGuid(),
+                        UserName = safeUserName,
+                        NormalizedUserName = safeUserName.ToUpper(),
+                        Email = email,
+                        NormalizedEmail = email.ToUpper(),
+                        EmailConfirmed = true,
+                        SecurityStamp = Guid.NewGuid().ToString(),
+                        ConcurrencyStamp = Guid.NewGuid().ToString(),
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    var createResult = await _userManager.CreateAsync(user);
+                    if (!createResult.Succeeded)
+                    {
+                        var errors = createResult.Errors.Select(e => e.Description).ToList();
+                        return Result<LoginResponse>.Bad(
+                            "Error creating user",
+                            StatusCodes.Status500InternalServerError,
+                            errors
+                        );
+                    }
+
+                    const string defaultRole = "User";
+                    if (!await _roleManager.RoleExistsAsync(defaultRole))
+                        return Result<LoginResponse>.Bad(
+                            $"Role '{defaultRole}' does not exist",
+                            StatusCodes.Status500InternalServerError
+                        );
+
+                    await _userManager.AddToRoleAsync(user, defaultRole);
+
+                    await _proposalStatisticRepository.AddProposalStatisticRecordAsync(email);
+                }
+
+                var roles = (await _userManager.GetRolesAsync(user)).ToList();
+                var jwtToken = _tokenFactory.CreateJwtToken(user, roles);
+                var jwtString = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+
+                var refreshToken = _tokenFactory.CreateRefreshToken(
+                    user.Id,
+                    httpContext.Connection.RemoteIpAddress?.ToString(),
+                    httpContext.Request.Headers["User-Agent"].ToString()
+                );
+
+                await _refreshTokenRepository.AddAsync(refreshToken);
+                await _refreshTokenRepository.SaveChangesAsync();
+
+                httpContext.Response.Cookies.Append("jwt", jwtString, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = jwtToken.ValidTo
+                });
+
+                httpContext.Response.Headers.Append("X-Token-Expiry", jwtToken.ValidTo.ToString("o"));
+
+                var responseDto = new LoginResponse
+                {
+                    Message = "Register successful via Facebook",
+                    Email = user.Email,
+                    UserName = user.UserName,
+                    Roles = roles
+                };
+
+                return Result<LoginResponse>.Good(
+                    "Register successful via Facebook",
+                    StatusCodes.Status200OK,
+                    responseDto
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during Facebook login/register");
+                return Result<LoginResponse>.Bad(
+                    "An error occurred during Facebook login/register",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message }
+                );
+            }
+        }
+
+        public async Task<Result<LoginResponse>> LoginWithFacebookTokenAsync(string token ,HttpContext httpContext)
+        {
+            try
+            {
+                var httpClient = new HttpClient();
+                var fbResponse = await httpClient.GetAsync(
+                    $"https://graph.facebook.com/me?fields=id,name,email&access_token={token}"
+                );
+
+                if (!fbResponse.IsSuccessStatusCode)
+                {
+                    return Result<LoginResponse>.Bad(
+                        "Invalid Facebook token", 
+                        StatusCodes.Status401Unauthorized);
+                }
+
+                var fbData = await JsonSerializer
+                    .DeserializeAsync<FacebookUserInfo>(
+                        await fbResponse.Content.ReadAsStreamAsync()
+                    );
+
+                string email = fbData.Email;
+                string name = fbData.Name;
+
+
+                if (string.IsNullOrEmpty(email))
+                {
+                    return Result<LoginResponse>.Bad(
+                        "Email claim not found in Facebook authentication",
+                        StatusCodes.Status400BadRequest
+                    );
+                }
+
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user == null)
+                {
+                    _logger.LogError(email, "User with email {Email} not found during Facebook login", email);
+                    return Result<LoginResponse>.Bad(
+                        "User not found. Please register first.",
+                        StatusCodes.Status404NotFound
+                    );
+                }
+                await _signInManager.SignInAsync(user, isPersistent: false);
+
+                var roles = (await _userManager.GetRolesAsync(user)).ToList();
+                var jwtToken = _tokenFactory.CreateJwtToken(user, roles);
+                var jwtString = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+
+                var refreshToken = _tokenFactory.CreateRefreshToken(
+                    user.Id,
+                    httpContext.Connection.RemoteIpAddress?.ToString(),
+                    httpContext.Request.Headers["User-Agent"].ToString()
+                );
+
+                await _refreshTokenRepository.AddAsync(refreshToken);
+                await _refreshTokenRepository.SaveChangesAsync();
+
+                SetAuthCookie(httpContext, jwtString, jwtToken.ValidTo, refreshToken);
+
+                httpContext.Response.Headers.Append("X-Token-Expiry", jwtToken.ValidTo.ToString("o"));
+
+                var responseDto = new LoginResponse
+                {
+                    Message = "Login successful via Facebook",
+                    Email = user.Email,
+                    UserName = user.UserName,
+                    Roles = roles
+                };
+
+                return Result<LoginResponse>.Good(
+                    "Login successful via Facebook",
+                    StatusCodes.Status200OK,
+                    responseDto
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception during Facebook login");
+                return Result<LoginResponse>.Bad(
+                    "An error occurred during Facebook login",
                     StatusCodes.Status500InternalServerError,
                     new List<string> { ex.Message }
                 );

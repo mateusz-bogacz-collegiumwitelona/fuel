@@ -1,4 +1,5 @@
 ﻿using DTO.Requests;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
@@ -14,11 +15,14 @@ namespace contlollers.Controllers.Client
     public class LoginRegisterContloller : ControllerBase
     {
         private readonly ILoginRegisterServices _login;
+        private readonly ILogger<LoginRegisterContloller> _logger;
         public LoginRegisterContloller(
-            ILoginRegisterServices login
+            ILoginRegisterServices login,
+            ILogger<LoginRegisterContloller> logger
             )
         {
             _login = login;
+            logger = _logger;
         }
 
         /// <summary>
@@ -122,6 +126,138 @@ namespace contlollers.Controllers.Client
                 {
                     success = true,
                     message = result.Message
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Authenticate user via Facebook OAuth and set a secure HTTP-only cookie with JWT token.
+        /// </summary>
+        /// <remarks>
+        /// Description
+        /// Authenticates a user using a Facebook access token obtained from Facebook Login SDK.
+        /// If the token is valid and the user exists in the system, a JWT token is generated and stored in a secure HTTP-only cookie.
+        /// 
+        /// Example request body
+        /// ```json
+        /// {
+        ///   "accessToken": "EAABwzLixnjYBO7ZC8ZCqKZBvN9k..."
+        /// }
+        /// ```
+        ///
+        /// Example response
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "Login successful via Facebook",
+        ///   "data": {
+        ///     "message": "Login successful via Facebook",
+        ///     "email": "user@example.pl",
+        ///     "userName": "JohnDoe",
+        ///     "roles": ["User"]
+        ///   }
+        /// }
+        /// ```
+        ///
+        /// Notes
+        /// - The access token must be obtained from Facebook Login SDK on the client side
+        /// - User must be already registered in the system (use /facebook/register for new users)
+        /// - The JWT token is automatically stored in a secure HTTP-only cookie named `jwt`
+        /// - The cookie is sent automatically with subsequent requests - no manual handling required
+        /// - The cookie expires after 3 hours
+        /// - For frontend applications, ensure `withCredentials: true` is set in HTTP client (axios/fetch)
+        /// - Facebook token is validated against Facebook Graph API
+        /// </remarks>
+        /// <response code="200">User successfully logged in via Facebook, JWT cookie set</response>
+        /// <response code="400">Email not provided by Facebook</response>
+        /// <response code="401">Invalid Facebook access token</response>
+        /// <response code="404">User not found - registration required</response>
+        /// <response code="500">Server error — something went wrong in the backend</response>
+        [AllowAnonymous]
+        [HttpPost("facebook/login")]
+        public async Task<IActionResult> LoginWithFacebookAsync([FromBody] FacebookTokenRequest request)
+        {
+            var result = await _login.LoginWithFacebookTokenAsync(request.AccessToken, HttpContext);
+
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Register a new user via Facebook OAuth and set a secure HTTP-only cookie with JWT token.
+        /// </summary>
+        /// <remarks>
+        /// Description
+        /// Registers a new user using a Facebook access token obtained from Facebook Login SDK.
+        /// If the token is valid, a new account is created with email from Facebook profile.
+        /// User is automatically assigned the "User" role and logged in.
+        /// 
+        /// Example request body
+        /// ```json
+        /// {
+        ///   "accessToken": "EAABwzLixnjYBO7ZC8ZCqKZBvN9k..."
+        /// }
+        /// ```
+        ///
+        /// Example response
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "Register successful via Facebook",
+        ///   "data": {
+        ///     "message": "Register successful via Facebook",
+        ///     "email": "newuser@example.pl",
+        ///     "userName": "JohnDoe",
+        ///     "roles": ["User"]
+        ///   }
+        /// }
+        /// ```
+        ///
+        /// Notes
+        /// - The access token must be obtained from Facebook Login SDK on the client side
+        /// - Email must be available in Facebook profile (public permission required)
+        /// - If user already exists, registration will fail - use /facebook/login instead
+        /// - Username is automatically generated from Facebook name (alphanumeric characters only)
+        /// - Email is automatically confirmed (EmailConfirmed = true)
+        /// - User is automatically assigned to "User" role
+        /// - The JWT token is automatically stored in a secure HTTP-only cookie named `jwt`
+        /// - The cookie is sent automatically with subsequent requests - no manual handling required
+        /// - The cookie expires after 3 hours
+        /// - For frontend applications, ensure `withCredentials: true` is set in HTTP client (axios/fetch)
+        /// - Facebook token is validated against Facebook Graph API
+        /// </remarks>
+        /// <response code="200">User successfully registered via Facebook, JWT cookie set</response>
+        /// <response code="400">Email not provided by Facebook</response>
+        /// <response code="401">Invalid Facebook access token</response>
+        /// <response code="500">Server error — something went wrong in the backend or user creation failed</response>
+        [AllowAnonymous]
+        [HttpPost("facebook/register")]
+        public async Task<IActionResult> RegisterWithFacebookAsync([FromBody] FacebookTokenRequest request)
+        {
+            var result = await _login.RegisterWithFacebookTokenAsync(request.AccessToken, HttpContext);
+
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data 
                 })
                 : StatusCode(result.StatusCode, new
                 {

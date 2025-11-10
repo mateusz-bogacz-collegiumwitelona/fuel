@@ -38,6 +38,8 @@ services:
       - MinIO__AccessKey=${MINIO_ROOT_USER}
       - MinIO__SecretKey=${MINIO_ROOT_PASSWORD}
       - MinIO__UseSSL=false
+      - FACEBOOK_APP_ID=${FACEBOOK_OAUTH_CLIENT_ID}
+      - FACEBOOK_APP_SECRET=${FACEBOOK_OAUTH_CLIENT_SECRET}
     ports:
       - "${API_PORT}:8080"
     networks:

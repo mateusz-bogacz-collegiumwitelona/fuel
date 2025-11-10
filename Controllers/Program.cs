@@ -119,6 +119,15 @@ builder.Services.AddAuthentication(options =>
             return Task.CompletedTask;
         }
     };
+})
+.AddFacebook("Facebook", options =>
+{
+    options.AppId = Environment.GetEnvironmentVariable("FACEBOOK_APP_ID");
+    options.AppSecret = Environment.GetEnvironmentVariable("FACEBOOK_APP_SECRET");
+    options.Fields.Add("name");
+    options.Fields.Add("email");
+    options.SaveTokens = true;
+    options.CallbackPath = "/api/auth/facebook/callback";
 });
 
 // Add DbContext with PostgreSQL
