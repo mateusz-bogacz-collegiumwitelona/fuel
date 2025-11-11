@@ -18,6 +18,7 @@ using Minio;
 using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using Services.BackgroundServices;
+using Services.BackgrounServices;
 using Services.Helpers;
 using Services.Interfaces;
 using Services.Services;
@@ -196,7 +197,9 @@ builder.Services.AddScoped<IFuelTypeRepository, FuelTypeRepository>();
 builder.Services.AddScoped<IBrandRepository, BrandRepository>();
 builder.Services.AddScoped<IReportRepositry, ReportRepositry>();
 builder.Services.AddScoped<IBanRepository, BanRepository>();
-builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>(); 
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+
+//register services
 builder.Services.AddScoped<ILoginRegisterServices, LoginRegisterServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
 builder.Services.AddScoped<IStationServices, StationServices>();
@@ -210,13 +213,14 @@ builder.Services.AddScoped<IReportService, ReportService>();
 
 //register helpers
 builder.Services.AddScoped<EmailSender>();
-builder.Services.AddScoped<IEmailBody,EmailBodys>();
+builder.Services.AddScoped<EmailBodys>();
 builder.Services.AddScoped<S3ApiHelper>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenFactory, TokenFactory>();
 
 //register background services
 builder.Services.AddHostedService<BanExpirationService>();
+builder.Services.AddHostedService<ProposalExpirationService>();
 
 builder.Services.AddControllers(op =>
 {
