@@ -17,26 +17,33 @@ namespace Services.Services
         private readonly ILogger<StationServices> _logger;
         private readonly IBrandRepository _brandRepository;
         private readonly IFuelTypeRepository _fuelTypeRepository;
+        private readonly CacheService _cache;
 
         public StationServices(
             IStationRepository stationRepository,
            ILogger<StationServices> logger,
            IBrandRepository brandRepository,
-           IFuelTypeRepository fuelTypeRepository)
+           IFuelTypeRepository fuelTypeRepository,
+           CacheService cache)
         {
             _stationRepository = stationRepository;
             _logger = logger;
             _brandRepository = brandRepository;
             _fuelTypeRepository = fuelTypeRepository;
+            _cache = cache;
         }
 
         public async Task<Result<List<GetStationsResponse>>> GetAllStationsForMapAsync(GetStationsRequest request)
         {
             try
             {
-                var resutlt = await _stationRepository.GetAllStationsForMapAsync(request);
+                var result = await _cache.GetOrSetAsync(
+                    CacheService.CacheKeys.StationMap,
+                    async () => await _stationRepository.GetAllStationsForMapAsync(request),
+                    CacheService.CacheExpiry.Medium
+                    );
 
-                if (resutlt == null || resutlt.Count == 0)
+                if (result == null || result.Count == 0)
                 {
                     _logger.LogWarning("No stations found in the database.");
                     return Result<List<GetStationsResponse>>.Bad(
@@ -49,7 +56,7 @@ namespace Services.Services
                 return Result<List<GetStationsResponse>>.Good(
                     "Stations retrieved successfully.",
                     StatusCodes.Status200OK,
-                    resutlt);
+                    result);
 
             }
             catch (Exception ex)
@@ -115,6 +122,7 @@ namespace Services.Services
             }
         }
 
+        //pomyśleć jak zroibć cache
         public async Task<Result<PagedResult<GetStationListResponse>>> GetStationListAsync(GetStationListRequest request)
         {
             try
@@ -309,7 +317,17 @@ namespace Services.Services
         }
 
         public async Task<Result<PagedResult<GetStationListForAdminResponse>>> GetStationsListForAdminAsync(GetPaggedRequest pagged, TableRequest request)
-            => await _stationRepository.GetStationsListForAdminAsync(request).ToPagedResultAsync(pagged, _logger, "stations");
+            => await ((Func<Task<List<GetStationListForAdminResponse>>>)
+            (() => _stationRepository.GetStationsListForAdminAsync(request)))
+            .ToCachedPagedResultAsync(
+                CacheService.CacheKeys.StationList,
+                pagged,
+                request,
+                _cache,
+                _logger,
+                "stations",
+                CacheService.CacheExpiry.Medium
+                );
 
         public async Task<Result<bool>> EditStationAsync(EditStationRequest request)
         {
@@ -341,6 +359,10 @@ namespace Services.Services
                         new List<string> { "Could not update the station with the provided details." },
                         false);
                 }
+
+                await _cache.InvalidateBrandCacheAsync();
+                await _cache.InvalidateStationCacheAsync();
+                await _cache.InvalidateFuelTypeCacheAsync();
 
                 return Result<bool>.Good(
                     "Station details updated successfully.",
@@ -433,6 +455,11 @@ namespace Services.Services
 
                 var result = await _stationRepository.AddNewStationAsync(request);
 
+
+                await _cache.InvalidateBrandCacheAsync();
+                await _cache.InvalidateStationCacheAsync();
+                await _cache.InvalidateFuelTypeCacheAsync();
+
                 if (!result)
                 {
                     _logger.LogWarning("Failed to add new station.");
@@ -473,6 +500,12 @@ namespace Services.Services
                         new List<string> { "Could not delete the station with the provided details." },
                         false);
                 }
+
+
+                await _cache.InvalidateBrandCacheAsync();
+                await _cache.InvalidateStationCacheAsync();
+                await _cache.InvalidateFuelTypeCacheAsync();
+
                 return Result<bool>.Good(
                     "Station deleted successfully.",
                     StatusCodes.Status200OK,

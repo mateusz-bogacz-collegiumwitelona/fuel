@@ -7,6 +7,5 @@ namespace Services.Interfaces
     public interface IProposalStatisticServices
     {
         Task<Result<GetProposalStatisticResponse>> GetUserProposalStatisticResponse(string email);
-        Task<Result<PagedResult<TopUserResponse>>> GetTopUserListAsync(GetPaggedRequest request);
-    }
+        Task<Result<PagedResult<TopUserResponse>>> GetTopUserListAsync(GetPaggedRequest pagged);    }
 }

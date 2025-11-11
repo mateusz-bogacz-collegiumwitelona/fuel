@@ -20,6 +20,7 @@ namespace Services.Services
         private readonly IStationRepository _stationRepository;
         private readonly IFuelTypeRepository _fuelTypeRepository;
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
+        private readonly CacheService _cache;
 
         public PriceProposalServices(
             IPriceProposalRepository priceProposalRepository,
@@ -27,7 +28,8 @@ namespace Services.Services
             UserManager<ApplicationUser> userManager,
             IStationRepository stationRepository,
             IFuelTypeRepository fuelTypeRepository,
-            IProposalStatisticRepository proposalStatisticRepository
+            IProposalStatisticRepository proposalStatisticRepository,
+            CacheService cache
             )
         {
             _priceProposalRepository = priceProposalRepository;
@@ -36,6 +38,7 @@ namespace Services.Services
             _stationRepository = stationRepository;
             _fuelTypeRepository = fuelTypeRepository;
             _proposalStatisticRepository = proposalStatisticRepository;
+            _cache = cache;
         }
 
         public async Task<Result<string>> AddNewProposalAsync(string email, AddNewPriceProposalRequest request)
@@ -337,6 +340,8 @@ namespace Services.Services
                         "Failed to update statistics for user {UserId}, but proposal status was changed",
                         priceProposal.User.Id);
                 }
+
+                await _cache.InvalidateUserStatsCacheAsync(priceProposal.User.Email);
 
                 return Result<bool>.Good(
                     $"Price proposal {(isAccepted ? "accepted" : "rejected")} successfully",
