@@ -39,32 +39,44 @@ namespace Data.Reopsitories
                 .Include(s => s.Address)
                 .AsQueryable();
 
-            if (request.BrandName != null && request.BrandName.Count > 0)
-                query = query.Where(s => request.BrandName.Contains(s.Brand.Name));
+            if (request.BrandName is { Count: > 0 })
+            {
+                var brandsLower = request.BrandName
+                    .Where(b => !string.IsNullOrWhiteSpace(b))
+                    .Select(b => b.Trim().ToLower())
+                    .ToList();
 
-            if (request.LocationLatitude.HasValue && request.LocationLongitude.HasValue && request.Distance.HasValue)
+                if (brandsLower.Count > 0)
+                {
+                    query = query.Where(s => brandsLower.Contains(s.Brand.Name.ToLower()));
+                }
+            }
+
+            if (request.Distance.HasValue && request.Distance.Value > 0
+                && request.LocationLatitude.HasValue && request.LocationLongitude.HasValue)
+            {
                 query = _filters.FilterByDistance<Station>(
                     query,
                     (int)request.Distance.Value,
-                    (float)request.LocationLatitude,
-                    (float)request.LocationLongitude);
+                    (float)request.LocationLatitude.Value,
+                    (float)request.LocationLongitude.Value);
+            }
 
-            var result = await query
-                .Select(s => new GetStationsResponse
-                {
-                    BrandName = s.Brand.Name,
-                    Street = s.Address.Street,
-                    HouseNumber = s.Address.HouseNumber,
-                    City = s.Address.City,
-                    PostalCode = s.Address.PostalCode,
-                    Latitude = s.Address.Location.Y,
-                    Longitude = s.Address.Location.X
-                })
-                .ToListAsync();
+            var stations = await query.ToListAsync();
+
+            var result = stations.Select(s => new GetStationsResponse
+            {
+                BrandName = s.Brand?.Name ?? string.Empty,
+                Street = s.Address?.Street ?? string.Empty,
+                HouseNumber = s.Address?.HouseNumber ?? string.Empty,
+                City = s.Address?.City ?? string.Empty,
+                PostalCode = s.Address?.PostalCode ?? string.Empty,
+                Latitude = s.Address?.Location?.Y ?? 0,   
+                Longitude = s.Address?.Location?.X ?? 0   
+            }).ToList();
 
             return result;
         }
-
 
         public async Task<List<GetStationsResponse>> GetNearestStationAsync(
             double latitude,
