@@ -11,7 +11,6 @@ namespace Data.Reopsitories
     public class ProposalStatisticRepository : IProposalStatisticRepository
     {
         private readonly ApplicationDbContext _context;
-        private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<ProposalStatisticRepository> _logger;
 
         public ProposalStatisticRepository(
@@ -21,26 +20,18 @@ namespace Data.Reopsitories
             )
         {
             _context = context;
-            _userManager = userManager;
             _logger = logger;
         }
 
-        public async Task<GetProposalStatisticResponse> GetUserProposalStatisticAsync(string email)
+        public async Task<GetProposalStatisticResponse> GetUserProposalStatisticAsync(ApplicationUser user)
         {
-            var user = await _userManager.FindByEmailAsync(email);
-
-            if (user == null)
-            {
-                _logger.LogWarning("User with email {Email} not found.", email);
-                return null;
-            }
 
             var proposals = _context.ProposalStatistics
                 .FirstOrDefault(ps => ps.UserId == user.Id);
 
             if (proposals == null)
             {
-                _logger.LogWarning("No proposal statistics found for user with email {Email}.", email);
+                _logger.LogWarning("No proposal statistics found for user with email {Email}.", user.Email);
                 return null;
             }
 
@@ -55,15 +46,8 @@ namespace Data.Reopsitories
             };
         }
 
-        public async Task<bool> AddProposalStatisticRecordAsync(string email)
+        public async Task<bool> AddProposalStatisticRecordAsync(ApplicationUser user)
         {
-            var user = await _userManager.FindByEmailAsync(email);
-
-            if (user == null)
-            {
-                _logger.LogWarning("User with email {Email} not found.", email);
-                return false;
-            }
 
             var proposal = new ProposalStatistic
             {
@@ -82,7 +66,7 @@ namespace Data.Reopsitories
 
             if (isSaved <= 0)
             {
-                _logger.LogError("Failed to add proposal statistics for user with email {Email}.", email);
+                _logger.LogError("Failed to add proposal statistics for user with email {Email}.", user.Email);
                 return false;
             }
 

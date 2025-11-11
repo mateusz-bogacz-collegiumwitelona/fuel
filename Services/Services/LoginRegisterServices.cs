@@ -455,7 +455,7 @@ namespace Services.Services
                     );
                 }
 
-                var isProposalStatAdded = await _proposalStatisticRepository.AddProposalStatisticRecordAsync(request.Email);
+                var isProposalStatAdded = await _proposalStatisticRepository.AddProposalStatisticRecordAsync(user);
 
                 if (!isProposalStatAdded)
                 {
@@ -771,7 +771,7 @@ namespace Services.Services
 
                     await _userManager.AddToRoleAsync(user, defaultRole);
 
-                    await _proposalStatisticRepository.AddProposalStatisticRecordAsync(email);
+                    await _proposalStatisticRepository.AddProposalStatisticRecordAsync(user);
                 }
 
                 var roles = (await _userManager.GetRolesAsync(user)).ToList();

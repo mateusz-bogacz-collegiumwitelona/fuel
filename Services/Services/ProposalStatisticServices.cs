@@ -39,7 +39,9 @@ namespace Services.Services
                     );
                 }
 
-                var response = await _proposalStatisticRepository.GetUserProposalStatisticAsync(email);
+                var user = await _userManager.FindByEmailAsync(email);
+
+                var response = await _proposalStatisticRepository.GetUserProposalStatisticAsync(user);
 
                 if (response == null)
                 {

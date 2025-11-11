@@ -19,6 +19,7 @@ using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using Services.BackgroundServices;
 using Services.BackgrounServices;
+using Services.Commands;
 using Services.Helpers;
 using Services.Interfaces;
 using Services.Services;
@@ -286,6 +287,14 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+var cliArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
+if (cliArgs.Length > 0)
+{
+    var commandRunner = new CommandRunner(app.Services);
+    await commandRunner.RunAsync(cliArgs);
+    Environment.Exit(0);
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
