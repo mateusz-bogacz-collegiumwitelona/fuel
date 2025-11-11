@@ -139,7 +139,6 @@ namespace Services.Helpers
             _logger.LogInformation("Invalidated fuel type cache");
         }
 
-
         public async Task InvalidateStationCacheAsync()
         {
             await RemoveByPatternAsync($"{CacheKeys.StationPrefix}*");
