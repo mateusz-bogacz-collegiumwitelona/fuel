@@ -51,7 +51,6 @@ export default function Header() {
                         </label>
                         <ul tabIndex={0} className="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52">
                             <li><a href="/settings">Ustawienia</a></li>
-                            <li><a href="/account">Ustawienia konta</a></li>
                             <li><a href="/dashboard">Dashboard</a></li>
                             <li><a href="/map">Mapa</a></li>
                             <li><a href="/list">Lista</a></li>
