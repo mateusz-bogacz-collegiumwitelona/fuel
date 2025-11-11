@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Services.Commands
+﻿namespace Services.Commands
 {
     public class CommandRunner
     {
@@ -14,7 +8,8 @@ namespace Services.Commands
         {
             _commands = new Dictionary<string, BaseCommand>
             {
-                { "user:create", new CreateUserCommand(serviceProvider) }
+                { "user:create", new CreateUserCommand(serviceProvider) },
+                { "user:promote", new PromoteUserCommand(serviceProvider) },
             };
         }
 
