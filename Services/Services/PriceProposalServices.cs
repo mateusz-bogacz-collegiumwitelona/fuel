@@ -20,6 +20,7 @@ namespace Services.Services
         private readonly IStationRepository _stationRepository;
         private readonly IFuelTypeRepository _fuelTypeRepository;
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
+        private EmailSender _email;
 
         public PriceProposalServices(
             IPriceProposalRepository priceProposalRepository,
@@ -27,7 +28,8 @@ namespace Services.Services
             UserManager<ApplicationUser> userManager,
             IStationRepository stationRepository,
             IFuelTypeRepository fuelTypeRepository,
-            IProposalStatisticRepository proposalStatisticRepository
+            IProposalStatisticRepository proposalStatisticRepository,
+            EmailSender email
             )
         {
             _priceProposalRepository = priceProposalRepository;
@@ -36,6 +38,7 @@ namespace Services.Services
             _stationRepository = stationRepository;
             _fuelTypeRepository = fuelTypeRepository;
             _proposalStatisticRepository = proposalStatisticRepository;
+            _email = email;
         }
 
         public async Task<Result<string>> AddNewProposalAsync(string email, AddNewPriceProposalRequest request)
@@ -336,6 +339,28 @@ namespace Services.Services
                     _logger.LogWarning(
                         "Failed to update statistics for user {UserId}, but proposal status was changed",
                         priceProposal.User.Id);
+                }
+
+                var sendEmail = await _email.SendPriceProposalStatusEmail(
+                    priceProposal.User.Email,
+                    priceProposal.User.UserName,
+                    isAccepted,
+                    new FindStationRequest
+                    {
+                        BrandName = priceProposal.Station.Brand.Name,
+                        Street = priceProposal.Station.Address.Street,
+                        HouseNumber = priceProposal.Station.Address.HouseNumber,
+                        City = priceProposal.Station.Address.City
+                    },
+                    priceProposal.ProposedPrice
+                    );
+
+                if (!sendEmail)
+                {
+                    _logger.LogWarning(
+                        "Failed to send price proposal status email to user {UserId} for proposal {ProposalId}",
+                        priceProposal.User.Id,
+                        priceProposal.Id);
                 }
 
                 return Result<bool>.Good(

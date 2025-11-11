@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using DTO.Requests;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using NetTopologySuite.Triangulate;
 using Services.Interfaces;
@@ -15,13 +16,13 @@ namespace Services.Helpers
     {
         private readonly ILogger<EmailSender> _logger;
         private readonly IConfiguration _config;
-        private readonly IEmailBody _emailBody;
+        private readonly Helpers.EmailBodys _emailBody;
         private readonly string _frontendUrl;
 
         public EmailSender(
             ILogger<EmailSender> logger,
             IConfiguration config,
-            IEmailBody emailBody
+            Helpers.EmailBodys emailBody
             )
         {
             _logger = logger;
@@ -223,6 +224,29 @@ namespace Services.Helpers
                     email, ex.Message);
                 return false;
             }
+        }
+
+        public async Task<bool> SendPriceProposalStatusEmail(
+            string email,
+            string userName, 
+            bool isAccepted, 
+            FindStationRequest info, 
+            decimal newPrice
+            )
+        {
+            var emailBody = _emailBody.GenerateProposaPriceStatusInfo(userName, isAccepted, info, newPrice);
+            string subject = "Fuel App - Price proposal Status";
+            var result = await SendEmailAsync(email, subject, emailBody);
+
+            if (result)
+            {
+                _logger.LogInformation("Email sent successfully to {Email}", email);
+            }
+            else
+            {
+                _logger.LogWarning("Failed to send email to {Email}", email);
+            }
+            return result;
         }
     }
 }
