@@ -15,16 +15,20 @@ namespace Services.Services
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
         private readonly ILogger<ProposalStatisticServices> _logger;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly CacheService _cache;
         public ProposalStatisticServices(
             IProposalStatisticRepository proposalStatisticRepository,
             ILogger<ProposalStatisticServices> logger,
-            UserManager<ApplicationUser> userManager
+            UserManager<ApplicationUser> userManager,
+            CacheService cache
             )
         {
             _proposalStatisticRepository = proposalStatisticRepository;
             _logger = logger;
             _userManager = userManager;
+            _cache = cache;
         }
+
         public async Task<Result<GetProposalStatisticResponse>> GetUserProposalStatisticResponse(string email)
         {
             try
@@ -41,7 +45,14 @@ namespace Services.Services
 
                 var user = await _userManager.FindByEmailAsync(email);
 
-                var response = await _proposalStatisticRepository.GetUserProposalStatisticAsync(user);
+                var cacheKey = $"{CacheService.CacheKeys.UserStatsPrefix}{email}";
+
+                var response = await _cache.GetOrSetAsync(
+                    cacheKey,
+                    async () => await _proposalStatisticRepository.GetUserProposalStatisticAsync(user),
+                    CacheService.CacheExpiry.Short
+                    );
+
 
                 if (response == null)
                 {
@@ -73,65 +84,17 @@ namespace Services.Services
             }
         }
 
-        public async Task<Result<PagedResult<TopUserResponse>>> GetTopUserListAsync(GetPaggedRequest request)
-            => await _proposalStatisticRepository.GetTopUserListAsync().ToPagedResultAsync(request, _logger, "top users");
-
-        public async Task<Result<bool>> UpdateTotalProposalsAsync(bool proposial, string email)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(email))
-                {
-                    _logger.LogWarning("Email is required to update user proposal statistics.");
-                    return Result<bool>.Bad(
-                        "Validation Error",
-                        StatusCodes.Status400BadRequest,
-                        new List<string> { "Email is required" }
-                    );
-                }
-
-                var user = await _userManager.FindByEmailAsync(email);
-
-                if (user == null)
-                {
-                    _logger.LogWarning("User with email {Email} not found.", email);
-                    return Result<bool>.Bad(
-                        "User Not Found",
-                        StatusCodes.Status404NotFound,
-                        new List<string> { "User does not exist" }
-                    );
-                }
-
-                var isUpdated = await _proposalStatisticRepository.UpdateTotalProposalsAsync(proposial, user.Id);
-
-                if (!isUpdated)
-                {
-                    _logger.LogWarning("Failed to update proposal statistics for user with email {Email}.", email);
-                    return Result<bool>.Bad(
-                        "Update Failed",
-                        StatusCodes.Status500InternalServerError,
-                        new List<string> { "Failed to update user proposal statistic" }
-                    );
-                }
-
-                return Result<bool>.Good(
-                    "User proposal statistic updated successfully",
-                    StatusCodes.Status200OK,
-                    true
-                    );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "An error occurred while updating proposal statistics for email: {email}",
-                    email);
-                return Result<bool>.Bad(
-                    "Internal Server Error",
-                    StatusCodes.Status500InternalServerError,
-                    new List<string> { ex.Message }
+        public async Task<Result<PagedResult<TopUserResponse>>> GetTopUserListAsync(GetPaggedRequest pagged)
+            => await ((Func<Task<List<TopUserResponse>>>)
+            (() => _proposalStatisticRepository.GetTopUserListAsync()))
+            .ToCachedPagedResultAsync(
+                CacheService.CacheKeys.TopUsers,
+                pagged,
+                _cache,
+                _logger,
+                "top users",
+                CacheService.CacheExpiry.Short
                 );
-            }
-        }
+
     }
 }

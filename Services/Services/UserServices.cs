@@ -19,19 +19,22 @@ namespace Services.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private EmailSender _email;
+        private readonly CacheService _cache;
 
         public UserServices(
             IUserRepository userRepository,
             ILogger<UserServices> logger,
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole<Guid>> roleManager,
-            EmailSender email)
+            EmailSender email,
+            CacheService cache)
         {
             _userRepository = userRepository;
             _logger = logger;
             _userManager = userManager;
             _roleManager = roleManager;
             _email = email;
+            _cache = cache;
         }
 
         public async Task<Result<GetUserInfoResponse>> GetUserInfoAsync(string email)
@@ -49,7 +52,13 @@ namespace Services.Services
 
                 }
 
-                var result = await _userRepository.GetUserInfoAsync(email);
+                var cacheKey = $"{CacheService.CacheKeys.UserInfoPrefix}{email}";
+
+                var result = await _cache.GetOrSetAsync(
+                    cacheKey,
+                    async () => await _userRepository.GetUserInfoAsync(email),
+                    CacheService.CacheExpiry.VeryLong
+                    );
 
                 if (result == null)
                 {
@@ -123,6 +132,7 @@ namespace Services.Services
                 }
 
                 var userNameChangeResult = await _userManager.SetUserNameAsync(user, userName);
+
                 if (!userNameChangeResult.Succeeded)
                 {
                     _logger.LogError("Cannot set new userName");
@@ -151,6 +161,8 @@ namespace Services.Services
                         new List<string> { error }
                         );
                 }
+
+                await _cache.InvalidateUserInfoCacheAsync(email);
 
                 return Result<IdentityResult>.Good(
                     "UserName changed successfully.",
@@ -241,6 +253,8 @@ namespace Services.Services
                         );
                 }
 
+                await _cache.InvalidateUserInfoCacheAsync(newEmail);
+
                 return Result<IdentityResult>.Good(
                     "Email changed successfully.",
                     StatusCodes.Status200OK,
@@ -317,6 +331,8 @@ namespace Services.Services
                         new List<string> { error }
                         );
                 }
+
+                await _cache.InvalidateUserInfoCacheAsync(email);
 
                 return Result<IdentityResult>.Good(
                     "Password changed successfully.",
@@ -395,6 +411,8 @@ namespace Services.Services
                         );
                 }
 
+                await _cache.InvalidateUserInfoCacheAsync(email);
+
                 return Result<IdentityResult>.Good(
                     "User deleted successfully.",
                     StatusCodes.Status200OK,
@@ -410,7 +428,17 @@ namespace Services.Services
         }
 
         public async Task<Result<PagedResult<GetUserListResponse>>> GetUserListAsync(GetPaggedRequest pagged, TableRequest request)
-            => await _userRepository.GetUserListAsync(request).ToPagedResultAsync(pagged, _logger, "users");
+           => await ((Func<Task<List<GetUserListResponse>>>)
+            (() => _userRepository.GetUserListAsync(request)))
+            .ToCachedPagedResultAsync(
+               CacheService.CacheKeys.UsersList,
+               pagged,
+               request,
+               _cache,
+               _logger,
+               "users",
+               CacheService.CacheExpiry.Medium
+               );
 
         public async Task<Result<IdentityResult>> ChangeUserRoleAsync(string email, string newRole)
         {
@@ -473,6 +501,8 @@ namespace Services.Services
 
                 _logger.LogInformation("Successfully changed role for '{Email}' to '{Role}'.", email, newRole);
 
+                await _cache.InvalidateUserInfoCacheAsync(email);
+
                 return Result<IdentityResult>.Good(
                     $"Role changed successfully to {newRole}.",
                     StatusCodes.Status200OK,
@@ -488,7 +518,5 @@ namespace Services.Services
                 );
             }
         }
-
-        
     }
 }

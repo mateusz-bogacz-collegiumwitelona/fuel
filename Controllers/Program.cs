@@ -218,6 +218,7 @@ builder.Services.AddScoped<EmailBodys>();
 builder.Services.AddScoped<S3ApiHelper>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenFactory, TokenFactory>();
+builder.Services.AddScoped<CacheService>();
 
 //register background services
 builder.Services.AddHostedService<BanExpirationService>();

@@ -21,6 +21,7 @@ namespace Services.Services
         private readonly IFuelTypeRepository _fuelTypeRepository;
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
         private EmailSender _email;
+        private readonly CacheService _cache;
 
         public PriceProposalServices(
             IPriceProposalRepository priceProposalRepository,
@@ -29,7 +30,8 @@ namespace Services.Services
             IStationRepository stationRepository,
             IFuelTypeRepository fuelTypeRepository,
             IProposalStatisticRepository proposalStatisticRepository,
-            EmailSender email
+            EmailSender email,
+            CacheService cache
             )
         {
             _priceProposalRepository = priceProposalRepository;
@@ -39,6 +41,7 @@ namespace Services.Services
             _fuelTypeRepository = fuelTypeRepository;
             _proposalStatisticRepository = proposalStatisticRepository;
             _email = email;
+            _cache = cache;
         }
 
         public async Task<Result<string>> AddNewProposalAsync(string email, AddNewPriceProposalRequest request)
@@ -362,6 +365,7 @@ namespace Services.Services
                         priceProposal.User.Id,
                         priceProposal.Id);
                 }
+                await _cache.InvalidateUserStatsCacheAsync(priceProposal.User.Email);
 
                 return Result<bool>.Good(
                     $"Price proposal {(isAccepted ? "accepted" : "rejected")} successfully",

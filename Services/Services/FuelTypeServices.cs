@@ -14,19 +14,28 @@ namespace Services.Services
     {
         private readonly IFuelTypeRepository _fuelTypeRepository;
         private readonly ILogger<FuelTypeServices> _logger;
+        private readonly CacheService _cache;
+
         public FuelTypeServices(
             IFuelTypeRepository fuelTypeRepository,
-            ILogger<FuelTypeServices> logger)
+            ILogger<FuelTypeServices> logger,
+            CacheService cache)
         {
             _fuelTypeRepository = fuelTypeRepository;
             _logger = logger;
+            _cache = cache;
         }
 
         public async Task<Result<List<string>>> GetAllFuelTypeCodesAsync()
         {
             try
             {
-                var result = await _fuelTypeRepository.GetAllFuelTypeCodesAsync();
+
+                var result = await _cache.GetOrSetAsync(
+                    CacheService.CacheKeys.AllFuelTypeCodes,
+                    async () => await _fuelTypeRepository.GetAllFuelTypeCodesAsync(),
+                    CacheService.CacheExpiry.VeryLong
+                    );
 
                 if (result == null || !result.Any())
                 {
@@ -55,7 +64,17 @@ namespace Services.Services
         }
 
         public async Task<Result<PagedResult<GetFuelTypeResponses>>> GetFuelsTypeListAsync(GetPaggedRequest pagged, TableRequest request)
-            => await _fuelTypeRepository.GetFuelsTypeListAsync(request).ToPagedResultAsync(pagged, _logger, "fuel types");
+            => await ((Func<Task<List<GetFuelTypeResponses>>>)
+                (() => _fuelTypeRepository.GetFuelsTypeListAsync(request)))
+                .ToCachedPagedResultAsync(
+                    CacheService.CacheKeys.FuelTypeList,
+                    pagged,
+                    request,
+                    _cache,
+                    _logger,
+                    "fuel types",
+                    CacheService.CacheExpiry.Long
+                );
 
         public async Task<Result<bool>> AddFuelTypeAsync(AddFuelTypeRequest request)
         {
@@ -104,6 +123,9 @@ namespace Services.Services
                         new List<string> { "An error occurred while adding the fuel type to the database." }
                         );
                 }
+
+                await _cache.InvalidateFuelTypeCacheAsync();
+                await _cache.InvalidateStationCacheAsync();
 
                 return Result<bool>.Good(
                     "Fuel type added successfully.",
@@ -192,6 +214,9 @@ namespace Services.Services
                     );
                 }
 
+                await _cache.InvalidateFuelTypeCacheAsync();
+                await _cache.InvalidateStationCacheAsync();
+
                 return Result<bool>.Good(
                     "Fuel type edited successfully.",
                     StatusCodes.Status200OK,
@@ -246,6 +271,9 @@ namespace Services.Services
                         new List<string> { $"InternalServerError." }
                     );
                 }
+
+                await _cache.InvalidateFuelTypeCacheAsync();
+                await _cache.InvalidateStationCacheAsync();
 
                 return Result<bool>.Good(
                     "Fuel type deleted successfully.",

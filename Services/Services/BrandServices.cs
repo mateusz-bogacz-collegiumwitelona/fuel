@@ -12,31 +12,52 @@ namespace Services.Services
     {
         private readonly IBrandRepository _brandRepository;
         private readonly ILogger<BrandServices> _logger;
+        private readonly CacheService _cache;
 
         public BrandServices(
             IBrandRepository brandRepository,
-            ILogger<BrandServices> logger
+            ILogger<BrandServices> logger,
+            CacheService cache
             )
         {
             _brandRepository = brandRepository;
             _logger = logger;
+            _cache = cache;
         }
 
         public async Task<Result<PagedResult<GetBrandDataResponse>>> GetBrandToListAsync(GetPaggedRequest pagged, TableRequest request)
-            => await _brandRepository.GetBrandToListAsync(request).ToPagedResultAsync(pagged, _logger, "brand");
+            => await ((Func<Task<List<GetBrandDataResponse>>>)
+                    (() => _brandRepository.GetBrandToListAsync(request)))
+                    .ToCachedPagedResultAsync(
+                        CacheService.CacheKeys.BrandList,
+                        pagged,
+                        request,
+                        _cache,
+                        _logger,
+                        "brand",
+                        CacheService.CacheExpiry.Long
+                    );
+
 
         public async Task<Result<List<string>>> GetAllBrandsAsync()
         {
             try
             {
-                var result = await _brandRepository.GetAllBrandsAsync();
+                var result = await _cache.GetOrSetAsync(
+                    CacheService.CacheKeys.AllBrands,
+                    async () => await _brandRepository.GetAllBrandsAsync(),
+                    CacheService.CacheExpiry.VeryLong
+                    );
 
                 if (result == null || result.Count == 0)
+                {
+                    _logger.LogWarning("No brand found");
                     return Result<List<string>>.Bad(
-                        "No brands found.",
+                        "No brand found",
                         StatusCodes.Status404NotFound,
-                        new List<string> { "No brands available in the database." });
-
+                        new List<string> { "No brand available in the database." }
+                        );
+                }
 
                 return Result<List<string>>.Good(
                     $"Succes: {result.Count} is listed",
@@ -114,6 +135,9 @@ namespace Services.Services
                        );
                 }
 
+                await _cache.InvalidateBrandCacheAsync();
+                await _cache.InvalidateStationCacheAsync();
+
                 return Result<bool>.Good(
                        $"Brand {oldName} edited successfull",
                        StatusCodes.Status200OK,
@@ -169,6 +193,8 @@ namespace Services.Services
                        );
                 }
 
+                await _cache.InvalidateBrandCacheAsync();
+
                 return Result<bool>.Good(
                        $"Brand {name} add successfull",
                        StatusCodes.Status201Created,
@@ -222,6 +248,9 @@ namespace Services.Services
                        new List<string> { "Cannot delete Brand" }
                        );
                 }
+
+                await _cache.InvalidateBrandCacheAsync();
+                await _cache.InvalidateStationCacheAsync();
 
                 return Result<bool>.Good(
                        $"Brand {name} delete successfull",
