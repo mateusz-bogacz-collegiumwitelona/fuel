@@ -140,6 +140,7 @@ namespace Controllers.Controllers.Admin
         /// <response code="200">Brand successfully updated</response>
         /// <response code="400">Validation error (missing or invalid parameters)</response>
         /// <response code="404">Brand not found</response>
+        /// <response code="409">Conflict</response>
         /// <response code="500">Server error during update</response>
 
         [HttpPatch("edit/{oldName}")]
@@ -215,6 +216,7 @@ namespace Controllers.Controllers.Admin
         /// <response code="400">Validation error – brand name is invalid or empty.</response>
         /// <response code="401">Unauthorized – missing or invalid JWT token.</response>
         /// <response code="403">Forbidden – user does not have permission to add brands.</response>
+        /// <response code="409">Conflict</response>
         /// <response code="500">Internal server error while processing the request.</response>
         [HttpPost("add")]
         public async Task<IActionResult> AddBrandAsync([FromForm] string name)

@@ -78,6 +78,30 @@ namespace Services.Services
                         );
                 }
 
+                bool isOldExist = await _brandRepository.FindBrandAsync(oldName);
+
+                if (!isOldExist)
+                {
+                    _logger.LogWarning("This brand dosn't exist {OldName}", oldName);
+                    return Result<bool>.Bad(
+                        "Application error",
+                        StatusCodes.Status409Conflict,
+                        new List<string> { "This brand dosn't exist" }
+                        );
+                }
+
+                bool isNewExist = await _brandRepository.FindBrandAsync(newName);
+
+                if (isNewExist)
+                { 
+                    _logger.LogWarning("Brand {NewName} already exists", newName);
+                    return Result<bool>.Bad(
+                        "Appliaction Error",
+                        StatusCodes.Status409Conflict,
+                        new List<string> { "Brand already exists" }
+                        );
+                }
+
                 var result = await _brandRepository.EditBrandAsync(oldName, newName);
 
                 if (!result)
