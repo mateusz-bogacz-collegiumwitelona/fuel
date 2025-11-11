@@ -40,7 +40,8 @@ namespace Data.Reopsitories
                     ApprovedProposals = (int)u.ProposalStatistic.ApprovedProposals,
                     RejectedProposals = (int)u.ProposalStatistic.RejectedProposals,
                     AcceptedRate = (int)u.ProposalStatistic.AcceptedRate,
-                    UpdatedAt = u.ProposalStatistic.UpdatedAt
+                    Points = (int)u.ProposalStatistic.Points,
+                    UpdatedAt = u.ProposalStatistic.UpdatedAt,
                 }
             })
             .FirstOrDefaultAsync();
