@@ -1,12 +1,9 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Data.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Data.Models;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Data.Context
 {
@@ -22,11 +19,18 @@ namespace Data.Context
         public DbSet<Logging> Logging { get; set; }
         public DbSet<PriceProposal> PriceProposals { get; set; }
         public DbSet<Station> Stations { get; set; }
-        public DbSet<ProposalStatistic> ProposalStatisicts { get; set; }
+        public DbSet<ProposalStatistic> ProposalStatistics { get; set; } 
+        public DbSet<StationAddress> StationAddress { get; set; }
+
+        public DbSet<BanRecord> BanRecords { get; set; }
+        public DbSet<ReportUserRecord> ReportUserRecords { get; set; }
+
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
 
             builder.Entity<Brand>()
                 .HasIndex(b => b.Name)
@@ -57,13 +61,19 @@ namespace Data.Context
                 .HasOne(au => au.ProposalStatistic)
                 .WithOne(ps => ps.User)
                 .HasForeignKey<ProposalStatistic>(ps => ps.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<ApplicationUser>()
                 .HasMany(u => u.PriceProposal)
                 .WithOne(pp => pp.User)
                 .HasForeignKey(pp => pp.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PriceProposal>()
+                .HasOne(pp => pp.Reviewer)
+                .WithMany()
+                .HasForeignKey(pp => pp.ReviewedBy)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Brand>()
                 .HasMany(b => b.Station)
@@ -96,7 +106,61 @@ namespace Data.Context
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Station>()
-                .Property(s => s.Location)
+                .HasOne(s => s.Address)
+                .WithOne(a => a.Station)
+                .HasForeignKey<Station>(s => s.AddressId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<BanRecord>()
+            .HasOne(b => b.User)
+            .WithMany(u => u.BansReceived)
+            .HasForeignKey(b => b.UserId)
+            .OnDelete(DeleteBehavior.Restrict); 
+
+            builder.Entity<BanRecord>()
+                .HasOne(b => b.Admin)
+                .WithMany(u => u.BansGiven)
+                .HasForeignKey(b => b.AdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<BanRecord>()
+                .HasOne(b => b.UnbannedByAdmin)
+                .WithMany(u => u.UnbansGiven)
+                .HasForeignKey(b => b.UnbannedByAdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ReportUserRecord>()
+                .HasOne(r => r.ReportingUser)
+                .WithMany(u => u.ReportsMade)
+                .HasForeignKey(r => r.ReportingUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ReportUserRecord>()
+                .HasOne(r => r.ReportedUser)
+                .WithMany(u => u.ReportsReceived)
+                .HasForeignKey(r => r.ReportedUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ReportUserRecord>()
+                .HasOne(r => r.ReviewedByAdmin)
+                .WithMany(u => u.ReportsReviewed)
+                .HasForeignKey(r => r.ReviewedByAdminId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<RefreshToken>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Token).IsUnique();
+                entity.HasIndex(e => e.UserId);
+
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+           builder.Entity<StationAddress>()
+                .Property(sa => sa.Location)
                 .HasColumnType("geometry(Point, 4326)");
         }
     }

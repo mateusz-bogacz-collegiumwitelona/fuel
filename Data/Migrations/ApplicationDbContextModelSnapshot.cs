@@ -24,6 +24,53 @@ namespace Data.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("BanRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AdminId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ApplicationUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("BannedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("BannedUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UnbannedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UnbannedByAdminId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdminId");
+
+                    b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("UnbannedByAdminId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("BanRecords");
+                });
+
             modelBuilder.Entity("Data.Models.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -40,11 +87,17 @@ namespace Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletdAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
                     b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("LockoutEnabled")
@@ -70,14 +123,14 @@ namespace Data.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("Points")
-                        .HasColumnType("integer");
-
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
@@ -103,10 +156,6 @@ namespace Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("LogoUrl")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -174,6 +223,9 @@ namespace Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
@@ -218,9 +270,6 @@ namespace Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AdminComment")
-                        .HasColumnType("text");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -235,7 +284,10 @@ namespace Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<Guid>("ReviewedBy")
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReviewedBy")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("StationId")
@@ -244,12 +296,18 @@ namespace Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.HasIndex("FuelTypeId");
+
+                    b.HasIndex("ReviewedBy");
 
                     b.HasIndex("StationId");
 
@@ -264,17 +322,20 @@ namespace Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("AcceptedRate")
+                    b.Property<decimal?>("AcceptedRate")
                         .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<int?>("ApprovedProposals")
                         .HasColumnType("integer");
 
-                    b.Property<int>("ApprovedProposals")
+                    b.Property<int?>("Points")
                         .HasColumnType("integer");
 
-                    b.Property<int>("RejectedProposals")
+                    b.Property<int?>("RejectedProposals")
                         .HasColumnType("integer");
 
-                    b.Property<int>("TotalProposals")
+                    b.Property<int?>("TotalProposals")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -288,7 +349,87 @@ namespace Data.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("ProposalStatisicts");
+                    b.ToTable("ProposalStatistics");
+                });
+
+            modelBuilder.Entity("Data.Models.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiryDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IpAddress")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserAgent")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens");
+                });
+
+            modelBuilder.Entity("Data.Models.ReportUserRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ReportedUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReportingUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReviewedByAdminId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportedUserId");
+
+                    b.HasIndex("ReportingUserId");
+
+                    b.HasIndex("ReviewedByAdminId");
+
+                    b.ToTable("ReportUserRecords");
                 });
 
             modelBuilder.Entity("Data.Models.Station", b =>
@@ -297,9 +438,8 @@ namespace Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid>("AddressId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("BrandId")
                         .HasColumnType("uuid");
@@ -307,18 +447,54 @@ namespace Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AddressId")
+                        .IsUnique();
+
+                    b.HasIndex("BrandId");
+
+                    b.ToTable("Stations");
+                });
+
+            modelBuilder.Entity("Data.Models.StationAddress", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("HouseNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<Point>("Location")
                         .IsRequired()
                         .HasColumnType("geometry(Point, 4326)");
+
+                    b.Property<string>("PostalCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Street")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BrandId");
-
-                    b.ToTable("Stations");
+                    b.ToTable("StationAddress");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
@@ -451,6 +627,36 @@ namespace Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("BanRecord", b =>
+                {
+                    b.HasOne("Data.Models.ApplicationUser", "Admin")
+                        .WithMany("BansGiven")
+                        .HasForeignKey("AdminId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.ApplicationUser", null)
+                        .WithMany("BanRecords")
+                        .HasForeignKey("ApplicationUserId");
+
+                    b.HasOne("Data.Models.ApplicationUser", "UnbannedByAdmin")
+                        .WithMany("UnbansGiven")
+                        .HasForeignKey("UnbannedByAdminId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Data.Models.ApplicationUser", "User")
+                        .WithMany("BansReceived")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Admin");
+
+                    b.Navigation("UnbannedByAdmin");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Data.Models.FuelPrice", b =>
                 {
                     b.HasOne("Data.Models.FuelType", "FuelType")
@@ -478,6 +684,11 @@ namespace Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Data.Models.ApplicationUser", "Reviewer")
+                        .WithMany()
+                        .HasForeignKey("ReviewedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Data.Models.Station", "Station")
                         .WithMany("PriceProposal")
                         .HasForeignKey("StationId")
@@ -492,6 +703,8 @@ namespace Data.Migrations
 
                     b.Navigation("FuelType");
 
+                    b.Navigation("Reviewer");
+
                     b.Navigation("Station");
 
                     b.Navigation("User");
@@ -502,19 +715,64 @@ namespace Data.Migrations
                     b.HasOne("Data.Models.ApplicationUser", "User")
                         .WithOne("ProposalStatistic")
                         .HasForeignKey("Data.Models.ProposalStatistic", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Data.Models.RefreshToken", b =>
+                {
+                    b.HasOne("Data.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Data.Models.ReportUserRecord", b =>
+                {
+                    b.HasOne("Data.Models.ApplicationUser", "ReportedUser")
+                        .WithMany("ReportsReceived")
+                        .HasForeignKey("ReportedUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.ApplicationUser", "ReportingUser")
+                        .WithMany("ReportsMade")
+                        .HasForeignKey("ReportingUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Data.Models.ApplicationUser", "ReviewedByAdmin")
+                        .WithMany("ReportsReviewed")
+                        .HasForeignKey("ReviewedByAdminId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ReportedUser");
+
+                    b.Navigation("ReportingUser");
+
+                    b.Navigation("ReviewedByAdmin");
+                });
+
             modelBuilder.Entity("Data.Models.Station", b =>
                 {
+                    b.HasOne("Data.Models.StationAddress", "Address")
+                        .WithOne("Station")
+                        .HasForeignKey("Data.Models.Station", "AddressId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Data.Models.Brand", "Brand")
                         .WithMany("Station")
                         .HasForeignKey("BrandId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Address");
 
                     b.Navigation("Brand");
                 });
@@ -572,10 +830,24 @@ namespace Data.Migrations
 
             modelBuilder.Entity("Data.Models.ApplicationUser", b =>
                 {
+                    b.Navigation("BanRecords");
+
+                    b.Navigation("BansGiven");
+
+                    b.Navigation("BansReceived");
+
                     b.Navigation("PriceProposal");
 
                     b.Navigation("ProposalStatistic")
                         .IsRequired();
+
+                    b.Navigation("ReportsMade");
+
+                    b.Navigation("ReportsReceived");
+
+                    b.Navigation("ReportsReviewed");
+
+                    b.Navigation("UnbansGiven");
                 });
 
             modelBuilder.Entity("Data.Models.Brand", b =>
@@ -595,6 +867,12 @@ namespace Data.Migrations
                     b.Navigation("FuelPrice");
 
                     b.Navigation("PriceProposal");
+                });
+
+            modelBuilder.Entity("Data.Models.StationAddress", b =>
+                {
+                    b.Navigation("Station")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

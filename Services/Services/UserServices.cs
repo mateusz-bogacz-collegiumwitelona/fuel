@@ -1,22 +1,522 @@
 ﻿using Data.Interfaces;
 using Data.Models;
 using DTO.Requests;
-using Microsoft.AspNetCore.Diagnostics;
+using DTO.Responses;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Services.Services
 {
     public class UserServices : IUserServices
     {
-        //
+        private readonly IUserRepository _userRepository;
+        private readonly ILogger<UserServices> _logger;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly RoleManager<IdentityRole<Guid>> _roleManager;
+        private EmailSender _email;
+        private readonly CacheService _cache;
+
+        public UserServices(
+            IUserRepository userRepository,
+            ILogger<UserServices> logger,
+            UserManager<ApplicationUser> userManager,
+            RoleManager<IdentityRole<Guid>> roleManager,
+            EmailSender email,
+            CacheService cache)
+        {
+            _userRepository = userRepository;
+            _logger = logger;
+            _userManager = userManager;
+            _roleManager = roleManager;
+            _email = email;
+            _cache = cache;
+        }
+
+        public async Task<Result<GetUserInfoResponse>> GetUserInfoAsync(string email)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(email))
+                {
+                    _logger.LogError("Error. Email is required");
+                    return Result<GetUserInfoResponse>.Bad(
+                        "Validation error",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "Email is required" }
+                        );
+
+                }
+
+                var cacheKey = $"{CacheService.CacheKeys.UserInfoPrefix}{email}";
+
+                var result = await _cache.GetOrSetAsync(
+                    cacheKey,
+                    async () => await _userRepository.GetUserInfoAsync(email),
+                    CacheService.CacheExpiry.VeryLong
+                    );
+
+                if (result == null)
+                {
+                    _logger.LogError("Error. Cannto find user");
+                    return Result<GetUserInfoResponse>.Bad(
+                        "Error",
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { "Cannto find user" }
+                        );
+                }
+
+                return Result<GetUserInfoResponse>.Good(
+                    "UserName changed successfully.",
+                    StatusCodes.Status200OK,
+                    result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while get info for user with email {Email}.", email);
+                return Result<GetUserInfoResponse>.Bad(
+                    "An unexpected error occurred.",
+                    StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        public async Task<Result<IdentityResult>> ChangeUserNameAsync(string email, string userName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(email) || string.IsNullOrWhiteSpace(email))
+                {
+                    _logger.LogWarning("Unauthorize: email is null or empty.");
+                    return Result<IdentityResult>.Bad(
+                        "Unauthorize.",
+                        StatusCodes.Status401Unauthorized,
+                        new List<string> { "Email is null or empty" }
+                        );
+                }
+
+                if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(userName))
+                {
+                    _logger.LogWarning("Invalid input: userName is null or empty.");
+                    return Result<IdentityResult>.Bad(
+                        "Validatin error.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "User name is null or empty" });
+                }
+
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user == null)
+                {
+                    _logger.LogWarning("User with this email {Email} dosn't exist", email);
+                    return Result<IdentityResult>.Bad(
+                        $"User with this email {email} dosn't exist",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "UserDoNotExist" }
+                        );
+                }
+
+                var isUserNameExist = await _userManager.FindByNameAsync(userName);
+
+                if (isUserNameExist != null)
+                {
+                    _logger.LogWarning("User with this userName {UserName} already exist", userName);
+
+                    return Result<IdentityResult>.Bad(
+                        $"User with this userName {userName} already exist",
+                        StatusCodes.Status409Conflict,
+                        new List<string> { "UserNameAlreadyExist" }
+                        );
+                }
+
+                var userNameChangeResult = await _userManager.SetUserNameAsync(user, userName);
+
+                if (!userNameChangeResult.Succeeded)
+                {
+                    _logger.LogError("Cannot set new userName");
+                    return Result<IdentityResult>.Bad(
+                        "Cannot set new userName",
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { "CannotSetNewUserName" }
+                        );
+                }
+
+                user.NormalizedUserName = _userManager.NormalizeName(userName);
+
+                var result = await _userManager.UpdateAsync(user);
+
+                if (!result.Succeeded)
+                {
+                    var error = string
+                        .Join(", ", result.Errors.Select(e => e.Description));
+
+                    _logger.LogError("Failed to change UserName for user with email {Email}. Errors: {Errors}", email, error);
+
+                    error = error.ToList().Count > 0 ? error : "Failed to change UserName for unknown reasons.";
+                    return Result<IdentityResult>.Bad(
+                        error,
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { error }
+                        );
+                }
+
+                await _cache.InvalidateUserInfoCacheAsync(email);
+
+                return Result<IdentityResult>.Good(
+                    "UserName changed successfully.",
+                    StatusCodes.Status200OK,
+                    userNameChangeResult);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while changing UserName for user with email {Email}.", email);
+                return Result<IdentityResult>.Bad(
+                    "An unexpected error occurred.",
+                    StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        public async Task<Result<IdentityResult>> ChangeUserEmailAsync(string oldEmail, string newEmail)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(oldEmail) || string.IsNullOrWhiteSpace(oldEmail))
+                {
+                    _logger.LogWarning("Unauthorize: old email is null or empty.");
+                    return Result<IdentityResult>.Bad(
+                        "Unauthorize.",
+                        StatusCodes.Status401Unauthorized,
+                        new List<string> { "Old email is null or empty" }
+                        );
+                }
+
+                if (string.IsNullOrEmpty(newEmail) || string.IsNullOrWhiteSpace(newEmail))
+                {
+                    _logger.LogWarning("Unauthorize: New email is null or empty.");
+                    return Result<IdentityResult>.Bad(
+                        "Unauthorize.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "New email is null or empty" }
+                        );
+                }
+
+                var user = await _userManager.FindByEmailAsync(oldEmail);
+                if (user == null)
+                {
+                    _logger.LogWarning("User with this email {oldEmail} dosn't exist", oldEmail);
+                    return Result<IdentityResult>.Bad(
+                        $"User with this email {oldEmail} dosn't exist",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "UserDoNotExist" }
+                        );
+                }
+
+                var isNewEmailExist = await _userManager.FindByEmailAsync(newEmail);
+                if (isNewEmailExist != null)
+                {
+                    _logger.LogWarning("User with this email {oldEmail} already exist", oldEmail);
+                    return Result<IdentityResult>.Bad(
+                        $"User with this email {oldEmail} already exist",
+                        StatusCodes.Status409Conflict,
+                        new List<string> { "UserAlreadyExist" }
+                        );
+                }
+
+                var setNewEmail = await _userManager.SetEmailAsync(user, newEmail);
+                if (!setNewEmail.Succeeded)
+                {
+                    _logger.LogError("Cannot set new email");
+                    return Result<IdentityResult>.Bad(
+                        "Cannot set new email",
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { "CannotSetNewEmail" }
+                        );
+                }
+
+                user.NormalizedEmail = _userManager.NormalizeEmail(newEmail);
+
+                var result = await _userManager.UpdateAsync(user);
+                if (!result.Succeeded)
+                {
+                    var error = string
+                        .Join(", ", result.Errors.Select(e => e.Description));
+
+                    _logger.LogError("Failed to change email for user with email {oldEmail}. Errors: {Errors}", oldEmail, error);
+
+                    error = error.ToList().Count > 0 ? error : "Failed to change email for unknown reasons.";
+                    return Result<IdentityResult>.Bad(
+                        error,
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { error }
+                        );
+                }
+
+                await _cache.InvalidateUserInfoCacheAsync(newEmail);
+
+                return Result<IdentityResult>.Good(
+                    "Email changed successfully.",
+                    StatusCodes.Status200OK,
+                    setNewEmail);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while changing email for user with email {Email}.", oldEmail);
+                return Result<IdentityResult>.Bad(
+                    "An unexpected error occurred.",
+                    StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        public async Task<Result<IdentityResult>> ChangeUserPasswordAsync(string email, ChangePasswordRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(email) || string.IsNullOrWhiteSpace(email))
+                {
+                    _logger.LogWarning("Unauthorize: email is null or empty.");
+                    return Result<IdentityResult>.Bad(
+                        "Unauthorize.",
+                        StatusCodes.Status401Unauthorized,
+                        new List<string> { "Email is null or empty" }
+                        );
+                }
+
+                if (request.NewPassword != request.ConfirmNewPassword)
+                {
+                    _logger.LogWarning("New password and confirm new password do not match for user with email {Email}", email);
+                    return Result<IdentityResult>.Bad(
+                        "New password and confirm new password do not match",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "PasswordMismatch" }
+                        );
+                }
+
+                var user = await _userManager.FindByEmailAsync(email);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("User with this email {Email} dosn't exist", email);
+                    return Result<IdentityResult>.Bad(
+                        $"User with this email {email} dosn't exist",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "UserDoNotExist" }
+                        );
+                }
+
+                if (!await _userManager.CheckPasswordAsync(user, request.CurrentPassword))
+                {
+                    _logger.LogWarning("Current password is incorrect for user with email {Email}", email);
+                    return Result<IdentityResult>.Bad(
+                        "Current password is incorrect",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "IncorrectCurrentPassword" }
+                        );
+                }
+
+                var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+
+                if (!result.Succeeded)
+                {
+                    var error = string
+                        .Join(", ", result.Errors.Select(e => e.Description));
+
+                    _logger.LogError("Failed to change password for user with email {Email}. Errors: {Errors}", email, error);
+
+                    error = error.ToList().Count > 0 ? error : "Failed to change password for unknown reasons.";
+                    return Result<IdentityResult>.Bad(
+                        error,
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { error }
+                        );
+                }
+
+                await _cache.InvalidateUserInfoCacheAsync(email);
+
+                return Result<IdentityResult>.Good(
+                    "Password changed successfully.",
+                    StatusCodes.Status200OK,
+                    result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while changing password for user with email {Email}.", email);
+                return Result<IdentityResult>.Bad(
+                    "An unexpected error occurred.",
+                    StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        public async Task<Result<IdentityResult>> DeleteUserAsyc(string email, DeleteAccountRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(email) || string.IsNullOrWhiteSpace(email))
+                {
+                    _logger.LogWarning("Unauthorize: email is null or empty.");
+                    return Result<IdentityResult>.Bad(
+                        "Unauthorize.",
+                        StatusCodes.Status401Unauthorized,
+                        new List<string> { "Email is null or empty" }
+                        );
+                }
+
+                var user = await _userManager.FindByEmailAsync(email);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("User with this email {Email} dosn't exist", email);
+                    return Result<IdentityResult>.Bad(
+                        $"User with this email {email} dosn't exist",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "UserDoNotExist" }
+                        );
+                }
+
+                if (request.Password != request.ConfirmPassword)
+                {
+                    _logger.LogWarning("Password and confirm password do not match for user with email {Email}", email);
+                    return Result<IdentityResult>.Bad(
+                        "Password and confirm password do not match",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "PasswordMismatch" }
+                        );
+                }
+
+                if (!await _userManager.CheckPasswordAsync(user, request.Password))
+                {
+                    _logger.LogWarning("Current password is incorrect for user with email {Email}", email);
+                    return Result<IdentityResult>.Bad(
+                        "Current password is incorrect",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "IncorrectCurrentPassword" }
+                        );
+                }
+
+                var result = await _userRepository.DeleteUserAsync(user);
+
+                if (!result.Succeeded)
+                {
+                    var error = string
+                        .Join(", ", result.Errors.Select(e => e.Description));
+
+                    _logger.LogError("Failed to delete account for user {Email}. Errors: {Errors}", email, error);
+
+                    error = error.ToList().Count > 0 ? error : "Failed to change password for unknown reasons.";
+                    return Result<IdentityResult>.Bad(
+                        error,
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { error }
+                        );
+                }
+
+                await _cache.InvalidateUserInfoCacheAsync(email);
+
+                return Result<IdentityResult>.Good(
+                    "User deleted successfully.",
+                    StatusCodes.Status200OK,
+                    result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while deleting user with email {Email}.", email);
+                return Result<IdentityResult>.Bad(
+                    "An unexpected error occurred.",
+                    StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        public async Task<Result<PagedResult<GetUserListResponse>>> GetUserListAsync(GetPaggedRequest pagged, TableRequest request)
+           => await ((Func<Task<List<GetUserListResponse>>>)
+            (() => _userRepository.GetUserListAsync(request)))
+            .ToCachedPagedResultAsync(
+               CacheService.CacheKeys.UsersList,
+               pagged,
+               request,
+               _cache,
+               _logger,
+               "users",
+               CacheService.CacheExpiry.Medium
+               );
+
+        public async Task<Result<IdentityResult>> ChangeUserRoleAsync(string email, string newRole)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    _logger.LogWarning("Email is null or empty.");
+                    return Result<IdentityResult>.Bad(
+                        "Email is required.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "EmailIsNullOrEmpty" }
+                    );
+                }
+
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user == null)
+                {
+                    _logger.LogWarning("User with email '{Email}' does not exist.", email);
+                    return Result<IdentityResult>.Bad(
+                        $"User with email {email} does not exist.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "UserNotFound" }
+                    );
+                }
+
+                if (!await _roleManager.RoleExistsAsync(newRole))
+                {
+                    _logger.LogWarning("Role '{Role}' does not exist.", newRole);
+                    return Result<IdentityResult>.Bad(
+                        $"Role {newRole} does not exist.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "RoleNotFound" }
+                    );
+                }
+
+                var currentRoles = await _userManager.GetRolesAsync(user);
+
+                var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                if (!removeResult.Succeeded)
+                {
+                    _logger.LogError("Failed to remove current roles from user '{Email}'.", email);
+                    return Result<IdentityResult>.Bad(
+                        $"Failed to remove existing roles from {email}.",
+                        StatusCodes.Status400BadRequest,
+                        removeResult.Errors.Select(e => e.Description).ToList()
+                    );
+                }
+
+                var addResult = await _userManager.AddToRoleAsync(user, newRole);
+                if (!addResult.Succeeded)
+                {
+                    _logger.LogError("Failed to assign role '{Role}' to user '{Email}'.", newRole, email);
+                    return Result<IdentityResult>.Bad(
+                        $"Failed to assign role {newRole} to {email}.",
+                        StatusCodes.Status400BadRequest,
+                        addResult.Errors.Select(e => e.Description).ToList()
+                    );
+                }
+
+                _logger.LogInformation("Successfully changed role for '{Email}' to '{Role}'.", email, newRole);
+
+                await _cache.InvalidateUserInfoCacheAsync(email);
+
+                return Result<IdentityResult>.Good(
+                    $"Role changed successfully to {newRole}.",
+                    StatusCodes.Status200OK,
+                    addResult
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while changing role for '{Email}' to '{Role}'.", email, newRole);
+                return Result<IdentityResult>.Bad(
+                    "An unexpected error occurred.",
+                    StatusCodes.Status500InternalServerError
+                );
+            }
+        }
     }
 }

@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
-using Data.Models;
-using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
-using Data.Context;
-using System.Runtime.ConstrainedExecution;
-using Data.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Data.Context;
 using Data.Enums;
+using Data.Helpers;
+using Data.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using System.Text;
+using System.Text.Json;
 
 namespace Data.Seeder
 {
@@ -36,13 +31,13 @@ namespace Data.Seeder
         {
             if (!await _roleManager.Roles.AnyAsync()) await SeedRolesAsync();
             if (!await _userManager.Users.AnyAsync()) await SeedUsersAsync();
+            if (!await _context.ProposalStatistics.AnyAsync()) await SeedProposalStatisticsAsync();
             if (!await _context.Brand.AnyAsync()) await SeedBrandsAsync();
             if (!await _context.Stations.AnyAsync()) await SeedStationsAsync();
             if (!await _context.FuelTypes.AnyAsync()) await SeedFuelTypesAsync();
             if (!await _context.FuelPrices.AnyAsync()) await SeedFuelPriceAsync();
-            if (!await _context.PriceProposals.AnyAsync()) await SeedPriceProposials();
-            if (!await _context.ProposalStatisicts.AnyAsync()) await SeedPriceProposial();
-
+            if (!await _context.PriceProposals.AnyAsync()) await SeedPriceProposals();
+            
             Console.WriteLine("Database seeding completed.");
         }
 
@@ -107,7 +102,7 @@ namespace Data.Seeder
                     ConcurrencyStamp = Guid.NewGuid().ToString(),
                     SecurityStamp = Guid.NewGuid().ToString(),
                     CreatedAt = DateTime.UtcNow,
-                    Points = 0
+                    IsDeleted = false
                 };
 
                 var result = await _userManager.CreateAsync(newUser, password);
@@ -136,7 +131,6 @@ namespace Data.Seeder
                         {
                             Id = Guid.NewGuid(),
                             Name = brandName,
-                            LogoUrl = " ",
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
                         };
@@ -169,49 +163,107 @@ namespace Data.Seeder
         {
             try
             {
-                var brands = await _context.Brand.ToListAsync();
+                using var httpClient = new HttpClient();
 
-                foreach (var brand in brands)
+                var query = @"
+                [out:json][timeout:180];
+                area[""ISO3166-1""=""PL""]->.poland;
+                (
+                  node[""amenity""=""fuel""](area.poland);
+                  way[""amenity""=""fuel""](area.poland);
+                  relation[""amenity""=""fuel""](area.poland);
+                );
+                out center;
+            ";
+
+                var content = new StringContent($"data={query}", Encoding.UTF8, "application/x-www-form-urlencoded");
+                var response = await httpClient.PostAsync("https://overpass-api.de/api/interpreter", content);
+                response.EnsureSuccessStatusCode();
+
+                var jsonString = await response.Content.ReadAsStringAsync();
+                var jsonDoc = JsonDocument.Parse(jsonString);
+
+                var batch = new List<Station>();
+                int maxStations = 10; 
+                int count = 0;
+
+                foreach (var element in jsonDoc.RootElement.GetProperty("elements").EnumerateArray())
                 {
-                    bool isExist = await _context.Stations.AnyAsync(s => s.BrandId == brand.Id);
+                    if (count >= maxStations) break;
 
-                    if (!isExist)
+                    var tags = element.TryGetProperty("tags", out var t) ? t : default;
+                    string brandName = GetBrandName(tags);
+
+                    var brand = await _context.Brand.FirstOrDefaultAsync(b => b.Name.ToLower() == brandName.ToLower());
+                    if (brand == null)
                     {
-                        double minLat = 49.0, maxLat = 54.8;
-                        double minLon = 14.1, maxLon = 24.2;
-
-                        double latitude = minLat + (maxLat - minLat) * _random.NextDouble();
-                        double longitude = minLon + (maxLon - minLon) * _random.NextDouble();
-
-                        var station = new Station
+                        brand = new Brand
                         {
                             Id = Guid.NewGuid(),
-                            BrandId = brand.Id,
-                            Brand = brand,
-                            Address = $"Sample Address for {brand.Name}",
-                            Location = new NetTopologySuite.Geometries.Point(longitude, latitude) { SRID = 4326 },
+                            Name = brandName,
                             CreatedAt = DateTime.UtcNow,
                             UpdatedAt = DateTime.UtcNow
                         };
-
-                        _context.Stations.Add(station);
+                        _context.Brand.Add(brand);
+                        await _context.SaveChangesAsync();
                     }
-                    else
+
+                    double lat = element.TryGetProperty("lat", out var latEl) ? latEl.GetDouble() : element.GetProperty("center").GetProperty("lat").GetDouble();
+                    double lon = element.TryGetProperty("lon", out var lonEl) ? lonEl.GetDouble() : element.GetProperty("center").GetProperty("lon").GetDouble();
+
+                    var street = tags.TryGetProperty("addr:street", out var s) ? s.GetString() ?? "" : "";
+                    var number = tags.TryGetProperty("addr:housenumber", out var n) ? n.GetString() ?? "" : "";
+                    var city = tags.TryGetProperty("addr:city", out var c) ? c.GetString() ?? "" : "";
+                    var postal = tags.TryGetProperty("addr:postcode", out var p) ? p.GetString() ?? "" : "";
+
+                    if (string.IsNullOrWhiteSpace(street) || 
+                        string.IsNullOrEmpty(number) ||
+                        string.IsNullOrWhiteSpace(city) ||
+                        string.IsNullOrWhiteSpace(postal))
+                        continue;
+
+                    var stationAddress = new StationAddress
                     {
-                        Console.WriteLine($"Station for brand {brand.Name} already exists.");
+                        Id = Guid.NewGuid(),
+                        Street = street,
+                        HouseNumber = number,
+                        City = city,
+                        PostalCode = postal,
+                        Location = new NetTopologySuite.Geometries.Point(lon, lat) { SRID = GeoConstants.SRID_VALUE },
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    _context.Add(stationAddress);
+                    await _context.SaveChangesAsync();
+
+                    var station = new Station
+                    {
+                        Id = Guid.NewGuid(),
+                        BrandId = brand.Id,
+                        AddressId = stationAddress.Id,
+                        Address = stationAddress,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    batch.Add(station);
+                    count++;
+
+                    if (batch.Count >= 100)
+                    {
+                        _context.Stations.AddRange(batch);
+                        await _context.SaveChangesAsync();
+                        batch.Clear();
                     }
                 }
 
-                int result = await _context.SaveChangesAsync();
+                if (batch.Any())
+                {
+                    _context.Stations.AddRange(batch);
+                    await _context.SaveChangesAsync();
+                }
 
-                if (result <= 0)
-                {
-                    throw new Exception("Failed to seed Stations");
-                }
-                else
-                {
-                    Console.WriteLine("Stations seeded successfully");
-                }
+                Console.WriteLine($"Stations seeded successfully from Overpass API. Total: {count}");
             }
             catch (Exception ex)
             {
@@ -242,7 +294,8 @@ namespace Data.Seeder
                             Id = Guid.NewGuid(),
                             Name = fuel.Name,
                             Code = fuel.Code,
-                            CreatedAt = DateTime.UtcNow
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
                         });
                     }
                     else
@@ -315,63 +368,63 @@ namespace Data.Seeder
             }
         }
 
-        public async Task SeedPriceProposials()
+        public async Task SeedPriceProposals()
         {
             try
             {
+                if (await _context.PriceProposals.AnyAsync())
+                {
+                    Console.WriteLine("PriceProposals already exist - skipping seeding");
+                    return;
+                }
+
                 var stations = await _context.Stations.ToListAsync();
                 var users = await _userManager.GetUsersInRoleAsync("User");
-                var fuelsTypes = await _context.FuelTypes.ToListAsync();
+                var fuelTypes = await _context.FuelTypes.ToListAsync();
 
-                if (stations.Count == 0 || users.Count == 0 || fuelsTypes.Count == 0)
+                if (stations.Count == 0 || users.Count == 0 || fuelTypes.Count == 0)
                 {
-                    throw new Exception("Stations, Users or FuelTypes data is missing. Please seed them first.");
+                    throw new Exception($"Missing data - Stations: {stations.Count}, Users: {users.Count}, FuelTypes: {fuelTypes.Count}. Please seed them first.");
                 }
 
-                foreach (var station in stations)
+                var proposals = new List<PriceProposal>();
+                int totalToGenerate = 100; 
+
+                for (int i = 0; i < totalToGenerate; i++)
                 {
-                    if (!_context.PriceProposals.Any(pp => pp.StationId == station.Id))
+                    var station = stations[_random.Next(stations.Count)];
+                    var user = users[_random.Next(users.Count)];
+                    var fuelType = fuelTypes[_random.Next(fuelTypes.Count)];
+
+                    var proposal = new PriceProposal
                     {
-                        var user = users[_random.Next(users.Count)];
-                        var priceProposal = new PriceProposal
-                        {
-                            Id = Guid.NewGuid(),
-                            UserId = user.Id,
-                            StationId = station.Id,
-                            PhotoUrl = " ",
-                            FuelTypeId = fuelsTypes[_random.Next(fuelsTypes.Count)].Id,
-                            ProposedPrice = Math.Round(Math.Abs((decimal)(_random.NextDouble() * (7.0 - 4.0) + 4.0)), 2),
-                            Status = PriceProposalStatus.Pending,
-                            CreatedAt = DateTime.UtcNow
-                        };
+                        Id = Guid.NewGuid(),
+                        UserId = user.Id,
+                        StationId = station.Id,
+                        FuelTypeId = fuelType.Id,
+                        ProposedPrice = Math.Round((decimal)(_random.NextDouble() * (7.0 - 4.0) + 4.0), 2),
+                        PhotoUrl = $"proposals/{Guid.NewGuid()}.jpg",
+                        Token = Guid.NewGuid().ToString("N"),
+                        Status = PriceProposalStatus.Pending,
+                        CreatedAt = DateTime.UtcNow.AddDays(-_random.Next(0, 30))
+                    };
 
-                        _context.PriceProposals.Add(priceProposal);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"PriceProposial for station {station.Id} already exists.");
-
-                    }
+                    proposals.Add(proposal);
                 }
 
-                int result = await _context.SaveChangesAsync();
+                _context.PriceProposals.AddRange(proposals);
+                int saved = await _context.SaveChangesAsync();
 
-                if (result <= 0)
-                {
-                    throw new Exception("Failed to seed PriceProposials");
-                }
-                else
-                {
-                    Console.WriteLine("PriceProposials seeded successfully");
-                }
+                Console.WriteLine($"Successfully seeded {saved} price proposals");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"An error occurred while seeding price proposials: {ex.Message} | {ex.InnerException}");
+                Console.WriteLine($"Error seeding price proposals: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw;
             }
         }
-
-        public async Task SeedPriceProposial()
+        public async Task SeedProposalStatisticsAsync()
         {
             try
             {
@@ -379,7 +432,7 @@ namespace Data.Seeder
 
                 foreach (var user in users)
                 {
-                    if (!await _context.ProposalStatisicts.AnyAsync(ps => ps.UserId == user.Id))
+                    if (!await _context.ProposalStatistics.AnyAsync(ps => ps.UserId == user.Id))
                     {
                         int total = _random.Next(1, 20);
                         int approved = _random.Next(1, total);
@@ -395,26 +448,43 @@ namespace Data.Seeder
                             ApprovedProposals = approved,
                             RejectedProposals = rejected,
                             AcceptedRate = rate,
+                            Points = approved,
                             UpdatedAt = DateTime.UtcNow
                         };
 
-                        await _context.ProposalStatisicts.AddAsync(poposal);
+                        await _context.ProposalStatistics.AddAsync(poposal);
                     }
                 }
 
                 int result = await _context.SaveChangesAsync();
 
-                if (result <= 0) {
+                if (result <= 0)
+                {
                     Console.WriteLine("Error during save changes");
-                } else
+                }
+                else
                 {
                     Console.WriteLine("Save success");
                 }
-            } 
+            }
             catch (Exception ex)
             {
                 Console.WriteLine($"{ex.Message} | {ex.InnerException}");
             }
+        }
+
+        private string GetBrandName(JsonElement tags)
+        {
+            if (tags.ValueKind == JsonValueKind.Undefined)
+                return "Unknown";
+
+            if (tags.TryGetProperty("brand", out var brandEl))
+                return brandEl.GetString() ?? "Unknown";
+
+            if (tags.TryGetProperty("name", out var nameEl))
+                return nameEl.GetString() ?? "Unknown";
+
+            return "Unknown";
         }
     }
 }

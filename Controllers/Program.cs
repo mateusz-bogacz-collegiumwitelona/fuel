@@ -1,24 +1,32 @@
 using Data.Config;
 using Data.Context;
+using Data.Helpers;
 using Data.Interfaces;
 using Data.Models;
 using Data.Reopsitories;
+using Data.Repositories;
 using Data.Seeder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Minio;
 using Serilog;
-using Serilog.Events;
 using Serilog.Sinks.PeriodicBatching;
+using Services.BackgroundServices;
+using Services.BackgrounServices;
+using Services.Commands;
 using Services.Helpers;
 using Services.Interfaces;
 using Services.Services;
 using StackExchange.Redis;
 using System.Reflection;
 using System.Text;
+
 //log configuration
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -51,7 +59,7 @@ builder.Services.AddCors(op =>
 {
     op.AddPolicy("AllowClient", p =>
     {
-        p.WithOrigins("https://localhost:4000")
+        p.WithOrigins("http://localhost:4000")
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials();
@@ -76,28 +84,35 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),
-
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.FromSeconds(30)
     };
 
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
         {
-            Console.WriteLine($"JWT: Token received: {context.Token}");
+            if (context.Request.Cookies.ContainsKey("jwt"))
+            {
+                context.Token = context.Request.Cookies["jwt"];
+                Console.WriteLine($"JWT: Token received from cookie");
+            }
+            else if (context.Request.Headers.ContainsKey("Authorization"))
+            {
+                var authHeader = context.Request.Headers["Authorization"].ToString();
+                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Token = authHeader.Substring("Bearer ".Length).Trim();
+                    Console.WriteLine($"JWT: Token received from Authorization header");
+                }
+            }
             return Task.CompletedTask;
         },
         OnTokenValidated = context =>
         {
-            Console.WriteLine($"JWT: Token validated. Audience claims:");
-            foreach (var claim in context.Principal.Claims.Where(c => c.Type == "aud"))
-            {
-                Console.WriteLine($"  {claim.Type}: {claim.Value}");
-            }
+            Console.WriteLine($"JWT: Token validated successfully");
             return Task.CompletedTask;
         },
         OnAuthenticationFailed = context =>
@@ -106,7 +121,15 @@ builder.Services.AddAuthentication(options =>
             return Task.CompletedTask;
         }
     };
-
+})
+.AddFacebook("Facebook", options =>
+{
+    options.AppId = Environment.GetEnvironmentVariable("FACEBOOK_APP_ID");
+    options.AppSecret = Environment.GetEnvironmentVariable("FACEBOOK_APP_SECRET");
+    options.Fields.Add("name");
+    options.Fields.Add("email");
+    options.SaveTokens = true;
+    options.CallbackPath = "/api/auth/facebook/callback";
 });
 
 // Add DbContext with PostgreSQL
@@ -137,22 +160,69 @@ var options = new ConfigurationOptions
 var redis = ConnectionMultiplexer.Connect(options);
 builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
 
-//regiser repo 
+//minio configuration
+builder.Services.Configure<MinIOSettings>(
+    builder.Configuration.GetSection("MinIO")
+    );
+
+//register minio client
+builder.Services.AddSingleton<IMinioClient>(sp =>
+{
+    var settings = sp.GetRequiredService<IOptions<MinIOSettings>>().Value;
+    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("MinIOConfig");
+
+    logger.LogWarning("=== CONFIGURING MINIO CLIENT ===");
+    logger.LogWarning("Endpoint: {Endpoint}", settings.Endpoint);
+    logger.LogWarning("PublicUrl: {PublicUrl}", settings.PublicUrl);
+    logger.LogWarning("AccessKey: {AccessKey}", settings.AccessKey);
+    logger.LogWarning("BucketName: {BucketName}", settings.BucketName);
+    logger.LogWarning("UseSSL: {UseSSL}", settings.UseSSL);
+
+    var client = new MinioClient()
+        .WithEndpoint(settings.Endpoint)
+        .WithCredentials(settings.AccessKey, settings.SecretKey)
+        .WithSSL(settings.UseSSL) 
+        .Build();
+
+    return client;
+});
+
+//register repo 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IStationRepository, StationRepository>();
 builder.Services.AddScoped<IProposalStatisticRepository, ProposalStatisticRepository>();
 builder.Services.AddScoped<ITestRepository, TestRepository>();
+builder.Services.AddScoped<IPriceProposalRepository, PriceProposalRepository>();
+builder.Services.AddScoped<IFuelTypeRepository, FuelTypeRepository>();
+builder.Services.AddScoped<IBrandRepository, BrandRepository>();
+builder.Services.AddScoped<IReportRepositry, ReportRepositry>();
+builder.Services.AddScoped<IBanRepository, BanRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
-//register services 
+//register services
 builder.Services.AddScoped<ILoginRegisterServices, LoginRegisterServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
 builder.Services.AddScoped<IStationServices, StationServices>();
-builder.Services.AddScoped<IEmailServices, EmailServices>();
 builder.Services.AddScoped<IProposalStatisticServices, ProposalStatisticServices>();
 builder.Services.AddScoped<ITestServices, TestServices>();
+builder.Services.AddScoped<IPriceProposalServices, PriceProposalServices>();
+builder.Services.AddScoped<IFuelTypeServices, FuelTypeServices>();
+builder.Services.AddScoped<IBrandServices, BrandServices>();
+builder.Services.AddScoped<IBanService, BanService>();
+builder.Services.AddScoped<IReportService, ReportService>();
 
 //register helpers
-builder.Services.AddScoped<IEmaliBody, EmailBodys>();
+builder.Services.AddScoped<EmailSender>();
+builder.Services.AddScoped<EmailBodys>();
+builder.Services.AddScoped<S3ApiHelper>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITokenFactory, TokenFactory>();
+builder.Services.AddScoped<CacheService>();
+
+//register background services
+builder.Services.AddHostedService<BanExpirationService>();
+builder.Services.AddHostedService<ProposalExpirationService>();
 
 builder.Services.AddControllers(op =>
 {
@@ -161,7 +231,28 @@ builder.Services.AddControllers(op =>
                     .Build();
 
     op.Filters.Add(new AuthorizeFilter(policy));
+})
+.ConfigureApiBehaviorOptions(op =>
+{
+    op.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+        .Where(e => e.Value.Errors.Count > 0)
+        .SelectMany(e => e.Value.Errors)
+        .Select(e => e.ErrorMessage)
+        .ToList();
+
+        var response = new
+        {
+            success = false,
+            message = "Validation error",
+            errors = errors
+        };
+
+        return new BadRequestObjectResult(response);
+    };
 });
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -198,6 +289,14 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+var cliArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
+if (cliArgs.Length > 0)
+{
+    var commandRunner = new CommandRunner(app.Services);
+    await commandRunner.RunAsync(cliArgs);
+    Environment.Exit(0);
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -229,15 +328,16 @@ using (var scope = app.Services.CreateScope())
 }
 
 //middleware
-app.UseHttpsRedirection();
 
+//app.UseHttpsRedirection();
 app.UseRouting();
 
-app.UseCors();
+app.UseCors("AllowClient");
 
 app.UseAuthentication();
-
 app.UseAuthorization();
+
+app.UseHttpsRedirection();
 
 app.MapControllers();
 

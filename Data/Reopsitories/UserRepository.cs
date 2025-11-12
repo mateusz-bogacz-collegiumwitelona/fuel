@@ -1,230 +1,186 @@
 ﻿using Data.Context;
+using Data.Helpers;
 using Data.Interfaces;
 using Data.Models;
 using DTO.Requests;
+using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Razor.Internal;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using StackExchange.Redis;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Linq.Expressions;
 
 namespace Data.Reopsitories
 {
     public class UserRepository : IUserRepository
     {
         private readonly ApplicationDbContext _context;
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly RoleManager<IdentityRole<Guid>> _roleManager;
-        private readonly IProposalStatisticRepository _proposalStatistic;
         private readonly ILogger<UserRepository> _logger;
+        private UserFilterSorting _filters = new();
 
         public UserRepository(
-            ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager,
-            RoleManager<IdentityRole<Guid>> roleManager,
-            ILogger<UserRepository> logger
-            )
+            ApplicationDbContext context, 
+            ILogger<UserRepository> logger,
+            UserManager<ApplicationUser> userManager)
         {
             _context = context;
-            _userManager = userManager;
-            _roleManager = roleManager;
             _logger = logger;
         }
 
-        public async Task<IdentityResult> RegisterNewUser(RegisterNewUserRequest request)
+        public async Task<GetUserInfoResponse> GetUserInfoAsync(string email)
+            => await _context.Users
+            .Where(u => u.Email == email)
+            .Select(u => new GetUserInfoResponse
+            {
+                UserName = u.UserName,
+                Email = u.Email,
+                CreatedAt = u.CreatedAt,
+                ProposalStatistics = new GetProposalStatisticResponse
+                {
+                    TotalProposals = (int)u.ProposalStatistic.TotalProposals,
+                    ApprovedProposals = (int)u.ProposalStatistic.ApprovedProposals,
+                    RejectedProposals = (int)u.ProposalStatistic.RejectedProposals,
+                    AcceptedRate = (int)u.ProposalStatistic.AcceptedRate,
+                    Points = (int)u.ProposalStatistic.Points,
+                    UpdatedAt = u.ProposalStatistic.UpdatedAt,
+                }
+            })
+            .FirstOrDefaultAsync();
+
+        public async Task<bool> IsUserDeleted(ApplicationUser user)
+         => await _context.Users
+                .Where(u => u.Id == user.Id && u.IsDeleted)
+                .AnyAsync();
+
+        public async Task<IdentityResult> DeleteUserAsync(ApplicationUser user)
         {
+            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var isEmailExist = await _userManager.FindByEmailAsync(request.Email);
-                if (isEmailExist != null)
+                var existingUser = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Id == user.Id);
+
+                if (existingUser == null)
                 {
-                    _logger.LogWarning("Attempt to register with existing email: {Email}", request.Email);
-                    return IdentityResult
-                        .Failed(new IdentityError
-                        {
-                            Description = $"User with this email: {request.Email} already exists"
-                        });
+                    _logger.LogWarning("User with ID {UserId} not found for deletion.", user.Id);
+                    return IdentityResult.Failed(new IdentityError
+                    {
+                        Code = "UserNotFound",
+                        Description = "User not found."
+                    });
                 }
 
-                var isUserNameExist = await _userManager.FindByNameAsync(request.UserName);
-                if (isUserNameExist != null)
+                existingUser.IsDeleted = true;
+                existingUser.DeletdAt = DateTime.UtcNow;
+                _context.Users.Update(existingUser);
+                var result = await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                if (result > 0)
                 {
-                    _logger.LogWarning("Attempt to register with existing username: {UserName}", request.UserName);
-                    return IdentityResult
-                        .Failed(new IdentityError
-                        {
-                            Description = $"User with this username: {request.UserName} already exists"
-                        });
+                    return IdentityResult.Success;
+                }
+                else
+                {
+                    return IdentityResult.Failed(new IdentityError
+                    {
+                        Code = "DeletionFailed",
+                        Description = "User deletion failed."
+                    });
+                    await transaction.RollbackAsync();
                 }
 
-                var newUser = new ApplicationUser
-                {
-                    Id = Guid.NewGuid(),
-                    UserName = request.UserName,
-                    NormalizedUserName = request.UserName.ToUpper(),
-                    Email = request.Email,
-                    NormalizedEmail = request.Email.ToUpper(),
-                    EmailConfirmed = false,
-                    SecurityStamp = Guid.NewGuid().ToString(),
-                    ConcurrencyStamp = Guid.NewGuid().ToString(),
-                    CreatedAt = DateTime.UtcNow,
-                    Points = 0
-                };
-
-                var creatUser = await _userManager.CreateAsync(newUser, request.Password);
-
-                if (!creatUser.Succeeded)
-                {
-                    _logger.LogError("User creation failed for {Email}. Errors: {Errors}",
-                        request.Email,
-                        string.Join(", ", creatUser.Errors.Select(e => e.Description)));
-
-                    return IdentityResult
-                        .Failed(creatUser.Errors.ToArray());
-                }
-
-                string defaultRole = "User";
-
-                if (!await _roleManager.RoleExistsAsync(defaultRole))
-                {
-                    _logger.LogError("Default role '{Role}' does not exist.", defaultRole);
-                    return IdentityResult
-                        .Failed(new IdentityError
-                        {
-                            Description = $"Role '{defaultRole}' does not exist"
-                        });
-                }
-
-                var addUserToRole = await _userManager.AddToRoleAsync(newUser, defaultRole);
-
-                if (!addUserToRole.Succeeded)
-                {
-                    var errors = string.Join(", ", addUserToRole.Errors.Select(e => e.Description));
-
-                    _logger.LogError("Failed to assign role '{Role}' to user {Email}. Errors: {Errors}",
-                        defaultRole,
-                        request.Email,
-                        errors);
-
-                    return IdentityResult
-                        .Failed(new IdentityError
-                        {
-                            Description = $"Failed to assign role '{defaultRole}' to user. Errors: {errors}"
-                        });
-                }
-
-                bool isHaveProposalRecord = await _proposalStatistic.AddProposalStatisticRecordAsunc(request.Email);
-
-                if (!isHaveProposalRecord)
-                {
-                    _logger.LogError("Failed to create proposal statistic record for user {Email}", request.Email);
-                    return IdentityResult
-                            .Failed(new IdentityError
-                            {
-                                Description = $"Failed to add Proposal record for {request.Email}"
-                            });
-                }
-
-                return IdentityResult.Success;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"An error occurred: {ex.Message} | throw: {ex.InnerException}");
-
-                return IdentityResult
-                    .Failed(new IdentityError
-                    {
-                        Description = $"An error occurred: {ex.Message} | throw: {ex.InnerException}"
-                    });
-            }
-        }
-
-        public async Task<string> GenerateConfirEmailTokenAsync(string email)
-        {
-            var user = await _userManager.FindByEmailAsync(email);
-
-            if (user == null)
-            {
-                return null;
-                _logger.LogWarning("Attempt to generate email confirmation token for non-existing email: {Email}", email);
-            }
-
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-
-            return token;
-        }
-
-        public async Task<IdentityResult> ConfirmEmailAsync(ConfirmEmailRequest request)
-        {
-            try
-            {
-                var user = await _userManager.FindByEmailAsync(request.Email);
-
-                if (user == null)
+                _logger.LogError(ex, "An error occurred while deleting user with ID {UserId}.", user.Id);
+                await transaction.RollbackAsync();
+                return IdentityResult.Failed(new IdentityError
                 {
-                    _logger.LogWarning("Attempt to confirm email for non-existing email: {Email}", request.Email);
-
-                    return IdentityResult.Failed(
-                        new IdentityError
-                        {
-                            Description = $"User with email '{request.Email}' not found."
-                        });
-                }
-
-                var decodedToken = Uri.UnescapeDataString(request.Token);
-                var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
-
-                if (!result.Succeeded)
-                {
-                    _logger.LogError("Email confirmation failed for {Email}. Errors: {Errors}",
-                        request.Email,
-                        string.Join(", ", result.Errors.Select(e => e.Description)));
-
-                    return IdentityResult.Failed(
-                        new IdentityError
-                        {
-                            Description = $"Email confirmation failed for user with email '{request.Email}'.",
-                        });
-                }
-                return IdentityResult.Success;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"An error occurred: {ex.Message} | throw: {ex.InnerException}");
-
-                return IdentityResult
-                    .Failed(new IdentityError
-                    {
-                        Description = $"An error occurred: {ex.Message} | throw: {ex.InnerException}"
-                    });
+                    Code = "Exception",
+                    Description = "An error occurred during user deletion."
+                });
             }
         }
 
-        public async Task<string> GeneratePasswordResetToken(string email)
+        public async Task<List<GetUserListResponse>> GetUserListAsync(TableRequest request)
         {
-
-            var user = await _userManager.FindByEmailAsync(email);
-
-            if (user == null)
+            var rolePriority = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
             {
-                _logger.LogWarning("Attempt to generate password reset token for non-existing email: {Email}", email);
-                return null;
+                { "admin", 2 },
+                { "user", 1 }
+            };
+
+
+            var query = from u in _context.Users
+                        where !u.IsDeleted
+                        join ur in _context.UserRoles on u.Id equals ur.UserId
+                        join r in _context.Roles on ur.RoleId equals r.Id
+                        select new
+                        {
+                            UserId = u.Id,
+                            UserName = u.UserName,
+                            Email = u.Email,
+                            Role = r.Name,
+                            CreatedAt = u.CreatedAt
+                        };
+
+            if (!string.IsNullOrEmpty(request.Search))
+            {
+                string searchLower = request.Search.ToLower();
+                query = query.Where(u =>
+                    u.UserName.ToLower().Contains(searchLower) ||
+                    u.Email.ToLower().Contains(searchLower) ||
+                    u.Role.ToLower().Contains(searchLower)
+                );
             }
 
-            string token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var users = await query.AsNoTracking().ToListAsync();
 
-            if (string.IsNullOrEmpty(token))
+            var userIds = users.Select(u => u.UserId).ToList();
+            var bannedUserIds = await _context.BanRecords
+                .Where(b => userIds.Contains(b.UserId) && b.IsActive)
+                .Select(b => b.UserId)
+                .Distinct()
+                .ToListAsync();
+
+            var bannedUsersSet = new HashSet<Guid>(bannedUserIds);
+
+            var list = users.Select(u => new GetUserListResponse
             {
-                _logger.LogError("Failed to generate password reset token for email: {Email}", email);
-                return null;
-            }
+                UserName = u.UserName,
+                Email = u.Email,
+                Roles = u.Role,
+                CreatedAt = u.CreatedAt,
+                IsBanned = bannedUsersSet.Contains(u.UserId)
+            }).ToList();
 
-            return token;
+            list = _filters.ApplySorting(list, request.SortBy, request.SortDirection, rolePriority);
+
+            return list;
+        }
+
+        
+        
+
+        public async Task<bool> ReportUserAsync(
+            ApplicationUser reported, 
+            ApplicationUser reportedBy, 
+            string reason)
+        {
+            var report = new ReportUserRecord
+            {
+                Id = Guid.NewGuid(),
+                ReportedUserId = reported.Id,
+                ReportedUser = reported,
+                ReportingUserId = reportedBy.Id,
+                ReportingUser = reportedBy,
+                Description = reason,
+                CreatedAt = DateTime.UtcNow,
+                Status = Data.Enums.ReportStatusEnum.Pending
+            };
+
+            await _context.ReportUserRecords.AddAsync(report);
+            var result = await _context.SaveChangesAsync();
+            return result > 0;
         }
     }
 }

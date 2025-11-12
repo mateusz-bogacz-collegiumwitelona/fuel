@@ -3,19 +3,14 @@ using Data.Interfaces;
 using Data.Models;
 using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Data.Reopsitories
 {
     public class ProposalStatisticRepository : IProposalStatisticRepository
     {
         private readonly ApplicationDbContext _context;
-        private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<ProposalStatisticRepository> _logger;
 
         public ProposalStatisticRepository(
@@ -25,26 +20,18 @@ namespace Data.Reopsitories
             )
         {
             _context = context;
-            _userManager = userManager;
             _logger = logger;
         }
 
-        public async Task<GetProposalStatisticResponse> GetUserProposalStatisticAsync(string email)
+        public async Task<GetProposalStatisticResponse> GetUserProposalStatisticAsync(ApplicationUser user)
         {
-            var user = await _userManager.FindByEmailAsync(email);
 
-            if (user == null)
-            {
-                _logger.LogWarning("User with email {Email} not found.", email);
-                return null;
-            }
-
-            var proposals = _context.ProposalStatisicts
+            var proposals = _context.ProposalStatistics
                 .FirstOrDefault(ps => ps.UserId == user.Id);
 
             if (proposals == null)
             {
-                _logger.LogWarning("No proposal statistics found for user with email {Email}.", email);
+                _logger.LogWarning("No proposal statistics found for user with email {Email}.", user.Email);
                 return null;
             }
 
@@ -54,19 +41,13 @@ namespace Data.Reopsitories
                 ApprovedProposals = proposals.ApprovedProposals ?? 0,
                 RejectedProposals = proposals.RejectedProposals ?? 0,
                 AcceptedRate = proposals.AcceptedRate ?? 0,
+                Points = proposals.Points ?? 0,
                 UpdatedAt = proposals.UpdatedAt
             };
         }
 
-        public async Task<bool> AddProposalStatisticRecordAsunc(string email)
+        public async Task<bool> AddProposalStatisticRecordAsync(ApplicationUser user)
         {
-            var user = await _userManager.FindByEmailAsync(email);
-
-            if (user == null)
-            {
-                _logger.LogWarning("User with email {Email} not found.", email);
-                return false;
-            }
 
             var proposal = new ProposalStatistic
             {
@@ -80,76 +61,75 @@ namespace Data.Reopsitories
                 UpdatedAt = DateTime.UtcNow
             };
 
-            await _context.ProposalStatisicts.AddAsync(proposal);
+            await _context.ProposalStatistics.AddAsync(proposal);
             int isSaved = await _context.SaveChangesAsync();
 
             if (isSaved <= 0)
             {
-                _logger.LogError("Failed to add proposal statistics for user with email {Email}.", email);
+                _logger.LogError("Failed to add proposal statistics for user with email {Email}.", user.Email);
                 return false;
             }
 
             return true;
         }
 
-        public async Task<bool> UpdateTotalProposalsAsync(bool proposial, string email)
+        public async Task<bool> UpdateTotalProposalsAsync(bool isAccepted, Guid userId)
         {
-            try
+            var userProposalStats = await _context.ProposalStatistics
+                .FirstOrDefaultAsync(ps => ps.UserId == userId);
+
+            if (userProposalStats == null)
             {
-                var user = await _userManager.FindByEmailAsync(email);
-
-                if (user == null)
-                {
-                    _logger.LogWarning("User with email {Email} not found.", email);
-                    return false;
-                }
-
-                var userProposialStats = _context.ProposalStatisicts
-                    .FirstOrDefault(ps => ps.UserId == user.Id);
-
-                if (userProposialStats == null)
-                {
-                    _logger.LogWarning("No proposal statistics found for user with email {Email}.", email);
-                    return false;
-                }
-
-                int newTotalProposals = (userProposialStats.TotalProposals ?? 0) + 1;
-                userProposialStats.TotalProposals = newTotalProposals;
-
-                if (proposial)
-                {
-                    int newApprovedProposals = (userProposialStats.ApprovedProposals ?? 0) + 1;
-                    userProposialStats.ApprovedProposals = newApprovedProposals;
-                }
-                else
-                {
-                    int newRejectedProposals = (userProposialStats.RejectedProposals ?? 0) + 1;
-                    userProposialStats.RejectedProposals = newRejectedProposals;
-                }
-
-                int newAcceptedRate = userProposialStats.TotalProposals > 0
-                    ? (int)(((double)userProposialStats.ApprovedProposals / userProposialStats.TotalProposals) * 100)
-                    : 0;
-
-                userProposialStats.AcceptedRate = newAcceptedRate;
-
-                userProposialStats.UpdatedAt = DateTime.UtcNow;
-
-                int isSaved = await _context.SaveChangesAsync();
-
-                if (isSaved <= 0)
-                {
-                    _logger.LogError("Failed to update proposal statistics for user with email {Email}.", email);
-                    return false;
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while updating proposal statistics for user with email {Email}.", email);
+                _logger.LogWarning("No proposal statistics found for user {UserId}", userId);
                 return false;
             }
+
+            userProposalStats.TotalProposals = (userProposalStats.TotalProposals ?? 0) + 1;
+
+            if (isAccepted)
+            {
+                userProposalStats.ApprovedProposals = (userProposalStats.ApprovedProposals ?? 0) + 1;
+                userProposalStats.Points = (userProposalStats.Points ?? 0) + 1;
+            }
+            else
+            {
+                userProposalStats.RejectedProposals = (userProposalStats.RejectedProposals ?? 0) + 1;
+            }
+
+            userProposalStats.AcceptedRate = userProposalStats.TotalProposals > 0
+                ? (int)(((double)(userProposalStats.ApprovedProposals ?? 0) / userProposalStats.TotalProposals.Value) * 100)
+                : 0;
+
+            userProposalStats.UpdatedAt = DateTime.UtcNow;
+
+
+            int savedCount = await _context.SaveChangesAsync();
+
+            if (savedCount <= 0)
+            {
+                _logger.LogError("Failed to update proposal statistics for user {UserId}", userId);
+                return false;
+            }
+
+            _logger.LogInformation(
+                "Updated statistics for user {UserId}: Total={Total}, Approved={Approved}, Rate={Rate}%",
+                userId, userProposalStats.TotalProposals, userProposalStats.ApprovedProposals, userProposalStats.AcceptedRate);
+
+            return true;
         }
+        public async Task<List<TopUserResponse>> GetTopUserListAsync()
+         => await _context.ProposalStatistics
+                .OrderByDescending(ps => ps.Points)
+                .Take(10)
+                .Select(ps => new TopUserResponse
+                {
+                    UserName = ps.User.UserName,
+                    TotalProposals = ps.TotalProposals,
+                    ApprovedProposals = ps.ApprovedProposals,
+                    RejectedProposals = ps.RejectedProposals,
+                    AcceptedRate = ps.AcceptedRate,
+                    Points = ps.Points
+                })
+                .ToListAsync();
     }
 }
