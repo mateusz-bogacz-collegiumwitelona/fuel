@@ -7,11 +7,19 @@ const API_BASE = "http://localhost:5111";
 function parseJwt(token: string | null) {
   if (!token) return null;
   try {
-    return JSON.parse(atob(token.split(".")[1]));
+    const payload = token.split(".")[1];
+    const decoded = atob(payload);
+    try {
+      // unicode-safe
+      return JSON.parse(decodeURIComponent(escape(decoded)));
+    } catch {
+      return JSON.parse(decoded);
+    }
   } catch (e) {
     return null;
   }
 }
+
 
 type Station = {
   id?: string;
@@ -62,45 +70,51 @@ export default function ListPage() {
   const [totalCount, setTotalCount] = React.useState<number | null>(null);
 
   React.useEffect(() => {
+  (async () => {
     const token = localStorage.getItem("token");
     const expiration = localStorage.getItem("token_expiration");
 
-    if (!token || !expiration || new Date(expiration) <= new Date()) {
-      if (typeof window !== "undefined") window.location.href = "/login";
+    if (token && expiration && new Date(expiration) > new Date()) {
+      const decoded = parseJwt(token);
+      const userEmail = decoded?.email || decoded?.sub || null;
+      setEmail(userEmail ?? "Zalogowany użytkownik");
+      await fetchStations(token, pageNumber, pageSize);
       return;
     }
 
-    const decoded = parseJwt(token);
-    const userEmail = decoded?.email || decoded?.sub || null;
-    setEmail(userEmail ?? "Zalogowany użytkownik");
+    // no Token, try refresh
+    try {
+      const refreshRes = await fetch(`${API_BASE}/api/refresh`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        credentials: "include",
+      });
 
-    // fetch initial page
-    fetchStations(token, pageNumber, pageSize);
+      console.log("/api/refresh status:", refreshRes.status);
+      const bodyText = await refreshRes.text();
+      console.log("refresh body:", bodyText);
 
-    // request geolocation so we can compute distances client-side if backend doesn't provide them
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
-        },
-        () => {
-          setUserCoords(null);
-        },
-        { timeout: 10_000 }
-      );
+      if (refreshRes.ok) {
+        // refresh works
+        setEmail("Zalogowany użytkownik");
+        // fetchStations can work without token
+        await fetchStations(null, pageNumber, pageSize);
+        return;
+      } else {
+        // refresh doesn't work -> redirect to login
+        if (typeof window !== "undefined") window.location.href = "/login";
+      }
+    } catch (err) {
+      console.error("Błąd podczas /api/refresh:", err);
+      if (typeof window !== "undefined") window.location.href = "/login";
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  })();
 
-  // refetch when pageNumber or pageSize change (after initial auth check, we re-read token inside)
-  React.useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    fetchStations(token, pageNumber, pageSize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageNumber, pageSize]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
-  async function fetchStations(token: string, pageNum: number, pageSz: number) {
+
+  async function fetchStations(token: string | null, pageNum: number, pageSz: number) {
   setLoading(true);
   setError(null);
 
@@ -112,7 +126,7 @@ export default function ListPage() {
     fuelType: [],
     minPrice: null,
     maxPrice: null,
-    sortingByDisance: false,   // some swagger examples use this (typo)
+    sortingByDisance: false,
     sortingByPrice: false,
     sortingDirection: sortDirection,
     pagging: {
@@ -138,28 +152,36 @@ export default function ListPage() {
     },
   ];
 
-  async function tryPost(bodyObj: any) {
+    async function tryPost(bodyObj: any) {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    console.log("tryPost -> POST", `${API_BASE}/api/station/list`, "body:", bodyObj);
     const res = await fetch(`${API_BASE}/api/station/list`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
+      headers,
+      credentials: "include",
       body: JSON.stringify(bodyObj),
     });
+    console.log("tryPost -> status:", res.status);
     return res;
   }
+
 
   try {
     let res = await tryPost(baseBody);
 
+    // if the first POST failed, try alternate request bodies
     if (!res.ok && (res.status === 400 || res.status === 422 || res.status === 404)) {
       console.warn("Primary POST failed, trying alternative bodies, status:", res.status);
       try {
-        const txt = await res.text();
+        const txt = await res.text().catch(() => "<no body>");
         console.warn("Primary body response text:", txt);
-      } catch (e) {}
+      } catch {}
+
       let ok = false;
       for (const alt of altBodies) {
         try {
@@ -169,24 +191,34 @@ export default function ListPage() {
             ok = true;
             break;
           } else {
-            const t = await altRes.text();
+            const t = await altRes.text().catch(() => "<no body>");
             console.warn("Alt POST failed status:", altRes.status, "body tried:", alt, "response:", t);
           }
         } catch (e) {
           console.error("Alt POST threw", e);
         }
       }
+
+      // if all POSTs fail, try GET fallback (with credentials)
       if (!ok && !res.ok) {
         try {
+          const fallbackHeaders: Record<string, string> = { Accept: "application/json" };
+          if (token) fallbackHeaders["Authorization"] = `Bearer ${token}`;
+
           const fallback = await fetch(`${API_BASE}/api/station/list`, {
-            headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+            headers: fallbackHeaders,
+            credentials: "include",
           });
+
           if (fallback.ok) {
             const data2 = await fallback.json();
+                const data = await res.json();
+            console.log("fetchStations: response JSON:", data);
+            applyListResponse(data);
             applyListResponse(data2);
             return;
           } else {
-            const txt = await fallback.text();
+            const txt = await fallback.text().catch(() => "<no body>");
             throw new Error(`Fallback GET failed: ${fallback.status} ${txt}`);
           }
         } catch (e) {
@@ -222,6 +254,7 @@ export default function ListPage() {
   }
 }
 
+
  function applyListResponse(data: any) {
   // swagger sample uses { items: [...], pageNumber, pageSize, totalCount, totalPages }
   const items = Array.isArray(data.items)
@@ -253,35 +286,74 @@ export default function ListPage() {
 
 
   function normalizeStations(data: any): Station[] {
-    // backend might return array or { stations: [...] } or { items: [...] }
-    const arr = Array.isArray(data) ? data : Array.isArray(data?.stations) ? data.stations : Array.isArray(data?.items) ? data.items : [];
+  // backend might return array or { stations: [...] } or { items: [...] }
+  const arr = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.stations)
+    ? data.stations
+    : Array.isArray(data?.items)
+    ? data.items
+    : [];
 
-    return arr.map((s: any) => {
-      // try to unify naming
-      const fuelPrices = s.fuelPrices ?? s.prices ?? s.fuelPrice ?? s.fuelPriceList ?? null;
+  return arr.map((s: any) => {
+    // unify fuel price formats:
+    // possible shapes:
+    // - { fuelPrices: { PB95: 6.29, ON: 6.99 } }
+    // - { fuelPrice: [ { fuelCode: "PB95", price: 6.29 }, ... ] }
+    // - { prices: { ... } }
+    let fuelPrices: Record<string, number | string> | null = null;
 
-      const normalized: Station = {
-        id: s.id ?? s.stationId ?? undefined,
-        name: s.brandName ?? s.name ?? s.stationName ?? undefined,
-        brandName: s.brandName ?? s.name ?? undefined,
-        street: s.street ?? (s.address ? s.address.split(",")[0] : undefined) ?? undefined,
-        houseNumber: s.houseNumber ?? s.houseNumberString ?? s.no ?? undefined,
-        postalCode: s.postalCode ?? s.postalcode ?? s.postal ?? undefined,
-        latitude: s.latitude ?? s.lat ?? undefined,
-        longitude: s.longitude ?? s.lon ?? s.lng ?? undefined,
-        city: s.city ?? s.town ?? s.locationCity ?? undefined,
-        imageUrl: s.imageUrl ?? s.image ?? undefined,
-        address: s.address ?? undefined,
-        distanceMeters: s.distanceMeters ?? s.distanceInMeters ?? (typeof s.distance === "number" ? s.distance : undefined),
-        fuelPrices: fuelPrices,
-        pricePb95: s.pricePb95 ?? s.pb95 ?? null,
-        priceDiesel: s.priceDiesel ?? s.on ?? null,
-        priceLpg: s.priceLpg ?? s.lpg ?? null,
-      };
+    if (s.fuelPrices && typeof s.fuelPrices === "object" && !Array.isArray(s.fuelPrices)) {
+      fuelPrices = s.fuelPrices;
+    } else if (s.prices && typeof s.prices === "object" && !Array.isArray(s.prices)) {
+      fuelPrices = s.prices;
+    } else if (Array.isArray(s.fuelPrice)) {
+      // convert array-of-objects to map { PB95: 6.29, ... }
+      const map: Record<string, number> = {};
+      for (const item of s.fuelPrice) {
+        const code = (item.fuelCode ?? item.fuel?.code ?? item.code ?? "").toString();
+        const price = typeof item.price === "string" ? parseFloat(item.price.replace(",", ".")) : Number(item.price);
+        if (code && !Number.isNaN(price)) map[code.toLowerCase()] = price;
+      }
+      if (Object.keys(map).length > 0) fuelPrices = map;
+    } else if (Array.isArray(s.fuelPrices)) {
+      // same for fuelPrices array
+      const map: Record<string, number> = {};
+      for (const item of s.fuelPrices) {
+        const code = (item.fuelCode ?? item.fuel?.code ?? item.code ?? "").toString();
+        const price = typeof item.price === "string" ? parseFloat(item.price.replace(",", ".")) : Number(item.price);
+        if (code && !Number.isNaN(price)) map[code.toLowerCase()] = price;
+      }
+      if (Object.keys(map).length > 0) fuelPrices = map;
+    } else if (s.fuelPrice && typeof s.fuelPrice === "object" && !Array.isArray(s.fuelPrice)) {
+      fuelPrices = s.fuelPrice;
+    }
 
-      return normalized;
-    });
-  }
+    const normalized: Station = {
+      id: s.id ?? s.stationId ?? undefined,
+      name: s.brandName ?? s.name ?? s.stationName ?? undefined,
+      brandName: s.brandName ?? s.name ?? undefined,
+      street: s.street ?? (s.address ? s.address.split(",")[0] : undefined) ?? undefined,
+      houseNumber: s.houseNumber ?? s.houseNumberString ?? s.no ?? undefined,
+      postalCode: s.postalCode ?? s.postalcode ?? s.postal ?? undefined,
+      latitude: s.latitude ?? s.lat ?? undefined,
+      longitude: s.longitude ?? s.lon ?? s.lng ?? undefined,
+      city: s.city ?? s.town ?? s.locationCity ?? undefined,
+      imageUrl: s.imageUrl ?? s.image ?? undefined,
+      address: s.address ?? undefined,
+      distanceMeters:
+        s.distanceMeters ??
+        s.distanceInMeters ??
+        (typeof s.distance === "number" ? s.distance : undefined),
+      fuelPrices: fuelPrices,
+      pricePb95: s.pricePb95 ?? s.pb95 ?? null,
+      priceDiesel: s.priceDiesel ?? s.on ?? null,
+      priceLpg: s.priceLpg ?? s.lpg ?? null,
+    };
+
+    return normalized;
+  });
+}
 
   function formatDistance(m?: number) {
     if (m == null || Number.isNaN(m)) return "-";

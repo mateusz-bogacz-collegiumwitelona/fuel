@@ -1,17 +1,26 @@
 import React from "react";
-import ThemeController from "../components/ThemeController.tsx";
-import { useTheme } from "../context/ThemeContext.tsx";
+import ThemeController from "../components/ThemeController";
+import { useTheme } from "../context/ThemeContext";
+
+const API_BASE = "http://localhost:5111";
 
 export default function Header() {
-    const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
-    const handleLogout = () => {
-        if (typeof window !== "undefined") {
-            localStorage.removeItem("token");
-            localStorage.removeItem("token_expiration");
-            window.location.href = "/login";
-        }
-    };
+  const handleLogout = async () => {
+    try {
+      await fetch(`${API_BASE}/api/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (e) {
+      console.warn("Logout request failed:", e);
+    }
+    localStorage.removeItem("token");
+    localStorage.removeItem("token_expiration");
+    if (typeof window !== "undefined") window.location.href = "/login";
+  };
+
 
     return (
         <header className="w-full bg-base-300 shadow-sm text-base-content">
@@ -42,7 +51,6 @@ export default function Header() {
                         </label>
                         <ul tabIndex={0} className="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52">
                             <li><a href="/settings">Ustawienia</a></li>
-                            <li><a href="/account">Ustawienia konta</a></li>
                             <li><a href="/dashboard">Dashboard</a></li>
                             <li><a href="/map">Mapa</a></li>
                             <li><a href="/list">Lista</a></li>

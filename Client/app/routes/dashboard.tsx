@@ -7,10 +7,8 @@ const API_BASE = "http://localhost:5111";
 function parseJwt(token: string | null) {
     if (!token) return null;
     try {
-        // decode payload in a unicode-safe way
         const payload = token.split(".")[1];
         const decoded = atob(payload);
-        // handle unicode characters properly
         return JSON.parse(decodeURIComponent(escape(decoded)));
     } catch (e) {
         return null;
@@ -79,10 +77,8 @@ export default function Dashboard() {
                 });
 
                 console.log("/api/refresh status:", refreshRes.status);
-
-                console.log("refreshRes.status", refreshRes.status);
                 console.log("refreshRes.body", await refreshRes.text());
-                
+
                 if (refreshRes.ok) {
                     setEmail("Zalogowany użytkownik");
 
@@ -151,7 +147,7 @@ export default function Dashboard() {
                     method: "POST",
                     headers,
                     body: JSON.stringify({ latitude: lat, longitude: lon }),
-                    credentials: "include", // ensure cookies go with request
+                    credentials: "include",
                 });
 
                 if (!res.ok) {
@@ -248,7 +244,13 @@ export default function Dashboard() {
         setStatsLoading(true);
         setStatsError(null);
 
-        const tryEndpoints = ["/api/proposal-statistic", "/api/proposal-statistics"];
+        // include the exact endpoint from Swagger plus older guesses for compatibility
+        const tryEndpoints = [
+            "/api/proposals/statistics",
+            "/api/proposal-statistic",
+            "/api/proposal-statistics",
+            "/api/proposals/statistic"
+        ];
 
         for (const ep of tryEndpoints) {
             try {
@@ -267,18 +269,50 @@ export default function Dashboard() {
 
                 const data = await res.json();
 
+                // 1) backend returns object with the Swagger shape:
+                //    { totalProposals, approvedProposals, rejectedProposals, acceptedRate, ... }
                 if (data && typeof data === "object" && !Array.isArray(data)) {
-                    setStats(data);
+                    const normalized = {
+                        total:
+                            data.total ??
+                            data.totalProposals ??
+                            data.total_proposals ??
+                            data.count ??
+                            data.itemsCount ??
+                            0,
+                        accepted:
+                            data.approved ??
+                            data.approvedProposals ??
+                            data.approved_proposals ??
+                            data.accepted ??
+                            data.acceptedProposals ??
+                            0,
+                        rejected:
+                            data.rejected ??
+                            data.rejectedProposals ??
+                            data.rejected_proposals ??
+                            data.denied ??
+                            0,
+                        acceptedRate:
+                            data.acceptedRate ??
+                            data.acceptanceRate ??
+                            data.accepted_rate ??
+                            data.approvedRate ??
+                            data.acceptedRate ??
+                            null,
+                    };
+                    setStats(normalized);
                     setStatsLoading(false);
                     return;
                 }
 
+                // 2) fallback: if backend returns an array of proposals, compute counts
                 if (Array.isArray(data)) {
                     const total = data.length;
                     const accepted = data.filter((x: any) => x.status === "accepted").length;
-                    const pending = data.filter((x: any) => x.status === "pending").length;
                     const rejected = data.filter((x: any) => x.status === "rejected").length;
-                    setStats({ total, accepted, pending, rejected });
+                    const acceptedRate = total > 0 ? Math.round((accepted / total) * 100) : null;
+                    setStats({ total, accepted, rejected, acceptedRate });
                     setStatsLoading(false);
                     return;
                 }
@@ -304,10 +338,12 @@ export default function Dashboard() {
 
     const formatDate = (iso?: string) => (iso ? new Date(iso).toLocaleString() : "-");
 
-    const formatDistance = (m?: number) => {
+    const formatDistance = (m?: string | number) => {
         if (m == null) return "-";
-        if (m >= 1000) return `${(m / 1000).toFixed(2)} km`;
-        return `${Math.round(m)} m`;
+        const mm = Number(m);
+        if (Number.isNaN(mm)) return "-";
+        if (mm >= 1000) return `${(mm / 1000).toFixed(2)} km`;
+        return `${Math.round(mm)} m`;
     };
 
     return (
@@ -376,13 +412,6 @@ export default function Dashboard() {
                                     key={s.id ?? `${s.name}-${idx}`}
                                     className="card bg-base-100 w-96 shadow-sm"
                                 >
-                                    <figure>
-                                        <img
-                                            src={s.imageUrl ?? "https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp"}
-                                            alt={s.name}
-                                            className="object-cover w-full h-40"
-                                        />
-                                    </figure>
                                     <div className="card-body">
                                         <h2 className="card-title">{s.name}</h2>
 
@@ -423,7 +452,7 @@ export default function Dashboard() {
                             ))}
                         </div>
                     ) : (
-                        <div className="text-gray-300">Brak dostępnych stacji.</div>
+                        <div className="text-base-content">Brak dostępnych stacji.</div>
                     )}
                 </section>
 
@@ -433,24 +462,24 @@ export default function Dashboard() {
                     {statsLoading ? (
                         <div>Ładowanie statystyk...</div>
                     ) : statsError ? (
-                        <div className="text-red-400">{statsError}</div>
+                        <div className="text-error">{statsError}</div>
                     ) : stats ? (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="p-4 bg-gray-700 rounded text-center">
-                                <div className="text-3xl font-bold">{stats.total ?? requests?.length ?? 0}</div>
-                                <div className="text-sm text-gray-300 mt-1">Wszystkie zgłoszenia</div>
+                            <div className="p-4 bg-base-100 rounded text-center">
+                                <div className="text-3xl text-base-content font-bold">{stats.total ?? requests?.length ?? 0}</div>
+                                <div className="text-sm text-base-content mt-1">Wszystkie zgłoszenia</div>
                             </div>
-                            <div className="p-4 bg-gray-700 rounded text-center">
-                                <div className="text-3xl font-bold">{stats.accepted ?? 0}</div>
-                                <div className="text-sm text-gray-300 mt-1">Zaakceptowane</div>
+                            <div className="p-4 bg-base-100 rounded text-center">
+                                <div className="text-3xl text-success font-bold">{stats.accepted ?? 0}</div>
+                                <div className="text-sm text-success mt-1">Zaakceptowane</div>
                             </div>
-                            <div className="p-4 bg-gray-700 rounded text-center">
-                                <div className="text-3xl font-bold">{stats.pending ?? 0}</div>
-                                <div className="text-sm text-gray-300 mt-1">W oczekiwaniu</div>
-                            </div>
-                            <div className="p-4 bg-gray-700 rounded text-center">
+                            <div className="p-4 bg-base-100 rounded text-error text-center">
                                 <div className="text-3xl font-bold">{stats.rejected ?? 0}</div>
-                                <div className="text-sm text-gray-300 mt-1">Odrzucone</div>
+                                <div className="text-sm mt-1">Odrzucone</div>
+                            </div>
+                            <div className="p-4 bg-base-100 rounded text-info text-center">
+                                <div className="text-3xl font-bold">{stats.acceptedRate != null ? `${stats.acceptedRate}%` : "-"}</div>
+                                <div className="text-sm mt-1">Wskaźnik akceptacji</div>
                             </div>
                         </div>
                     ) : (
@@ -467,7 +496,7 @@ export default function Dashboard() {
                                     <div key={r.id} className="p-4 bg-base-100 rounded flex items-center justify-between">
                                         <div>
                                             <div className="font-medium">{r.title}</div>
-                                            <div className="text-sm text-gray-300">{formatDate(r.createdAt)}</div>
+                                            <div className="text-sm text-base-content">{formatDate(r.createdAt)}</div>
                                         </div>
 
                                         <div className="text-sm">
@@ -482,7 +511,7 @@ export default function Dashboard() {
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-gray-300">Nie masz jeszcze zgłoszeń.</div>
+                            <div className="text-base-content">Nie masz jeszcze zgłoszeń.</div>
                         )}
                     </div>
                 </section>
