@@ -448,7 +448,7 @@ export default function SettingsPage() {
                   <div>
                     <h2 className="text-xl font-semibold mb-2">Ogólne</h2>
                     <div className="bg-base-100 p-4 rounded">
-                      <p className="text-sm text-gray-400 mb-2">Kilka przykładowych opcji ogólnych, które możesz dostosować:</p>
+                      <p className="text-sm text-gray-400 mb-2">Losowe rzeczy, nie wiem co tu dać xD:</p>
                       <div className="grid md:grid-cols-2 gap-4">
                         <label className="flex items-center gap-2">
                           <input type="checkbox" className="checkbox" />
