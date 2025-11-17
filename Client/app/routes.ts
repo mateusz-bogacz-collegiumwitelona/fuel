@@ -7,5 +7,6 @@ export default [
   route("admin-dashboard", "routes/admin-dashboard.tsx"),
   route("map", "routes/map.tsx"),
   route("list", "routes/list.tsx"),
-  route("settings", "routes/settings.tsx")
+  route("settings", "routes/settings.tsx"),
+  route("station/:brandName/:city/:street/:houseNumber", "routes/station.tsx"),
 ] satisfies RouteConfig;

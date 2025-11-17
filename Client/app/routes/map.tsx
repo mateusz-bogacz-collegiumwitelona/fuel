@@ -1,17 +1,22 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 import Header from "../components/header";
 import Footer from "../components/footer";
 
 type Station = {
   brandName: string;
-  address: string;
+  street: string;
+  houseNumber: string;
+  city: string;
+  postcode: string;
   latitude: number;
   longitude: number;
 };
 
 export default function MapView() {
   const [stations, setStations] = useState<Station[]>([]);
+  const [allStations, setAllStations] = useState<Station[]>([]);
   const [MapComponents, setMapComponents] = useState<{
     MapContainer?: any;
     TileLayer?: any;
@@ -20,15 +25,10 @@ export default function MapView() {
   }>({});
   const [L, setL] = useState<any>(null);
 
-  const [filters, setFilters] = useState({
-    brandName: [] as string[],
-    locationLatitude: null as number | null,
-    locationLongitude: null as number | null,
-    distance: null as number | null,
-  });
+  const [searchTerm, setSearchTerm] = useState("");
 
   const brandColors: Record<string, string> = {
-    Default:"black",
+    Default: "black",
     Orlen: "red",
     BP: "green",
     Shell: "yellow",
@@ -60,12 +60,12 @@ export default function MapView() {
     try {
       const token = localStorage.getItem("token");
 
-          if (filters.brandName.length > 0) {
-      const normalized =
-        filters.brandName[0].charAt(0).toUpperCase() +
-        filters.brandName[0].slice(1).toLowerCase();
-      filters.brandName = [normalized];
-    }
+      const body = {
+        brandName: [] as string[],
+        locationLatitude: null as number | null,
+        locationLongitude: null as number | null,
+        distance: null as number | null,
+      };
 
       const response = await fetch("http://localhost:5111/api/station/map/all", {
         method: "POST",
@@ -75,13 +75,14 @@ export default function MapView() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: "include",
-        body: JSON.stringify(filters),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) throw new Error(`Błąd serwera: ${response.status}`);
 
-      const data = await response.json();
+      const data: Station[] = await response.json();
       console.log("Odebrano dane:", data);
+      setAllStations(data);
       setStations(data);
     } catch (e) {
       console.error("Błąd pobierania stacji:", e);
@@ -92,12 +93,28 @@ export default function MapView() {
     fetchStations();
   }, []);
 
+  const handleSearch = () => {
+    const q = searchTerm.trim().toLowerCase();
+
+    if (!q) {
+      setStations(allStations);
+      return;
+    }
+
+    const filtered = allStations.filter((s) =>
+      s.brandName.toLowerCase().includes(q)
+    );
+    setStations(filtered);
+  };
+
   const { MapContainer, TileLayer, Marker, Popup } = MapComponents;
   if (!MapContainer || !L) return null;
 
-const getMarkerIcon = (brand: string) => { 
-const normalizedBrand = Object.keys(brandColors).find( (key) => key.toLowerCase() === brand.toLowerCase() ); 
-const color = normalizedBrand ? brandColors[normalizedBrand] : brandColors.Default;
+  const getMarkerIcon = (brand: string) => {
+    const normalizedBrand = Object.keys(brandColors).find(
+      (key) => key.toLowerCase() === brand.toLowerCase()
+    );
+    const color = normalizedBrand ? brandColors[normalizedBrand] : brandColors.Default;
     return new L.Icon({
       iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
       shadowUrl:
@@ -118,35 +135,29 @@ const color = normalizedBrand ? brandColors[normalizedBrand] : brandColors.Defau
           <h1 className="text-2xl md:text-3xl font-bold">
             Mapa stacji benzynowych
           </h1>
-            <a href="/dashboard" className="btn btn-outline">
+          <a href="/dashboard" className="btn btn-outline">
             ← Powrót do dashboardu
           </a>
         </div>
 
-<div className="bg-base-300 p-4 rounded-xl shadow-md mb-6 flex flex-wrap gap-3 items-center">
-  <input
-    type="text"
-    placeholder="Wpisz nazwę stacji (np. Orlen)"
-    className="input input-bordered bg-base-100 text-base-content w-64 placeholder-gray-400"
-    onChange={(e) =>
-      setFilters((f) => ({
-        ...f,
-        brandName: e.target.value
-          ? [e.target.value.trim().toLowerCase()]
-          : [],
-      }))
-    }
-  />
+        <div className="bg-base-300 p-4 rounded-xl shadow-md mb-6 flex flex-wrap gap-3 items-center">
+          <input
+            type="text"
+            placeholder="Wpisz nazwę stacji (np. Orlen)"
+            className="input input-bordered bg-base-100 text-base-content w-64 placeholder-gray-400"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
 
-  <button
-    className="btn bg-blue-600 hover:bg-blue-500 text-white font-medium"
-    onClick={fetchStations}
-  >
-  Szukaj
-  </button>
-</div>
+          <button
+            className="btn bg-blue-600 hover:bg-blue-500 text-white font-medium"
+            onClick={handleSearch}
+          >
+            Szukaj
+          </button>
+        </div>
 
-        <div className="bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-700">
+        <div className="bg-base-800 rounded-xl shadow-lg overflow-hidden border border-base-700">
           <div className="h-[70vh] w-full">
             <MapContainer
               center={[52.2297, 21.0122]}
@@ -164,9 +175,25 @@ const color = normalizedBrand ? brandColors[normalizedBrand] : brandColors.Defau
                   icon={getMarkerIcon(s.brandName)}
                 >
                   <Popup>
-                    <strong>{s.brandName}</strong>
-                    <br />
-                    {s.address}
+                    <div className="space-y-1">
+                      <div>
+                        <strong>{s.brandName}</strong>
+                        <br />
+                        <strong>
+                          {s.city}, {s.street} {s.houseNumber}
+                        </strong>
+                      </div>
+                      <Link
+                        to={`/station/${encodeURIComponent(
+                          s.brandName
+                        )}/${encodeURIComponent(s.city)}/${encodeURIComponent(
+                          s.street
+                        )}/${encodeURIComponent(s.houseNumber)}`}
+                        className="btn btn-xs btn-base mt-2"
+                      >
+                        Zobacz szczegóły
+                      </Link>
+                    </div>
                   </Popup>
                 </Marker>
               ))}
@@ -175,8 +202,7 @@ const color = normalizedBrand ? brandColors[normalizedBrand] : brandColors.Defau
         </div>
       </main>
 
-
-      <Footer/>
+      <Footer />
     </div>
   );
 }
