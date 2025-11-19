@@ -35,7 +35,6 @@ export default function StationProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-
   const [MapComponents, setMapComponents] = useState<{
     MapContainer?: any;
     TileLayer?: any;
@@ -145,6 +144,18 @@ export default function StationProfilePage() {
 
   const { MapContainer, TileLayer, Marker, Popup } = MapComponents;
 
+  const buildGoogleMapsUrl = (st: StationProfile) => {
+    const query = `${st.brandName} ${st.street} ${st.houseNumber}, ${st.city}`;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      query
+    )}`;
+  };
+
+  const buildGoogleMapsDirectionsUrl = (lat: number, lng: number) => {
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+};
+
+
   return (
     <div className="min-h-screen bg-base-200 text-base-content">
       <Header />
@@ -183,9 +194,27 @@ export default function StationProfilePage() {
               <p className="text-sm md:text-base">
                 {station.city}, {station.street} {station.houseNumber}
               </p>
+<div className="mt-3 flex gap-2">
+              <a
+                href={buildGoogleMapsUrl(station)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-sm btn-outline mt-3"
+              >
+                Otwórz w Google Maps
+              </a>
+
+              <a
+  href={buildGoogleMapsDirectionsUrl(station.latitude, station.longitude)}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="btn btn-sm btn-outline mt-3"
+>
+  Nawiguj
+</a>
+</div>
 
             </section>
-
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <section className="bg-base-300 rounded-xl p-4 shadow-md ">
@@ -221,7 +250,6 @@ export default function StationProfilePage() {
                   )}
                 </div>
               </section>
-
 
               <section className="bg-base-300 rounded-xl p-6 shadow-md">
                 <h3 className="text-lg font-semibold mb-3">Ceny paliw</h3>
