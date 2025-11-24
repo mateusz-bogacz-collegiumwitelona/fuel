@@ -71,25 +71,25 @@ export default function AdminDashboard() {
                     </p>
                     <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
                         <a
-                            href="/admin/brand"
+                            href="/brand_admin"
                             className="btn btn-primary w-full"
                         >
                             Brand panel
                         </a>
                         <a
-                            href="/admin/users"
+                            href="/user_admin"
                             className="btn btn-primary w-full"
                         >
                             User panel
                         </a>
                         <a
-                            href="/admin/stations"
+                            href="/gas_station_admin"
                             className="btn btn-primary w-full"
                         >
                             Gas station panel
                         </a>
                         <a
-                            href="/admin/proposals"
+                            href="/proposals_admin"
                             className="btn btn-primary w-full"
                         >
                             Proposal panel

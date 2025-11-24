@@ -160,8 +160,8 @@ export default function StationProfilePage() {
     <div className="min-h-screen bg-base-200 text-base-content">
       <Header />
 
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        <div className="mb-6 flex items-center justify-between gap-4">
+      <main className="mx-auto max-w-6xl px-4 py-20">
+        <div className="mb-10 flex items-center justify-between gap-4">
           <button
             className="btn btn-outline btn-sm"
             onClick={() => navigate(-1)}
