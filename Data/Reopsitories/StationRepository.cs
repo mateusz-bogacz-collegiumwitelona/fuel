@@ -329,6 +329,12 @@ namespace Data.Reopsitories
                     addressUpdated = true;
                 }
 
+                if (!string.IsNullOrWhiteSpace(request.NewPostalCode))
+                {
+                    station.Address.PostalCode = request.NewPostalCode;
+                    addressUpdated = true;
+                }
+
                 if (request.NewLatitude.HasValue && request.NewLongitude.HasValue)
                 {
                     var newLocation = new Point(

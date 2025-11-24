@@ -132,6 +132,7 @@ namespace Controllers.Controllers.Admin
         ///       "newStreet": "Nowa",
         ///       "newHouseNumber": "5b",
         ///       "newCity": "Kraków",
+        ///       "newPostalCode": "11-111",
         ///       "newLatitude": 50.0647,
         ///       "newLongitude": 19.9450,
         ///       "fuelType": [
