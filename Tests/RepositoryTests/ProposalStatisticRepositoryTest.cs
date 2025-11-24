@@ -125,6 +125,12 @@ namespace Tests.RepositoryTests
 
             //Assert
             Assert.False(result);
+            _loggerMock.Verify(x => x.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("No proposal statistics found for user")),
+                    It.Is<Exception>(ex => ex == null),
+                    It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
             _output.WriteLine("UpdateTotalProposalsAsync returns false if user has no stats.");
         }
 
