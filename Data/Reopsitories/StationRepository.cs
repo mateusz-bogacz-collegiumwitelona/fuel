@@ -105,7 +105,6 @@ namespace Data.Reopsitories
                 .ToListAsync();
         }
 
-
         public async Task<List<GetStationListResponse>> GetStationListAsync(GetStationListRequest request)
         {
             var stations = _context.Stations
@@ -184,7 +183,6 @@ namespace Data.Reopsitories
             return result;
         }
         
-
         public async Task<GetStationListResponse> GetStationProfileAsync(FindStationRequest request)
         {
             var station = await _context.Stations
@@ -326,6 +324,12 @@ namespace Data.Reopsitories
                 if (!string.IsNullOrWhiteSpace(request.NewCity))
                 {
                     station.Address.City = request.NewCity;
+                    addressUpdated = true;
+                }
+
+                if (!string.IsNullOrWhiteSpace(request.NewPostalCode))
+                {
+                    station.Address.PostalCode = request.NewPostalCode;
                     addressUpdated = true;
                 }
 
@@ -476,6 +480,7 @@ namespace Data.Reopsitories
                     Street = request.Street,
                     HouseNumber = request.HouseNumber,
                     City = request.City,
+                    PostalCode = request.PostalCode,
                     Location = new Point(
                         (float)request.Longitude,
                         (float)request.Latitude)

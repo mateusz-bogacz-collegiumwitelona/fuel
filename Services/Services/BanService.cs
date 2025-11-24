@@ -18,6 +18,7 @@ namespace Services.Services
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private EmailSender _email;
         private readonly IReportRepositry _reportRepositry;
+        private readonly CacheService _cache;
 
         public BanService(
             IBanRepository banRepository,
@@ -25,7 +26,8 @@ namespace Services.Services
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole<Guid>> roleManager,
             EmailSender email,
-            IReportRepositry reportRepositry)
+            IReportRepositry reportRepositry,
+            CacheService cache)
         {
             _banRepository = banRepository;
             _logger = logger;
@@ -33,6 +35,7 @@ namespace Services.Services
             _roleManager = roleManager;
             _email = email;
             _reportRepositry = reportRepositry;
+            _cache = cache;
         }
 
         public async Task<Result<IdentityResult>> LockoutUserAsync(string adminEmail, SetLockoutForUserRequest request)
@@ -153,6 +156,8 @@ namespace Services.Services
                     request.Email,
                     request.Days.HasValue ? $"Duration: {request.Days.Value} days" : "Permanent");
 
+                await _cache.RemoveByPatternAsync($"{CacheService.CacheKeys.UsersList}*");
+
                 return Result<IdentityResult>.Good(
                     message,
                     StatusCodes.Status200OK,
@@ -253,6 +258,8 @@ namespace Services.Services
                 }
 
                 await _userManager.ResetAccessFailedCountAsync(user);
+
+                await _cache.RemoveByPatternAsync($"{CacheService.CacheKeys.UsersList}*");
 
                 await _email.SendUnlockEmailAsync(
                     user.Email,

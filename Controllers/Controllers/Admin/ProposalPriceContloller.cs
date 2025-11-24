@@ -3,6 +3,7 @@ using DTO.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Services.Interfaces;
 
 namespace Controllers.Controllers.Admin
@@ -113,7 +114,7 @@ namespace Controllers.Controllers.Admin
         ///
         /// Example request
         /// ```http
-        /// GET /api/proposal/abc123def456
+        /// GET /api/proposal?token=abc123def456
         /// ```
         ///
         /// Example response
@@ -144,8 +145,9 @@ namespace Controllers.Controllers.Admin
         /// <response code="400">Validation error - photo token is null or empty.</response>
         /// <response code="404">Price proposal not found with the provided photo token.</response>
         /// <response code="500">Unexpected server error occurred while processing the request.</response>
-        [HttpGet("{token}")]
-        public async Task<IActionResult> GetPriceProposal([FromRoute]string token)
+        [EnableRateLimiting("upload")]
+        [HttpGet("")]
+        public async Task<IActionResult> GetPriceProposal([FromQuery]string token)
         {
             var result = await _priceProposalServices.GetPriceProposal(token);
 
@@ -184,12 +186,12 @@ namespace Controllers.Controllers.Admin
         /// 
         /// Example request (Accept):
         /// ```
-        /// POST /api/proposals/change-status/abc123token?isAccepted=true
+        /// POST /api/proposals/change-status?token=abc123token&amp;isAccepted=true
         /// ```
         /// 
         /// Example request (Reject):
         /// ```
-        /// POST /api/proposals/change-status/abc123token?isAccepted=false
+        /// POST /api/proposals/change-status?token=abc123token&amp;isAccepted=false
         /// ```
         /// 
         /// Example success response (200 OK):
@@ -228,8 +230,8 @@ namespace Controllers.Controllers.Admin
         /// <response code="404">Price proposal not found or not in Pending status</response>
         /// <response code="409">Conflict - proposal has already been reviewed</response>
         /// <response code="500">Internal server error or database transaction failed</response>
-        [HttpPatch("change-status/{token}")]
-        public async Task<IActionResult> ChangePriceProposalStatus([FromRoute]string token, [FromQuery]bool isAccepted)
+        [HttpPatch("change-status")]
+        public async Task<IActionResult> ChangePriceProposalStatus([FromQuery] string token, [FromQuery]bool isAccepted)
         {
             var (adminEmail, error) = GetAuthenticatedUser();
             if (error != null) return error;

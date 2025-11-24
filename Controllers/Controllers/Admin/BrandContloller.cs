@@ -8,7 +8,7 @@ using Services.Interfaces;
 namespace Controllers.Controllers.Admin
 {
     [ApiController]
-    [Route("api/admin/brad")]
+    [Route("api/admin/brand")]
     [EnableCors("AllowClient")]
     [Authorize(Roles = "Admin")]
     public class BrandContloller : ControllerBase

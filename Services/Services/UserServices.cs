@@ -501,6 +501,7 @@ namespace Services.Services
 
                 _logger.LogInformation("Successfully changed role for '{Email}' to '{Role}'.", email, newRole);
 
+                await _cache.RemoveByPatternAsync($"{CacheService.CacheKeys.UsersList}*");
                 await _cache.InvalidateUserInfoCacheAsync(email);
 
                 return Result<IdentityResult>.Good(
