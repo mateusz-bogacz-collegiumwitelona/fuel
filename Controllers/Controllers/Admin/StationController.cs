@@ -280,6 +280,7 @@ namespace Controllers.Controllers.Admin
         ///       "street": "Główna",
         ///       "houseNumber": "15A",
         ///       "city": "Warszawa",
+        ///       "postalCode": "00-001"
         ///       "latitude": 52.2297,
         ///       "longitude": 21.0122,
         ///       "fuelTypes": [

@@ -476,6 +476,7 @@ namespace Data.Reopsitories
                     Street = request.Street,
                     HouseNumber = request.HouseNumber,
                     City = request.City,
+                    PostalCode = request.PostalCode,
                     Location = new Point(
                         (float)request.Longitude,
                         (float)request.Latitude)
