@@ -3,6 +3,7 @@ using DTO.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Services.Interfaces;
 
 namespace Controllers.Controllers.Admin
@@ -144,6 +145,7 @@ namespace Controllers.Controllers.Admin
         /// <response code="400">Validation error - photo token is null or empty.</response>
         /// <response code="404">Price proposal not found with the provided photo token.</response>
         /// <response code="500">Unexpected server error occurred while processing the request.</response>
+        [EnableRateLimiting("upload")]
         [HttpGet("")]
         public async Task<IActionResult> GetPriceProposal([FromQuery]string token)
         {

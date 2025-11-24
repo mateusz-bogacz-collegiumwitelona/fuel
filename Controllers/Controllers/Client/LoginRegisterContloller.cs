@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore.Internal;
 using Services.Interfaces;
 using System.Security.Claims;
@@ -12,6 +13,7 @@ namespace contlollers.Controllers.Client
     [ApiController]
     [Route("api/")]
     [EnableCors("AllowClient")]
+    [EnableRateLimiting("auth")]
     public class LoginRegisterContloller : ControllerBase
     {
         private readonly ILoginRegisterServices _login;

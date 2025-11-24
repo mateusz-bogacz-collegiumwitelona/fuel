@@ -2,6 +2,7 @@
 using DTO.Requests;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Services.Interfaces;
 using System.Security.Claims;
 
@@ -591,6 +592,7 @@ namespace Contlollers.Controllers.Client
         /// <response code="200">Price proposal successfully added</response>
         /// <response code="400">Validation error — invalid data format, file type, size, missing station or user</response>
         /// <response code="500">Server error — something went wrong while processing the request</response>
+        [EnableRateLimiting("upload")]
         [HttpPost("price-proposal/add")]
         public async Task<IActionResult> AddNewPriceProposalAsync([FromForm] AddNewPriceProposalRequest request)
         {

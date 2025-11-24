@@ -105,7 +105,6 @@ namespace Data.Reopsitories
                 .ToListAsync();
         }
 
-
         public async Task<List<GetStationListResponse>> GetStationListAsync(GetStationListRequest request)
         {
             var stations = _context.Stations
@@ -184,7 +183,6 @@ namespace Data.Reopsitories
             return result;
         }
         
-
         public async Task<GetStationListResponse> GetStationProfileAsync(FindStationRequest request)
         {
             var station = await _context.Stations
