@@ -54,6 +54,7 @@ export default function Header() {
                             <li><a href="/dashboard">Dashboard</a></li>
                             <li><a href="/map">Mapa</a></li>
                             <li><a href="/list">Lista</a></li>
+                            <li><a href="/proposal">Propozycje</a></li>
                             <li><button onClick={handleLogout} className="w-full text-left">Wyloguj</button></li>
                         </ul>
                     </div>
