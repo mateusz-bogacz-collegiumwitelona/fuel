@@ -6,7 +6,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 export default defineConfig({
   plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
   server: {
-    port: 4000,
+    port: 8524,
     host: "0.0.0.0",
     watch: {
       usePolling: true,

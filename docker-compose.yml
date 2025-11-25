@@ -137,7 +137,7 @@ services:
       args:
         BUILD_CONFIGURATION: Debug
     ports:
-      - "4000:4000"
+      - "8524:8524"
     volumes:
       - ./Client:/app
       - /app/node_modules

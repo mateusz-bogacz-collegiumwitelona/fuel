@@ -1,6 +1,7 @@
 import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
+import { useTranslation } from "react-i18next";
 
 const API_BASE = "http://localhost:5111";
 
@@ -38,6 +39,7 @@ type Station = {
 };
 
 export default function Dashboard() {
+    const { t, i18n } = useTranslation();
     const [email, setEmail] = React.useState<string | null>(null);
 
     const [requests, setRequests] = React.useState<RequestItem[] | null>(null);
@@ -98,7 +100,8 @@ export default function Dashboard() {
             }
         })();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+        document.documentElement.lang = i18n.language;
+    }, [i18n.language]);
 
     async function fetchRequests(token: string | null) {
         setRequestsLoading(true);
@@ -336,7 +339,16 @@ export default function Dashboard() {
         if (typeof window !== "undefined") window.location.href = "/login";
     };
 
-    const formatDate = (iso?: string) => (iso ? new Date(iso).toLocaleString() : "-");
+    const formatDate = (iso?: string) =>
+    iso
+      ? new Intl.DateTimeFormat(i18n.language, {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(iso))
+      : "-";
 
     const formatDistance = (m?: string | number) => {
         if (m == null) return "-";
@@ -351,8 +363,7 @@ export default function Dashboard() {
             <Header />
 
             <main className="mx-auto max-w-350 px-1 py-8">
-                <h1 className="text-2xl md:text-3xl font-bold mb-4">Witaj, jesteś zalogowany!</h1>
-                {email && <p className="mb-4 text-sm text-gray-400">Zalogowany jako: {email}</p>}
+                {email && <h1 className="text-2xl md:text-3xl font-bold mb-4">{t("dashboard.welcome")}{email}</h1>}
 
                 <section className="mb-8">
                     <div className="carousel w-full">
@@ -385,7 +396,7 @@ export default function Dashboard() {
                         <div className="relative h-56 md:h-72 bg-gray-700 flex items-center justify-center">
                             <img src="/images/map-preview.png" alt="map" className="object-cover w-full h-full" />
                             <div className="absolute inset-0 bg-black/30"></div>
-                            <div className="absolute z-10 text-2xl font-bold">Mapa stacji</div>
+                            <div className="absolute z-10 text-2xl font-bold">{t("dashboard.map")}</div>
                         </div>
                     </a>
 
@@ -393,13 +404,13 @@ export default function Dashboard() {
                         <div className="relative h-56 md:h-72 bg-gray-700 flex items-center justify-center">
                             <img src="/images/list-preview.png" alt="list" className="object-cover w-full h-full" />
                             <div className="absolute inset-0 bg-black/30"></div>
-                            <div className="absolute z-10 text-2xl font-bold">Lista stacji</div>
+                            <div className="absolute z-10 text-2xl font-bold">{t("dashboard.list")}</div>
                         </div>
                     </a>
                 </section>
 
                 <section className="bg-base-300 p-6 rounded-xl shadow-md mb-8">
-                    <h2 className="text-xl font-semibold mb-10">Najbliższe stacje</h2>
+                    <h2 className="text-xl font-semibold mb-10">{t("dashboard.nearest")}</h2>
 
                     {stationsLoading ? (
                         <div>Ładowanie najbliższych stacji... (upewnij się, że zezwoliłeś na dostęp do lokalizacji)</div>
@@ -430,7 +441,7 @@ export default function Dashboard() {
                                         <p className="text-sm text-gray-600">{`kod pocztowy = ${s.postalcode ?? "-"}`}</p>
 
                                         {s.distanceMeters !== undefined && s.distanceMeters !== null && (
-                                            <p className="text-sm text-gray-500">Odległość: {formatDistance(s.distanceMeters)}</p>
+                                            <p className="text-sm text-gray-500">{t("dashboard.dostance")} {formatDistance(s.distanceMeters)}</p>
                                         )}
 
                                         <div className="card-actions justify-mid mt-2">
@@ -438,13 +449,13 @@ export default function Dashboard() {
                                                 href={`/map?lat=${s.latitude ?? ""}&lon=${s.longitude ?? ""}`}
                                                 className="btn btn-outline"
                                             >
-                                                Pokaż na mapie
+                                                {t("dashboard.showonmap")}
                                             </a>
                                             <a
                                                 href={`/list#${encodeURIComponent(s.id ?? s.name ?? String(idx))}`}
                                                 className="btn btn-outline btn-primary"
                                             >
-                                                Szczegóły stacji
+                                                {t("dashboard.stationdetails")}
                                             </a>
                                         </div>
                                     </div>
@@ -452,44 +463,44 @@ export default function Dashboard() {
                             ))}
                         </div>
                     ) : (
-                        <div className="text-base-content">Brak dostępnych stacji.</div>
+                        <div className="text-base-content">{t("dashboard.nostations")}</div>
                     )}
                 </section>
 
                 <section className="bg-base-300 p-6 rounded-xl shadow-md">
-                    <h2 className="text-xl font-semibold mb-4">Twoje statystyki zgłoszeń</h2>
+                    <h2 className="text-xl font-semibold mb-4">{t("dashboard.yourstatistics")}</h2>
 
                     {statsLoading ? (
-                        <div>Ładowanie statystyk...</div>
+                        <div>{t("dashboard.loadstatistics")}</div>
                     ) : statsError ? (
                         <div className="text-error">{statsError}</div>
                     ) : stats ? (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="p-4 bg-base-100 rounded text-center">
                                 <div className="text-3xl text-base-content font-bold">{stats.total ?? requests?.length ?? 0}</div>
-                                <div className="text-sm text-base-content mt-1">Wszystkie zgłoszenia</div>
+                                <div className="text-sm text-base-content mt-1">{t("dashboard.allreports")}</div>
                             </div>
                             <div className="p-4 bg-base-100 rounded text-center">
                                 <div className="text-3xl text-success font-bold">{stats.accepted ?? 0}</div>
-                                <div className="text-sm text-success mt-1">Zaakceptowane</div>
+                                <div className="text-sm text-success mt-1">{t("dashboard.accepted")}</div>
                             </div>
                             <div className="p-4 bg-base-100 rounded text-error text-center">
                                 <div className="text-3xl font-bold">{stats.rejected ?? 0}</div>
-                                <div className="text-sm mt-1">Odrzucone</div>
+                                <div className="text-sm mt-1">{t("dashboard.rejected")}</div>
                             </div>
                             <div className="p-4 bg-base-100 rounded text-info text-center">
                                 <div className="text-3xl font-bold">{stats.acceptedRate != null ? `${stats.acceptedRate}%` : "-"}</div>
-                                <div className="text-sm mt-1">Wskaźnik akceptacji</div>
+                                <div className="text-sm mt-1">{t("dashboard.acceptrate")}</div>
                             </div>
                         </div>
                     ) : (
-                        <div className="text-gray-300">Brak statystyk.</div>
+                        <div className="text-gray-300">{t("dashboard.nostatistics")}</div>
                     )}
 
                     <div className="mt-6">
-                        <h3 className="font-semibold mb-3">Twoje zgłoszenia (lista)</h3>
+                        <h3 className="font-semibold mb-3">{t("dashboard.yourreports")}</h3>
                         {requestsLoading ? (
-                            <div>Ładowanie...</div>
+                            <div>{t("dashboard.loading")}</div>
                         ) : requests && requests.length > 0 ? (
                             <div className="flex flex-col gap-3">
                                 {requests.map((r) => (
@@ -511,7 +522,7 @@ export default function Dashboard() {
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-base-content">Nie masz jeszcze zgłoszeń.</div>
+                            <div className="text-base-content">{t("dashboard.noyourreports")}</div>
                         )}
                     </div>
                 </section>

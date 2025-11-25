@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -26,6 +27,7 @@ using Services.Services;
 using StackExchange.Redis;
 using System.Reflection;
 using System.Text;
+using System.Threading.RateLimiting;
 
 //log configuration
 Log.Logger = new LoggerConfiguration()
@@ -59,11 +61,66 @@ builder.Services.AddCors(op =>
 {
     op.AddPolicy("AllowClient", p =>
     {
-        p.WithOrigins("http://localhost:4000")
+        p.WithOrigins("http://localhost:8524")
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials();
     });
+});
+
+// rate limiting
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 200,
+            Window = TimeSpan.FromMinutes(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        });
+    });
+
+    options.AddFixedWindowLimiter("auth", options =>
+    {
+        options.PermitLimit = 5;
+        options.Window = TimeSpan.FromMinutes(1);
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 0;
+    });
+
+
+    options.AddFixedWindowLimiter("upload", options => { 
+        options.PermitLimit = 10;
+        options.Window = TimeSpan.FromMinutes(1);
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 0;
+    });
+
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+
+        TimeSpan? retryAfter = null;
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retry))
+        {
+            retryAfter = retry;
+            context.HttpContext.Response.Headers.RetryAfter = retry.TotalSeconds.ToString();
+        }
+
+        var result = Result<object>.Bad(
+            message: "Too many requests. Please try again later.",
+            statusCode: StatusCodes.Status429TooManyRequests,
+            errors: retryAfter.HasValue
+                ? new List<string> { $"Retry after {retryAfter.Value.TotalSeconds} seconds" }
+                : new List<string> { "Rate limit exceeded" }
+        );
+
+        await context.HttpContext.Response.WriteAsJsonAsync(result, cancellationToken);
+    };
 });
 
 //jwt configuration

@@ -1,0 +1,54 @@
+{
+  "dashboard": {
+    "welcome": "Witaj, jesteś zalogowany jako ",
+    "map": "Mapa stacji",
+    "list": "Lista stacji",
+    "nearest": "Najbliższe stacje",
+    "distance": "Odległość",
+    "showonmap": "Pokaż na mapie",
+    "stationdetails": "Szczegóły stacji",
+    "nostations": "Brak dostępnych stacji",
+    "yourstatistics": "Twoje statystyki zgłoszeń",
+    "loadstatistics": "Ładowanie statystyk",
+    "allreports": "Wszystkie zgłoszenia",
+    "accepted": "Zaakceptowane",
+    "rejected": "Odrzucone",
+    "acceptrate": "Wskaźnik akceptacji",
+    "nostatistics": "Brak zgłoszeń",
+    "yourreports": "Twoje zgłoszenia (lista)",
+    "loading": "Loading...",
+    "noyourreports": "Nie masz jeszcze zgłoszeń"
+  },
+  "map": {
+    "title": "Mapa stacji"
+  },
+  "list": {
+    "title": "Lista stacji"
+  },
+  "stations": {
+    "nearestTitle": "Najbliższe stacje",
+    "loading": "Ładowanie najbliższych stacji... (upewnij się, że zezwoliłeś na dostęp do lokalizacji)",
+    "noAccess": "Brak dostępu do lokalizacji i nie udało się pobrać stacji.",
+    "none": "Brak dostępnych stacji."
+  },
+  "buttons": {
+    "showOnMap": "Pokaż na mapie",
+    "stationDetails": "Szczegóły stacji",
+    "language": "Język",
+    "polish": "Polski",
+    "english": "English"
+  },
+  "stats": {
+    "all": "Wszystkie zgłoszenia",
+    "accepted": "Zaakceptowane",
+    "rejected": "Odrzucone",
+    "rate": "Wskaźnik akceptacji",
+    "loading": "Ładowanie statystyk...",
+    "noStats": "Brak statystyk."
+  },
+  "requests": {
+    "title": "Twoje zgłoszenia (lista)",
+    "loading": "Ładowanie...",
+    "noRequests": "Nie masz jeszcze zgłoszeń."
+  }
+}

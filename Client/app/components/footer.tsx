@@ -29,7 +29,6 @@ export default function Footer() {
                 <li><a href="/settings" className="link link-hover">Ustawienia</a></li>
                 <li><a href="/map" className="link link-hover">Mapa</a></li>
                 <li><a href="/list" className="link link-hover">Lista</a></li>
-                <li><a href="/proposal" className="link link-hover">Propozycje</a></li>
               </ul>
             </div>
           </div>

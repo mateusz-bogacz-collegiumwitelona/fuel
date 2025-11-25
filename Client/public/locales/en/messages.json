@@ -1,0 +1,34 @@
+{
+  "dashboard": {
+    "welcome": "Welcome, you're logged in as ",
+    "map": "Station map"
+  },
+  "map": { "title": "Station map" },
+  "list": { "title": "Station list" },
+  "stations": {
+    "nearestTitle": "Nearest stations",
+    "loading": "Loading nearest stations... (make sure you allowed location)",
+    "noAccess": "No access to location and failed to fetch stations.",
+    "none": "No available stations."
+  },
+  "buttons": {
+    "showOnMap": "Show on map",
+    "stationDetails": "Station details",
+    "language": "Language",
+    "polish": "Polish",
+    "english": "English"
+  },
+  "stats": {
+    "all": "All proposals",
+    "accepted": "Accepted",
+    "rejected": "Rejected",
+    "rate": "Acceptance rate",
+    "loading": "Loading statistics...",
+    "noStats": "No statistics."
+  },
+  "requests": {
+    "title": "Your proposals (list)",
+    "loading": "Loading...",
+    "noRequests": "You don't have proposals yet."
+  }
+}

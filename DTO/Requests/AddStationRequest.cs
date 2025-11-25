@@ -12,9 +12,13 @@ namespace DTO.Requests
 
         [Required(ErrorMessage = "House number is required")]
         public string HouseNumber { get; set; }
-
+        
         [Required(ErrorMessage = "City is required")]
         public string City { get; set; }
+
+        [RegularExpression(@"^[A-Za-z0-9 -]{3,10}$", ErrorMessage = "Invalid postal code format.")]
+        [Required(ErrorMessage = "City is required")]
+        public string PostalCode { get; set; }
 
         [Required(ErrorMessage = "Latitude is required")]
         [Range(-90, 90, ErrorMessage = "Latitude must be between -90 and 90.")]

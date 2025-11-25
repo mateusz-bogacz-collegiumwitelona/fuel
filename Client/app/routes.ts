@@ -8,5 +8,10 @@ export default [
   route("map", "routes/map.tsx"),
   route("list", "routes/list.tsx"),
   route("settings", "routes/settings.tsx"),
-  route("proposal", "routes/proposal.tsx")
+  route("proposals", "routes/proposals.tsx"),
+  route("station/:brandName/:city/:street/:houseNumber", "routes/station.tsx"),
+  route("gas_station_admin", "routes/gas-station-admin.tsx"),
+  route("admin_admin", "routes/admin-admin.tsx"),
+  route("user_admin", "routes/user-admin.tsx"),
+  route("brand_admin", "routes/brand-admin.tsx"),
 ] satisfies RouteConfig;

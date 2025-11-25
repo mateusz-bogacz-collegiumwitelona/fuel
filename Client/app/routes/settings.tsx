@@ -1,6 +1,7 @@
 import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
+import { useTranslation } from "react-i18next";
 
 const API_BASE = "http://localhost:5111";
 
