@@ -1,5 +1,7 @@
 import * as React from "react";
 
+/* ---------------------- TYPY ---------------------- */
+
 export type AdminStation = {
   brandName: string;
   street: string;
@@ -25,6 +27,8 @@ export type StationFormValues = {
   longitude: number;
   fuelTypes: FuelForm[];
 };
+
+/* ---------------------- BAZOWY MODAL ---------------------- */
 
 type BaseModalProps = {
   isOpen: boolean;
@@ -79,36 +83,39 @@ export function AddStationModal({
     fuelTypes: [
       {
         code: "PB95",
-        price: 6.5,
+        price: 6.52,
       },
       {
         code: "PB98",
-        price: 6.5,
+        price: 5.98,
       },
       {
         code: "E85",
-        price: 6.5,
+        price: 6.23,
       },
       {
         code: "ON",
-        price: 6.5,
+        price: 6.21,
       },
       {
         code: "LPG",
-        price: 6.5,
+        price: 3.56,
       },
     ],
   });
+
+
+  const [geoLoading, setGeoLoading] = React.useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
     setForm((prev) => ({
       ...prev,
-      [name]: name === "latitude" || name === "longitude" ? Number(value) : value,
+      [name]:
+        name === "latitude" || name === "longitude" ? Number(value) : value,
     }));
   };
-
 
   const handleFuelChange = (
     index: number,
@@ -125,7 +132,6 @@ export function AddStationModal({
     });
   };
 
-
   const handleAddFuelRow = () => {
     setForm((prev) => ({
       ...prev,
@@ -133,18 +139,74 @@ export function AddStationModal({
     }));
   };
 
-
   const handleRemoveFuelRow = (index: number) => {
     setForm((prev) => {
-      if (prev.fuelTypes.length === 1) return prev; 
+      if (prev.fuelTypes.length === 1) return prev;
       const fuelTypes = prev.fuelTypes.filter((_, i) => i !== index);
       return { ...prev, fuelTypes };
     });
   };
 
+
+  const handleGeocode = async () => {
+    const { city, street, houseNumber, postalCode } = form;
+
+    if (!city.trim() || !street.trim() || !houseNumber.trim()) {
+      alert("Podaj co najmniej miasto, ulicę i numer budynku.");
+      return;
+    }
+
+    const query = `${street} ${houseNumber}, ${postalCode ?? ""} ${city}, Polska`;
+
+    try {
+      setGeoLoading(true);
+
+      const params = new URLSearchParams({
+        format: "json",
+        q: query,
+        limit: "1",
+      });
+
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+        {
+          headers: {
+            Accept: "application/json",
+          },
+        },
+      );
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(
+          `Błąd geokodowania (${res.status}): ${text || "brak treści"}`,
+        );
+      }
+
+      const data: Array<{ lat: string; lon: string }> = await res.json();
+
+      if (!data.length) {
+        alert("Nie znaleziono współrzędnych dla podanego adresu.");
+        return;
+      }
+
+      const first = data[0];
+
+      setForm((prev) => ({
+        ...prev,
+        latitude: Number(first.lat),
+        longitude: Number(first.lon),
+      }));
+    } catch (err) {
+      console.error(err);
+      alert("Nie udało się pobrać współrzędnych dla tego adresu.");
+    } finally {
+      setGeoLoading(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
 
     const cleaned: StationFormValues = {
       ...form,
@@ -224,39 +286,55 @@ export function AddStationModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">lat</span>
-              </label>
-              <input
-                name="latitude"
-                type="number"
-                step="0.000001"
-                className="input input-bordered input-sm"
-                value={form.latitude}
-                onChange={handleChange}
-                required
-              />
+          <div className="col-span-1 md:col-span-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">lat</span>
+                </label>
+                <input
+                  name="latitude"
+                  type="number"
+                  step="0.000001"
+                  className="input input-bordered input-sm"
+                  value={form.latitude}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">lng</span>
+                </label>
+                <input
+                  name="longitude"
+                  type="number"
+                  step="0.000001"
+                  className="input input-bordered input-sm"
+                  value={form.longitude}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
             </div>
 
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">lng</span>
-              </label>
-              <input
-                name="longitude"
-                type="number"
-                step="0.000001"
-                className="input input-bordered input-sm"
-                value={form.longitude}
-                onChange={handleChange}
-                required
-              />
+            <div className="mt-2">
+              <button
+                type="button"
+                className="btn btn-outline btn-xs"
+                onClick={handleGeocode}
+                disabled={geoLoading}
+              >
+                {geoLoading
+                  ? "Pobieranie współrzędnych..."
+                  : "Pobierz współrzędne z adresu"}
+              </button>
             </div>
           </div>
         </div>
 
+        {/* Paliwa – wiele wierszy */}
         <div className="mt-2 border-t border-base-300 pt-3">
           <h3 className="text-sm font-semibold mb-2">Ceny paliw</h3>
 
@@ -264,7 +342,7 @@ export function AddStationModal({
             <div key={index} className="grid grid-cols-12 gap-2 mb-2">
               <div className="form-control col-span-5">
                 <label className="label">
-                  <span className="label-text">Rodzaj paliwa</span>
+                  <span className="label-text">Kod (np. PB95)</span>
                 </label>
                 <input
                   className="input input-bordered input-sm"
@@ -365,7 +443,8 @@ export function EditStationModal({
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: name === "latitude" || name === "longitude" ? Number(value) : value,
+      [name]:
+        name === "latitude" || name === "longitude" ? Number(value) : value,
     }));
   };
 
