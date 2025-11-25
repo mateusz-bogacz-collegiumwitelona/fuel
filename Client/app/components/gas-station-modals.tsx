@@ -109,7 +109,7 @@ export function AddStationModal({
     }));
   };
 
-  // Zmiana pojedynczego pola paliwa
+
   const handleFuelChange = (
     index: number,
     field: "code" | "price",
@@ -125,7 +125,7 @@ export function AddStationModal({
     });
   };
 
-  // Dodanie nowego wiersza paliwa
+
   const handleAddFuelRow = () => {
     setForm((prev) => ({
       ...prev,
@@ -133,10 +133,10 @@ export function AddStationModal({
     }));
   };
 
-  // Usunięcie wiersza paliwa
+
   const handleRemoveFuelRow = (index: number) => {
     setForm((prev) => {
-      if (prev.fuelTypes.length === 1) return prev; // zawsze minimum jedno paliwo
+      if (prev.fuelTypes.length === 1) return prev; 
       const fuelTypes = prev.fuelTypes.filter((_, i) => i !== index);
       return { ...prev, fuelTypes };
     });
@@ -145,7 +145,7 @@ export function AddStationModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // odfiltruj puste wiersze paliw na wszelki wypadek
+
     const cleaned: StationFormValues = {
       ...form,
       fuelTypes: form.fuelTypes.filter(
@@ -257,7 +257,6 @@ export function AddStationModal({
           </div>
         </div>
 
-        {/* Paliwa – teraz wiele wierszy */}
         <div className="mt-2 border-t border-base-300 pt-3">
           <h3 className="text-sm font-semibold mb-2">Ceny paliw</h3>
 

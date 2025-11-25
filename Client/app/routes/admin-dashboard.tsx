@@ -23,7 +23,6 @@ export default function AdminDashboard() {
             const token = localStorage.getItem("token");
             const expiration = localStorage.getItem("token_expiration");
 
-            // jeśli token jest i nie wygasł – bierzemy z niego maila
             if (token && expiration && new Date(expiration) > new Date()) {
                 const decoded = parseJwt(token);
                 const userEmail = (decoded && (decoded.email || decoded.sub)) || null;
@@ -31,7 +30,6 @@ export default function AdminDashboard() {
                 return;
             }
 
-            // próba odświeżenia jak w dashboard.tsx
             try {
                 const refreshRes = await fetch(`${API_BASE}/api/refresh`, {
                     method: "POST",

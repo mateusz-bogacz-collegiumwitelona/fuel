@@ -46,7 +46,7 @@ export default function GasStationAdminPage() {
   const [pageSize] = React.useState(10);
   const [totalPages, setTotalPages] = React.useState(1);
 
-  // NOWE: tekst wyszukiwania + flaga, że autoryzacja została sprawdzona
+
   const [search, setSearch] = React.useState("");
   const [authChecked, setAuthChecked] = React.useState(false);
 
@@ -55,7 +55,7 @@ export default function GasStationAdminPage() {
   const [selectedStation, setSelectedStation] =
     React.useState<AdminStation | null>(null);
 
-  // 1) efekt tylko do sprawdzenia tokenu / refresh
+
   React.useEffect(() => {
     (async () => {
       try {
@@ -89,13 +89,11 @@ export default function GasStationAdminPage() {
     })();
   }, []);
 
-  // 2) efekt do faktycznego ładowania listy (paginacja + search)
   React.useEffect(() => {
     if (!authChecked) return;
     (async () => {
       await loadStationsFromApi(pageNumber, pageSize, search);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authChecked, pageNumber, pageSize, search]);
 
   async function loadStationsFromApi(
@@ -114,7 +112,6 @@ export default function GasStationAdminPage() {
         SortDirection: "asc",
       });
 
-      // NOWE: obsługa parametru Search
       if (searchValue.trim().length > 0) {
         params.set("Search", searchValue.trim());
       }
