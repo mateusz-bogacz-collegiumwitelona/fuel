@@ -46,11 +46,16 @@ export default function GasStationAdminPage() {
   const [pageSize] = React.useState(10);
   const [totalPages, setTotalPages] = React.useState(1);
 
+  // NOWE: tekst wyszukiwania + flaga, że autoryzacja została sprawdzona
+  const [search, setSearch] = React.useState("");
+  const [authChecked, setAuthChecked] = React.useState(false);
+
   const [activeModal, setActiveModal] =
     React.useState<"add" | "edit" | "delete" | null>(null);
   const [selectedStation, setSelectedStation] =
     React.useState<AdminStation | null>(null);
 
+  // 1) efekt tylko do sprawdzenia tokenu / refresh
   React.useEffect(() => {
     (async () => {
       try {
@@ -61,7 +66,7 @@ export default function GasStationAdminPage() {
           const decoded = parseJwt(token);
           const userEmail = (decoded && (decoded.email || decoded.sub)) || null;
           setEmail(userEmail ?? "Zalogowany administrator");
-          await loadStationsFromApi(pageNumber, pageSize);
+          setAuthChecked(true);
           return;
         }
 
@@ -73,21 +78,31 @@ export default function GasStationAdminPage() {
 
         if (refreshRes.ok) {
           setEmail("Zalogowany administrator");
-          await loadStationsFromApi(pageNumber, pageSize);
+          setAuthChecked(true);
         } else {
           if (typeof window !== "undefined") window.location.href = "/login";
         }
       } catch (err) {
         console.error(err);
         if (typeof window !== "undefined") window.location.href = "/login";
-      } finally {
-        setLoading(false);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageNumber, pageSize]);
+  }, []);
 
-  async function loadStationsFromApi(page: number, size: number) {
+  // 2) efekt do faktycznego ładowania listy (paginacja + search)
+  React.useEffect(() => {
+    if (!authChecked) return;
+    (async () => {
+      await loadStationsFromApi(pageNumber, pageSize, search);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authChecked, pageNumber, pageSize, search]);
+
+  async function loadStationsFromApi(
+    page: number,
+    size: number,
+    searchValue: string,
+  ) {
     setLoading(true);
     setError(null);
 
@@ -98,6 +113,11 @@ export default function GasStationAdminPage() {
         SortBy: "brandname",
         SortDirection: "asc",
       });
+
+      // NOWE: obsługa parametru Search
+      if (searchValue.trim().length > 0) {
+        params.set("Search", searchValue.trim());
+      }
 
       const res = await fetch(
         `${API_BASE}/api/admin/station/list?${params.toString()}`,
@@ -172,7 +192,7 @@ export default function GasStationAdminPage() {
           street: values.street,
           houseNumber: values.houseNumber,
           city: values.city,
-          postalCode: values.postalCode, // <-- TUTAJ wysyłamy kod pocztowy
+          postalCode: values.postalCode,
           latitude: values.latitude,
           longitude: values.longitude,
           fuelTypes: values.fuelTypes.map((f) => ({
@@ -188,7 +208,7 @@ export default function GasStationAdminPage() {
         throw new Error(`Nie udało się dodać stacji (${res.status}): ${text}`);
       }
 
-      await loadStationsFromApi(pageNumber, pageSize);
+      await loadStationsFromApi(pageNumber, pageSize, search);
       closeModal();
     } catch (e) {
       console.error(e);
@@ -215,7 +235,8 @@ export default function GasStationAdminPage() {
       if (values.city) body.newCity = values.city;
       if (values.postalCode) body.newPostalCode = values.postalCode;
       if (typeof values.latitude === "number") body.newLatitude = values.latitude;
-      if (typeof values.longitude === "number") body.newLongitude = values.longitude;
+      if (typeof values.longitude === "number")
+        body.newLongitude = values.longitude;
       if (values.fuelTypes && values.fuelTypes.length > 0) {
         body.fuelTypes = values.fuelTypes.map((f) => ({
           code: f.code,
@@ -235,10 +256,12 @@ export default function GasStationAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`Nie udało się edytować stacji (${res.status}): ${text}`);
+        throw new Error(
+          `Nie udało się edytować stacji (${res.status}): ${text}`,
+        );
       }
 
-      await loadStationsFromApi(pageNumber, pageSize);
+      await loadStationsFromApi(pageNumber, pageSize, search);
       closeModal();
     } catch (e) {
       console.error(e);
@@ -267,10 +290,12 @@ export default function GasStationAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`Nie udało się usunąć stacji (${res.status}): ${text}`);
+        throw new Error(
+          `Nie udało się usunąć stacji (${res.status}): ${text}`,
+        );
       }
 
-      await loadStationsFromApi(pageNumber, pageSize);
+      await loadStationsFromApi(pageNumber, pageSize, search);
       closeModal();
     } catch (e) {
       console.error(e);
@@ -308,6 +333,28 @@ export default function GasStationAdminPage() {
           </div>
         </div>
 
+        {/* FILTR SZUKANIA */}
+        <div className="bg-base-300 rounded-xl p-4 shadow-md mb-4">
+          <div className="form-control w-full max-w-xs">
+            <label className="label">
+              <span className="label-text">
+                Szukaj (miasto, ulica, marka, kod pocztowy)
+              </span>
+            </label>
+            <input
+              type="text"
+              className="input input-bordered input-sm w-full"
+              placeholder="np. Legnica, Orlen, 59-220..."
+              value={search}
+              onChange={(e) => {
+                setPageNumber(1);
+                setSearch(e.target.value);
+              }}
+            />
+          </div>
+        </div>
+
+        {/* TABELA */}
         <div className="bg-base-300 rounded-xl p-4 shadow-md">
           {loading ? (
             <div className="text-sm">Ładowanie stacji...</div>

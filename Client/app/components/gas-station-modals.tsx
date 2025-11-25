@@ -81,6 +81,22 @@ export function AddStationModal({
         code: "PB95",
         price: 6.5,
       },
+      {
+        code: "PB98",
+        price: 6.5,
+      },
+      {
+        code: "E85",
+        price: 6.5,
+      },
+      {
+        code: "ON",
+        price: 6.5,
+      },
+      {
+        code: "LPG",
+        price: 6.5,
+      },
     ],
   });
 
@@ -93,9 +109,51 @@ export function AddStationModal({
     }));
   };
 
+  // Zmiana pojedynczego pola paliwa
+  const handleFuelChange = (
+    index: number,
+    field: "code" | "price",
+    value: string,
+  ) => {
+    setForm((prev) => {
+      const fuelTypes = [...prev.fuelTypes];
+      fuelTypes[index] = {
+        ...fuelTypes[index],
+        [field]: field === "price" ? Number(value) : value,
+      };
+      return { ...prev, fuelTypes };
+    });
+  };
+
+  // Dodanie nowego wiersza paliwa
+  const handleAddFuelRow = () => {
+    setForm((prev) => ({
+      ...prev,
+      fuelTypes: [...prev.fuelTypes, { code: "", price: 0 }],
+    }));
+  };
+
+  // Usunięcie wiersza paliwa
+  const handleRemoveFuelRow = (index: number) => {
+    setForm((prev) => {
+      if (prev.fuelTypes.length === 1) return prev; // zawsze minimum jedno paliwo
+      const fuelTypes = prev.fuelTypes.filter((_, i) => i !== index);
+      return { ...prev, fuelTypes };
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onConfirm(form);
+
+    // odfiltruj puste wiersze paliw na wszelki wypadek
+    const cleaned: StationFormValues = {
+      ...form,
+      fuelTypes: form.fuelTypes.filter(
+        (f) => f.code.trim().length > 0 && !Number.isNaN(f.price),
+      ),
+    };
+
+    onConfirm(cleaned);
   };
 
   return (
@@ -199,52 +257,63 @@ export function AddStationModal({
           </div>
         </div>
 
-        {/* Paliwa – na razie jedno obowiązkowe */}
+        {/* Paliwa – teraz wiele wierszy */}
         <div className="mt-2 border-t border-base-300 pt-3">
-          <h3 className="text-sm font-semibold mb-2">
-            Rodzaj paliwa (wymagane)
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Kod (np. PB95)</span>
-              </label>
-              <input
-                className="input input-bordered input-sm"
-                value={form.fuelTypes[0].code}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    fuelTypes: [{ ...prev.fuelTypes[0], code: e.target.value }],
-                  }))
-                }
-                required
-              />
+          <h3 className="text-sm font-semibold mb-2">Ceny paliw</h3>
+
+          {form.fuelTypes.map((fuel, index) => (
+            <div key={index} className="grid grid-cols-12 gap-2 mb-2">
+              <div className="form-control col-span-5">
+                <label className="label">
+                  <span className="label-text">Rodzaj paliwa</span>
+                </label>
+                <input
+                  className="input input-bordered input-sm"
+                  value={fuel.code}
+                  onChange={(e) =>
+                    handleFuelChange(index, "code", e.target.value)
+                  }
+                  required
+                />
+              </div>
+
+              <div className="form-control col-span-5">
+                <label className="label">
+                  <span className="label-text">Cena</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="input input-bordered input-sm"
+                  value={fuel.price}
+                  onChange={(e) =>
+                    handleFuelChange(index, "price", e.target.value)
+                  }
+                  required
+                />
+              </div>
+
+              <div className="flex items-end justify-end col-span-2">
+                {form.fuelTypes.length > 1 && (
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-ghost text-error"
+                    onClick={() => handleRemoveFuelRow(index)}
+                  >
+                    usuń
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Cena</span>
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                className="input input-bordered input-sm"
-                value={form.fuelTypes[0].price}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    fuelTypes: [
-                      {
-                        ...prev.fuelTypes[0],
-                        price: Number(e.target.value),
-                      },
-                    ],
-                  }))
-                }
-                required
-              />
-            </div>
-          </div>
+          ))}
+
+          <button
+            type="button"
+            className="btn btn-xs mt-1"
+            onClick={handleAddFuelRow}
+          >
+            + Dodaj paliwo
+          </button>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">

@@ -112,7 +112,7 @@ export default function BrandAdminPage() {
       }
 
       const res = await fetch(
-        `${API_BASE}/api/admin/brad/list?${params.toString()}`,
+        `${API_BASE}/api/admin/brand/list?${params.toString()}`,
         {
           method: "GET",
           headers: {
@@ -174,7 +174,7 @@ const handleAddConfirm = async (form: AddBrandForm) => {
     const formData = new FormData();
     formData.append("name", form.name);
 
-    const res = await fetch(`${API_BASE}/api/admin/brad/add`, {
+    const res = await fetch(`${API_BASE}/api/admin/brand/add`, {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -202,7 +202,7 @@ const handleAddConfirm = async (form: AddBrandForm) => {
 
     try {
       const res = await fetch(
-        `${API_BASE}/api/admin/brad/edit/${encodeURIComponent(
+        `${API_BASE}/api/admin/brand/edit/${encodeURIComponent(
           selectedBrand.name,
         )}?newName=${encodeURIComponent(form.newName)}`,
         {
@@ -232,7 +232,7 @@ const handleAddConfirm = async (form: AddBrandForm) => {
 
     try {
       const res = await fetch(
-        `${API_BASE}/api/admin/brad/${encodeURIComponent(selectedBrand.name)}`,
+        `${API_BASE}/api/admin/brand/${encodeURIComponent(selectedBrand.name)}`,
         {
           method: "DELETE",
           headers: {
