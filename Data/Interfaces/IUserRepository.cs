@@ -7,7 +7,6 @@ namespace Data.Interfaces
 {
     public interface IUserRepository
     {
-        Task<GetUserInfoResponse> GetUserInfoAsync(string email);
         Task<bool> IsUserDeleted(ApplicationUser user);
         Task<IdentityResult> DeleteUserAsync(ApplicationUser user);
         Task<List<GetUserListResponse>> GetUserListAsync(TableRequest request);

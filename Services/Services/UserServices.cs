@@ -37,53 +37,6 @@ namespace Services.Services
             _cache = cache;
         }
 
-        public async Task<Result<GetUserInfoResponse>> GetUserInfoAsync(string email)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(email))
-                {
-                    _logger.LogError("Error. Email is required");
-                    return Result<GetUserInfoResponse>.Bad(
-                        "Validation error",
-                        StatusCodes.Status404NotFound,
-                        new List<string> { "Email is required" }
-                        );
-
-                }
-
-                var cacheKey = $"{CacheService.CacheKeys.UserInfoPrefix}{email}";
-
-                var result = await _cache.GetOrSetAsync(
-                    cacheKey,
-                    async () => await _userRepository.GetUserInfoAsync(email),
-                    CacheService.CacheExpiry.VeryLong
-                    );
-
-                if (result == null)
-                {
-                    _logger.LogError("Error. Cannto find user");
-                    return Result<GetUserInfoResponse>.Bad(
-                        "Error",
-                        StatusCodes.Status500InternalServerError,
-                        new List<string> { "Cannto find user" }
-                        );
-                }
-
-                return Result<GetUserInfoResponse>.Good(
-                    "UserName changed successfully.",
-                    StatusCodes.Status200OK,
-                    result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while get info for user with email {Email}.", email);
-                return Result<GetUserInfoResponse>.Bad(
-                    "An unexpected error occurred.",
-                    StatusCodes.Status500InternalServerError);
-            }
-        }
-
         public async Task<Result<IdentityResult>> ChangeUserNameAsync(string email, string userName)
         {
             try
