@@ -203,31 +203,6 @@ namespace Services.Services
             }
         }
 
-        public async Task<Result<PagedResult<GetUserAllProposalPricesResponse>>> GetUserAllProposalPricesAsync(string email, GetPaggedRequest pagged)
-        {
-            if (string.IsNullOrEmpty(email) || string.IsNullOrWhiteSpace(email))
-            {
-                _logger.LogWarning("Unauthorize: email is null or empty.");
-                return Result<PagedResult<GetUserAllProposalPricesResponse>>.Bad(
-                    "Unauthorize.",
-                    StatusCodes.Status401Unauthorized,
-                    new List<string> { "Email is null or empty" });
-            }
-
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null)
-            {
-                _logger.LogWarning("User with email {Email} not found.", email);
-                return Result<PagedResult<GetUserAllProposalPricesResponse>>.Bad(
-                    "Validation error",
-                    StatusCodes.Status400BadRequest,
-                    new List<string> { "User not found with the provided email." });
-            }
-
-            return await _priceProposalRepository.GetUserAllProposalPricesAsync(user.Id)
-                .ToPagedResultAsync(pagged, _logger, "user price proposals");
-        }
-
         public async Task<Result<PagedResult<GetStationPriceProposalResponse>>> GetAllPriceProposal(GetPaggedRequest pagged, TableRequest request)
         {
             try
