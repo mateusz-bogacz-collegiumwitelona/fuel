@@ -1,13 +1,75 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import ThemeController from "../components/ThemeController";
 import { useTheme } from "../context/ThemeContext";
 import { useTranslation } from "react-i18next";
 
 const API_BASE = "http://localhost:5111";
 
+function normalizeRole(raw: unknown): string | null {
+  if (!raw) return null;
+  const pick = Array.isArray(raw) ? raw[0] : raw;
+  if (pick == null) return null;
+
+  let role = String(pick).trim();
+  if (!role) return null;
+
+  if (role.startsWith("ROLE_")) role = role.slice(5);
+  role = role.toLowerCase();
+
+  if (["admin", "administrator"].includes(role)) return "Admin";
+  if (["user", "użytkownik", "viewer"].includes(role)) return "User";
+
+  return role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+function extractRoleLoose(obj: any): string | null {
+  if (!obj || typeof obj !== "object") return null;
+
+  const candidates = [
+    "roles",
+    "role",
+    "authorities",
+    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/role",
+  ];
+
+  for (const key of candidates) {
+    if (key in obj) {
+      const maybe = normalizeRole(obj[key]);
+      if (maybe) return maybe;
+    }
+  }
+  return null;
+}
+
 export default function Header() {
   const { theme, setTheme } = useTheme();
   const { i18n, t } = useTranslation();
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+  let mounted = true;
+  (async () => {
+    try {
+      const meRes = await fetch(`${API_BASE}/api/user/me`, {
+        method: "GET",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+      if (!mounted) return;
+      if (meRes.ok) {
+        const me = await meRes.json();
+        const meRole = extractRoleLoose(me);
+        setRole(meRole);
+      } else {
+        setRole(null);
+      }
+    } catch (e) {
+      setRole(null);
+    }
+  })();
+  return () => { mounted = false; };
+}, []);
 
   const handleLogout = async () => {
     try {
@@ -20,6 +82,8 @@ export default function Header() {
     }
     localStorage.removeItem("token");
     localStorage.removeItem("token_expiration");
+    localStorage.removeItem("role");
+    localStorage.removeItem("email");
     if (typeof window !== "undefined") window.location.href = "/login";
   };
 
@@ -80,6 +144,11 @@ export default function Header() {
               <li><a href="/map">Mapa</a></li>
               <li><a href="/list">Lista</a></li>
               <li><a href="/proposals">Propozycje zmian</a></li>
+
+              {role === "Admin" && (
+                <li><a href="/admin-dashboard">Admin Dashboard</a></li>
+              )}
+
               <li><button onClick={handleLogout} className="w-full text-left">Wyloguj</button></li>
             </ul>
           </div>

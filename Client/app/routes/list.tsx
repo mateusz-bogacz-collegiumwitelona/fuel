@@ -59,12 +59,140 @@ export default function ListPage() {
 
     // Location
     const [userCoords, setUserCoords] = React.useState<{ lat: number; lon: number } | null>(null);
+    // Address autocomplete / geocoding
+    const [address, setAddress] = React.useState<string>("");
+    const [addressSuggestions, setAddressSuggestions] = React.useState<Array<{ display_name: string; lat: string; lon: string }>>([]);
+    const [addressLoading, setAddressLoading] = React.useState<boolean>(false);
+    const geocodeTimeoutRef = React.useRef<number | null>(null);
+
+    // Available lists from API (fuel types & brands)
+    const [availableFuelTypes, setAvailableFuelTypes] = React.useState<string[]>([]);
+    const [availableBrands, setAvailableBrands] = React.useState<string[]>([]);
+    const [brandsOpen, setBrandsOpen] = React.useState<boolean>(false);
+    const [fuelsOpen, setFuelsOpen] = React.useState<boolean>(false);
+    const [brandFilter, setBrandFilter] = React.useState<string>("");
+
+    // Fetch available fuel types and brands once
+    React.useEffect(() => {
+        (async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const fetchOptions: any = {
+                    headers: { Accept: 'application/json' },
+                    credentials: 'include',
+                };
+                if (token) fetchOptions.headers.Authorization = `Bearer ${token}`;
+
+                console.log('[ListPage] fetching fuel-codes and all-brands with options:', fetchOptions);
+
+                // Fuel codes
+                try {
+                    const fRes = await fetch(`${API_BASE}/api/station/fuel-codes`, fetchOptions);
+                    const fText = await fRes.text();
+
+                    if (!fRes.ok) {
+                        console.warn('[ListPage] fuel-codes response not ok', fRes.status, fText);
+                        if (fRes.status === 404) setAvailableFuelTypes([]);
+                    } else {
+                        let fJson: any;
+                        try { fJson = JSON.parse(fText); } catch { fJson = fText; }
+
+                        // support several shapes: ['PB95',...] or { data: [...] } or { items: [...] } or [{ code: 'PB95' }, ...]
+                        let arr: any[] = [];
+                        if (Array.isArray(fJson)) arr = fJson;
+                        else if (Array.isArray(fJson.data)) arr = fJson.data;
+                        else if (Array.isArray(fJson.items)) arr = fJson.items;
+
+                        // if items are objects, try to extract string code
+                        arr = arr.map((x: any) => typeof x === 'string' ? x : (x.code || x.name || x.value || x));
+                        // filter falsy and unique
+                        arr = Array.from(new Set(arr.filter(Boolean)));
+                        setAvailableFuelTypes(arr);
+                    }
+                } catch (e) {
+                    console.error('[ListPage] error fetching fuel-codes', e);
+                    setAvailableFuelTypes([]);
+                }
+
+                // Brands
+                try {
+                    const bRes = await fetch(`${API_BASE}/api/station/all-brands`, fetchOptions);
+                    const bText = await bRes.text();
+
+                    if (!bRes.ok) {
+                        console.warn('[ListPage] all-brands response not ok', bRes.status, bText);
+                        if (bRes.status === 404) setAvailableBrands([]);
+                    } else {
+                        let bJson: any;
+                        try { bJson = JSON.parse(bText); } catch { bJson = bText; }
+
+                        let arr: any[] = [];
+                        if (Array.isArray(bJson)) arr = bJson;
+                        else if (Array.isArray(bJson.data)) arr = bJson.data;
+                        else if (Array.isArray(bJson.items)) arr = bJson.items;
+
+                        arr = arr.map((x: any) => typeof x === 'string' ? x : (x.brandName || x.name || x.value || x));
+                        arr = Array.from(new Set(arr.filter(Boolean)));
+                        setAvailableBrands(arr);
+                    }
+                } catch (e) {
+                    console.error('[ListPage] error fetching all-brands', e);
+                    setAvailableBrands([]);
+                }
+
+            } catch (e) {
+                console.error('Error fetching fuel types/brands', e);
+                setAvailableFuelTypes([]);
+                setAvailableBrands([]);
+            }
+        })();
+    }, []);
+
+    async function geocodeAddress(query: string) {
+        if (!query || query.trim().length === 0) {
+            setAddressSuggestions([]);
+            return;
+        }
+        setAddressLoading(true);
+        try {
+            // Using Nominatim (OpenStreetMap) for simple geocoding. Swap to your preferred geocoding API if needed.
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=0&limit=5`);
+            if (!res.ok) return;
+            const json = await res.json();
+            setAddressSuggestions(Array.isArray(json) ? json : []);
+        } catch (e) {
+            console.error("Geocode error", e);
+        } finally {
+            setAddressLoading(false);
+        }
+    }
+
+    function selectAddress(suggestion: any) {
+        setAddress(suggestion.display_name || "");
+        setUserCoords({ lat: parseFloat(suggestion.lat), lon: parseFloat(suggestion.lon) });
+        setAddressSuggestions([]);
+    }
+
+    async function applyAddress() {
+        if (userCoords) return;
+        if (!address) return;
+        await geocodeAddress(address);
+        const first = addressSuggestions[0];
+        if (first) {
+            selectAddress(first);
+        } else {
+            setError("Nie znaleziono adresu.");
+        }
+    }
 
     // Pagination
     const [pageNumber, setPageNumber] = React.useState<number>(1);
     const [pageSize, setPageSize] = React.useState<number>(10);
     const [totalPages, setTotalPages] = React.useState<number>(1);
     const [totalCount, setTotalCount] = React.useState<number | null>(null);
+
+    // Collapsible filters
+    const [filtersOpen, setFiltersOpen] = React.useState<boolean>(false); // domyślnie zwinięte
 
     const fuelTypes = ["PB95", "PB98", "ON", "LPG", "CNG"];
 
@@ -331,138 +459,228 @@ export default function ListPage() {
                     </a>
                 </div>
 
-                {/* Filters */}
-                <section className="bg-base-300 p-6 rounded-xl shadow-md mb-6">
-                    <h2 className="text-xl font-semibold mb-4">Filtry</h2>
-
-                    {/* Location */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium mb-2">Lokalizacja</label>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                            <input
-                                type="number"
-                                placeholder="Szerokość"
-                                value={userCoords?.lat ?? ""}
-                                onChange={(e) => setUserCoords(prev => ({
-                                    lat: parseFloat(e.target.value),
-                                    lon: prev?.lon ?? 0
-                                }))}
-                                className="input input-bordered input-sm"
-                            />
-                            <input
-                                type="number"
-                                placeholder="Długość"
-                                value={userCoords?.lon ?? ""}
-                                onChange={(e) => setUserCoords(prev => ({
-                                    lat: prev?.lat ?? 0,
-                                    lon: parseFloat(e.target.value)
-                                }))}
-                                className="input input-bordered input-sm"
-                            />
-                            <input
-                                type="number"
-                                placeholder="Odległość (km)"
-                                value={distance}
-                                onChange={(e) => setDistance(e.target.value)}
-                                className="input input-bordered input-sm"
-                            />
-                            <button onClick={getUserLocation} className="btn btn-sm btn-outline">
-                                📍 Użyj mojej lokalizacji
-                            </button>
-                        </div>
+                {/* Collapsible Filters */}
+                <section className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-xl font-semibold">Filtry</h2>
+                        <button
+                            onClick={() => setFiltersOpen(prev => !prev)}
+                            aria-expanded={filtersOpen}
+                            className="btn btn-outline btn-sm"
+                        >
+                            Filtry {filtersOpen ? '↑' : '↓'}
+                        </button>
                     </div>
 
-                    {/* Fuel Types */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium mb-2">Rodzaj paliwa</label>
-                        <div className="flex flex-wrap gap-2">
-                            {fuelTypes.map(type => (
+                    <div className={`overflow-hidden transition-all duration-300 bg-base-300 rounded-xl shadow-md ${filtersOpen ? 'p-6 max-h-[2000px] opacity-100' : 'p-0 max-h-0 opacity-0'}`}>
+                        {/* Location */}
+                        {/* Address (autocomplete) */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Adres</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Wpisz adres (np. Warszawa, Marszałkowska 1)"
+                                    value={address}
+                                    onChange={(e) => {
+                                        const v = e.target.value;
+                                        setAddress(v);
+                                        if (geocodeTimeoutRef.current) window.clearTimeout(geocodeTimeoutRef.current);
+                                        geocodeTimeoutRef.current = window.setTimeout(() => geocodeAddress(v), 500);
+                                    }}
+                                    className="input input-bordered input-sm w-full"
+                                />
+
+                                {addressLoading && (
+                                    <span className="loading loading-spinner loading-sm absolute right-2 top-2"></span>
+                                )}
+
+                                {addressSuggestions.length > 0 && (
+                                    <ul className="absolute z-50 bg-base-100 w-full mt-1 rounded-md shadow-lg max-h-52 overflow-auto">
+                                        {addressSuggestions.map((s, i) => (
+                                            <li
+                                                key={i}
+                                                className="p-2 hover:bg-base-200 cursor-pointer"
+                                                onClick={() => selectAddress(s)}
+                                            >
+                                                {s.display_name}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+
+                            <div className="mt-2 flex gap-2">
                                 <button
-                                    key={type}
-                                    onClick={() => toggleFuelType(type)}
-                                    className={`btn btn-sm ${
-                                        selectedFuelTypes.includes(type)
-                                            ? "btn-primary"
-                                            : "btn-outline"
-                                    }`}
+                                    type="button"
+                                    className="btn btn-sm btn-outline"
+                                    onClick={() => geocodeAddress(address)}
                                 >
-                                    {type}
+                                    Szukaj adresu
                                 </button>
-                            ))}
+                                <button
+                                    type="button"
+                                    className="btn btn-sm"
+                                    onClick={() => applyAddress()}
+                                >
+                                    Użyj tego adresu
+                                </button>
+                                <button onClick={getUserLocation} className="btn btn-sm btn-outline ml-auto">
+                                    Użyj mojej lokalizacji
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Price Range */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium mb-2">Zakres cen</label>
-                        <div className="grid grid-cols-2 gap-3">
+                        {/* Fuel Types */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Rodzaj paliwa</label>
+
+                            <div className="relative inline-block">
+                                <button
+                                    type="button"
+                                    className="btn"
+                                    onClick={() => setFuelsOpen(v => !v)}
+                                >
+                                    {selectedFuelTypes.length > 0 ? selectedFuelTypes.join(', ') : 'Wybierz paliwa'} {fuelsOpen ? '▲' : '▼'}
+                                </button>
+
+                                {fuelsOpen && (
+                                    <ul className="dropdown menu w-64 rounded-box bg-base-100 shadow-sm mt-2 p-2 z-50">
+                                        {availableFuelTypes.length === 0 ? (
+                                            <li className="p-2 text-sm text-gray-500">Brak dostępnych rodzajów paliw</li>
+                                        ) : (
+                                            availableFuelTypes.map((ft) => (
+                                                <li key={ft}>
+                                                    <button
+                                                        type="button"
+                                                        className={`w-full text-left ${selectedFuelTypes.includes(ft) ? 'font-semibold' : ''}`}
+                                                        onClick={() => toggleFuelType(ft)}
+                                                    >
+                                                        {selectedFuelTypes.includes(ft) ? '✓ ' : ''}{ft}
+                                                    </button>
+                                                </li>
+                                            ))
+                                        )}
+                                    </ul>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Brand */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Marka</label>
+                            <div className="relative inline-block w-full">
+                                <button
+                                    type="button"
+                                    className="btn w-full justify-between"
+                                    onClick={() => setBrandsOpen(b => !b)}
+                                >
+                                    {brandName || 'Wybierz markę'} {brandsOpen ? '▲' : '▼'}
+                                </button>
+
+                                {brandsOpen && (
+                                    <div className="dropdown-content mt-2 w-full rounded-box bg-base-100 shadow-sm p-2 z-50">
+                                        <input
+                                            type="text"
+                                            placeholder="Filtruj marki..."
+                                            className="input input-sm mb-2 w-full"
+                                            value={brandFilter}
+                                            onChange={(e) => setBrandFilter(e.target.value)}
+                                        />
+                                        <ul className="max-h-40 overflow-auto">
+                                            {availableBrands.filter(b => b.toLowerCase().includes(brandFilter.toLowerCase())).map((b) => (
+                                                <li key={b}>
+                                                    <button
+                                                        type="button"
+                                                        className={`w-full text-left ${brandName === b ? 'font-semibold' : ''}`}
+                                                        onClick={() => { setBrandName(b); setBrandsOpen(false); }}
+                                                    >
+                                                        {b}
+                                                    </button>
+                                                </li>
+                                            ))}
+                                            {availableBrands.length === 0 && (
+                                                <li className="p-2 text-sm text-gray-500">Brak marek w bazie</li>
+                                            )}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Price Range */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Zakres cen</label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <input
+                                    type="number"
+                                    placeholder="Min cena"
+                                    value={minPrice}
+                                    onChange={(e) => setMinPrice(e.target.value)}
+                                    className="input input-bordered input-sm"
+                                    step="0.01"
+                                />
+                                <input
+                                    type="number"
+                                    placeholder="Max cena"
+                                    value={maxPrice}
+                                    onChange={(e) => setMaxPrice(e.target.value)}
+                                    className="input input-bordered input-sm"
+                                    step="0.01"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Brand */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Marka</label>
                             <input
-                                type="number"
-                                placeholder="Min cena"
-                                value={minPrice}
-                                onChange={(e) => setMinPrice(e.target.value)}
-                                className="input input-bordered input-sm"
-                                step="0.01"
-                            />
-                            <input
-                                type="number"
-                                placeholder="Max cena"
-                                value={maxPrice}
-                                onChange={(e) => setMaxPrice(e.target.value)}
-                                className="input input-bordered input-sm"
-                                step="0.01"
+                                type="text"
+                                placeholder="np. Orlen, Shell, BP..."
+                                value={brandName}
+                                onChange={(e) => setBrandName(e.target.value)}
+                                className="input input-bordered input-sm w-full"
                             />
                         </div>
-                    </div>
 
-                    {/* Brand */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium mb-2">Marka</label>
-                        <input
-                            type="text"
-                            placeholder="np. Orlen, Shell, BP..."
-                            value={brandName}
-                            onChange={(e) => setBrandName(e.target.value)}
-                            className="input input-bordered input-sm w-full"
-                        />
-                    </div>
-
-                    {/* Sorting */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium mb-2">Sortowanie</label>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => {
-                                    setSortColumn("distance");
-                                    setSortDirection("asc");
-                                }}
-                                className={`btn btn-sm ${sortColumn === "distance" ? "btn-primary" : "btn-outline"}`}
-                            >
-                                Odległość
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setSortColumn("price");
-                                    setSortDirection("asc");
-                                }}
-                                className={`btn btn-sm ${sortColumn === "price" ? "btn-primary" : "btn-outline"}`}
-                            >
-                                Cena
-                            </button>
-                            <select
-                                value={sortDirection}
-                                onChange={(e) => setSortDirection(e.target.value as "asc" | "desc")}
-                                className="select select-sm select-bordered"
-                            >
-                                <option value="asc">Rosnąco</option>
-                                <option value="desc">Malejąco</option>
-                            </select>
+                        {/* Sorting */}
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Sortowanie</label>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setSortColumn("distance");
+                                        setSortDirection("asc");
+                                    }}
+                                    className={`btn btn-sm ${sortColumn === "distance" ? "btn-primary" : "btn-outline"}`}
+                                >
+                                    Odległość
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setSortColumn("price");
+                                        setSortDirection("asc");
+                                    }}
+                                    className={`btn btn-sm ${sortColumn === "price" ? "btn-primary" : "btn-outline"}`}
+                                >
+                                    Cena
+                                </button>
+                                <select
+                                    value={sortDirection}
+                                    onChange={(e) => setSortDirection(e.target.value as "asc" | "desc")}
+                                    className="select select-sm select-bordered"
+                                >
+                                    <option value="asc">Rosnąco</option>
+                                    <option value="desc">Malejąco</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
 
-                    <button onClick={handleSearch} className="btn btn-primary w-full">
-                        🔍 Szukaj stacji
-                    </button>
+                        <button onClick={handleSearch} className="btn btn-primary w-full">
+                            Szukaj stacji
+                        </button>
+
+                    </div>
                 </section>
 
                 {/* Results */}
@@ -530,7 +748,7 @@ export default function ListPage() {
                                                         href={`/map?lat=${s.latitude ?? ""}&lon=${s.longitude ?? ""}`}
                                                         className="btn btn-xs btn-outline"
                                                     >
-                                                        🗺️ Mapa
+                                                        Mapa
                                                     </a>
                                                 </div>
                                             </td>
