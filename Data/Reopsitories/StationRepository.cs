@@ -1,4 +1,5 @@
 ﻿using Data.Context;
+using Data.Enums;
 using Data.Helpers;
 using Data.Interfaces;
 using Data.Models;
@@ -560,5 +561,37 @@ namespace Data.Reopsitories
             }
         } 
         
+
+        public async Task<List<GetPriceProposalByStationResponse>> GetPriceProposaByStationAsync(FindStationRequest request)
+        {
+            var station = await _context.Stations
+                .Include(s => s.PriceProposal)
+                    .ThenInclude(pp => pp.FuelType)
+                .Include(s => s.PriceProposal)
+                    .ThenInclude(pp => pp.User)
+                .Include(s => s.Brand)
+                .Include(s => s.Address)
+                .FirstOrDefaultAsync(s =>
+                    s.Brand.Name.ToLower() == request.BrandName.ToLower() &&
+                    s.Address.Street.ToLower() == request.Street.ToLower() &&
+                    s.Address.HouseNumber.ToLower() == request.HouseNumber.ToLower() &&
+                    s.Address.City.ToLower() == request.City.ToLower()
+                );
+
+            if (station == null) return new List<GetPriceProposalByStationResponse>();
+
+            var pendingProposals = station.PriceProposal
+                .Where(pp => pp.Status == PriceProposalStatus.Pending)
+                .Select(pp => new GetPriceProposalByStationResponse
+                {
+                    UserName = pp.User.UserName,
+                    FuelCode = pp.FuelType.Code,
+                    ProposedPrice = pp.ProposedPrice,
+                    CreatedAt = pp.CreatedAt
+                }).ToList();
+
+            return pendingProposals;
+        }
+            
     }
 }

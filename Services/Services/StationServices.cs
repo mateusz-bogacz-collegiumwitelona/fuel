@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Services.Services
 {
@@ -521,5 +522,26 @@ namespace Services.Services
                     false);
             }
         }
+
+        public async Task<Result<PagedResult<GetPriceProposalByStationResponse>>> GetPriceProposalByStationAsync(
+            FindStationRequest request,
+            GetPaggedRequest pagged)
+        {
+            string cacheKey = _cache.GenerateCacheKey(
+                $"{CacheService.CacheKeys.PriceProposalByStation}{request.BrandName}:{request.City}:{request.Street}"
+            );
+
+            return await ((Func<Task<List<GetPriceProposalByStationResponse>>>)(() =>
+                        _stationRepository.GetPriceProposaByStationAsync(request)))
+                        .ToCachedPagedResultAsync(
+                            cacheKey,
+                            pagged,
+                            _cache,
+                            _logger,
+                            "price proposals",
+                            CacheService.CacheExpiry.Short
+                        );
+        }
+        
     }
 }
