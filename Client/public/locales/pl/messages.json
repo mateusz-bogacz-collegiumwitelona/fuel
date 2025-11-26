@@ -4,7 +4,13 @@
     "map": "Mapa stacji",
     "list": "Lista stacji",
     "nearest": "Najbliższe stacje",
+    "nearestload": "Ładowanie najbliższych stacji... (upewnij się, że zezwoliłeś na dostęp do lokalizacji)",
+    "stationname": "Nazwa stacji = ",
+    "street": "ulica = ",
+    "city": "miasto = ",
+    "postalcode": "kod pocztowy = ",
     "distance": "Odległość",
+    "dostance": "Odległość",
     "showonmap": "Pokaż na mapie",
     "stationdetails": "Szczegóły stacji",
     "nostations": "Brak dostępnych stacji",
@@ -14,30 +20,37 @@
     "accepted": "Zaakceptowane",
     "rejected": "Odrzucone",
     "acceptrate": "Wskaźnik akceptacji",
-    "nostatistics": "Brak zgłoszeń",
-    "yourreports": "Twoje zgłoszenia (lista)",
-    "loading": "Loading...",
-    "noyourreports": "Nie masz jeszcze zgłoszeń"
+    "nostatistics": "Brak zgłoszeń"
   },
+
   "map": {
-    "title": "Mapa stacji"
+    "fuelstationmap": "Mapa stacji benzynowych",
+    "dashboardback": "← Powrót do dashboardu",
+    "search": "Szukaj",
+    "seedetails": "Zobacz szczehóły",
+    "stationname": "Wpisz nazwę stacji (np. Orlen)"
   },
+
   "list": {
-    "title": "Lista stacji"
+    "title": "Lista stacji",
+    "dashboardback": "← Powrót do dashboardu"
   },
+
   "stations": {
     "nearestTitle": "Najbliższe stacje",
     "loading": "Ładowanie najbliższych stacji... (upewnij się, że zezwoliłeś na dostęp do lokalizacji)",
     "noAccess": "Brak dostępu do lokalizacji i nie udało się pobrać stacji.",
     "none": "Brak dostępnych stacji."
   },
+
   "buttons": {
-    "showOnMap": "Pokaż na mapie",
-    "stationDetails": "Szczegóły stacji",
     "language": "Język",
     "polish": "Polski",
-    "english": "English"
+    "english": "English",
+    "showOnMap": "Pokaż na mapie",
+    "stationDetails": "Szczegóły stacji"
   },
+
   "stats": {
     "all": "Wszystkie zgłoszenia",
     "accepted": "Zaakceptowane",
@@ -46,9 +59,27 @@
     "loading": "Ładowanie statystyk...",
     "noStats": "Brak statystyk."
   },
+
   "requests": {
     "title": "Twoje zgłoszenia (lista)",
     "loading": "Ładowanie...",
     "noRequests": "Nie masz jeszcze zgłoszeń."
+  },
+
+  "footer": {
+    "creatorsTitle": "Twórcy",
+    "linksTitle": "Odniesienia",
+    "links": {
+      "dashboard": "Dashboard",
+      "settings": "Ustawienia",
+      "map": "Mapa",
+      "list": "Lista"
+    },
+    "rightTitle": "Prawa i kontakt",
+    "rightText": "Wszelkie prawa zastrzeżone. Możesz podać tu pełną informację o licencji.",
+    "contact": "Kontakt",
+    "contactAria": "Wyślij wiadomość e-mail do zespołu FuelStats",
+    "allRights": "Wszystkie prawa zastrzeżone"
   }
+
 }

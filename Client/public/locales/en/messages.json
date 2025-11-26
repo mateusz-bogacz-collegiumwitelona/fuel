@@ -1,34 +1,85 @@
 {
   "dashboard": {
-    "welcome": "Welcome, you're logged in as ",
-    "map": "Station map"
+    "welcome": "Welcome, You're logged in as ",
+    "map": "Station map",
+    "list": "Station list",
+    "nearest": "Nearest stations",
+    "nearestload": "Loading nearest stations... (make sure you have allowed location access)",
+    "stationname": "Station name = ",
+    "street": "street = ",
+    "city": "city = ",
+    "postalcode": "postal code = ",
+    "distance": "Distance",
+    "dostance": "Distance",
+    "showonmap": "Show on map",
+    "stationdetails": "Station details",
+    "nostations": "No stations available",
+    "yourstatistics": "Your report statistics",
+    "loadstatistics": "Loading statistics",
+    "allreports": "All reports",
+    "accepted": "Accepted",
+    "rejected": "Rejected",
+    "acceptrate": "Acceptance rate",
+    "nostatistics": "No reports"
   },
-  "map": { "title": "Station map" },
-  "list": { "title": "Station list" },
+
+  "map": {
+    "fuelstationmap": "Station map",
+    "dashboardback": "← Back to dashboard",
+    "search": "Search",
+    "seedetails": "See details",
+    "stationname": " Type station name (e.g. Orlen)"
+  },
+
+  "list": {
+    "title": "Station list",
+    "dashboardback": "← Back to dashboard"
+  },
+
   "stations": {
     "nearestTitle": "Nearest stations",
-    "loading": "Loading nearest stations... (make sure you allowed location)",
+    "loading": "Loading nearest stations... (make sure you have allowed location access)",
     "noAccess": "No access to location and failed to fetch stations.",
-    "none": "No available stations."
+    "none": "No stations available."
   },
+
   "buttons": {
-    "showOnMap": "Show on map",
-    "stationDetails": "Station details",
     "language": "Language",
     "polish": "Polish",
-    "english": "English"
+    "english": "English",
+    "showOnMap": "Show on map",
+    "stationDetails": "Station details"
   },
+
   "stats": {
-    "all": "All proposals",
+    "all": "All reports",
     "accepted": "Accepted",
     "rejected": "Rejected",
     "rate": "Acceptance rate",
     "loading": "Loading statistics...",
     "noStats": "No statistics."
   },
+
   "requests": {
     "title": "Your proposals (list)",
     "loading": "Loading...",
-    "noRequests": "You don't have proposals yet."
+    "noRequests": "You have no proposals yet."
+  },
+
+  "footer": {
+    "creatorsTitle": "Creators",
+    "linksTitle": "Quick links",
+    "links": {
+      "dashboard": "Dashboard",
+      "settings": "Settings",
+      "map": "Map",
+      "list": "List"
+    },
+    "rightTitle": "Rights & contact",
+    "rightText": "All rights reserved. Place license or company info here.",
+    "contact": "Contact",
+    "contactAria": "Send email to FuelStats team",
+    "allRights": "All rights reserved"
   }
+
 }

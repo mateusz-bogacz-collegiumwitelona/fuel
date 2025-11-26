@@ -48,12 +48,20 @@ export default function Header() {
             </div>
             <ul tabIndex={0} className="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow-sm">
               <li>
-                <a role="button" onClick={() => changeLanguage("pl")} className={i18n.language === "pl" ? "font-bold" : ""}>
+                <a
+                  role="button"
+                  onClick={() => changeLanguage("pl")}
+                  className={i18n.language === "pl" ? "font-bold" : ""}
+                >
                   {t("buttons.polish")}
                 </a>
               </li>
               <li>
-                <a role="button" onClick={() => changeLanguage("en")} className={i18n.language === "en" ? "font-bold" : ""}>
+                <a
+                  role="button"
+                  onClick={() => changeLanguage("en")}
+                  className={i18n.language === "en" ? "font-bold" : ""}
+                >
                   {t("buttons.english")}
                 </a>
               </li>
@@ -63,7 +71,7 @@ export default function Header() {
           <div className="dropdown dropdown-end">
             <label tabIndex={0} className="btn btn-ghost btn-square">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </label>
             <ul tabIndex={0} className="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52">

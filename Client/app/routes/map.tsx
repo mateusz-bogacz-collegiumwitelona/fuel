@@ -16,6 +16,7 @@ type Station = {
 };
 
 export default function MapView() {
+  const { t, i18n } = useTranslation();
   const [stations, setStations] = useState<Station[]>([]);
   const [allStations, setAllStations] = useState<Station[]>([]);
   const [MapComponents, setMapComponents] = useState<{
@@ -42,10 +43,7 @@ export default function MapView() {
     if (typeof window === "undefined") return;
 
     (async () => {
-      const [rl, leaflet] = await Promise.all([
-        import("react-leaflet"),
-        import("leaflet"),
-      ]);
+      const [rl, leaflet] = await Promise.all([import("react-leaflet"), import("leaflet")]);
 
       setL(leaflet);
       setMapComponents({
@@ -102,9 +100,7 @@ export default function MapView() {
       return;
     }
 
-    const filtered = allStations.filter((s) =>
-      s.brandName.toLowerCase().includes(q)
-    );
+    const filtered = allStations.filter((s) => s.brandName.toLowerCase().includes(q));
     setStations(filtered);
   };
 
@@ -133,48 +129,32 @@ export default function MapView() {
 
       <main className="mx-auto max-w-6xl px-4 py-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold">
-            Mapa stacji benzynowych
-          </h1>
+          <h1 className="text-2xl md:text-3xl font-bold">{t("map.fuelstationmap")}</h1>
           <a href="/dashboard" className="btn btn-outline">
-            ← Powrót do dashboardu
+            {t("map.dashboardback")}
           </a>
         </div>
 
         <div className="bg-base-300 p-4 rounded-xl shadow-md mb-6 flex flex-wrap gap-3 items-center">
           <input
             type="text"
-            placeholder="Wpisz nazwę stacji (np. Orlen)"
+            placeholder={t("map.stationname")}
             className="input input-bordered bg-base-100 text-base-content w-64 placeholder-gray-400"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
 
-          <button
-            className="btn bg-blue-600 hover:bg-blue-500 text-white font-medium"
-            onClick={handleSearch}
-          >
-            Szukaj
+          <button className="btn bg-blue-600 hover:bg-blue-500 text-white font-medium" onClick={handleSearch}>
+            {t("map.search")}
           </button>
         </div>
 
         <div className="bg-base-800 rounded-xl shadow-lg overflow-hidden border border-base-700">
           <div className="h-[70vh] w-full">
-            <MapContainer
-              center={[52.2297, 21.0122]}
-              zoom={7}
-              style={{ height: "100%", width: "100%" }}
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution="&copy; OpenStreetMap contributors"
-              />
+            <MapContainer center={[52.2297, 21.0122]} zoom={7} style={{ height: "100%", width: "100%" }}>
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
               {stations.map((s, i) => (
-                <Marker
-                  key={i}
-                  position={[s.latitude, s.longitude]}
-                  icon={getMarkerIcon(s.brandName)}
-                >
+                <Marker key={i} position={[s.latitude, s.longitude]} icon={getMarkerIcon(s.brandName)}>
                   <Popup>
                     <div className="space-y-1">
                       <div>
@@ -185,14 +165,12 @@ export default function MapView() {
                         </strong>
                       </div>
                       <Link
-                        to={`/station/${encodeURIComponent(
-                          s.brandName
-                        )}/${encodeURIComponent(s.city)}/${encodeURIComponent(
+                        to={`/station/${encodeURIComponent(s.brandName)}/${encodeURIComponent(s.city)}/${encodeURIComponent(
                           s.street
                         )}/${encodeURIComponent(s.houseNumber)}`}
                         className="btn btn-xs btn-base mt-2"
                       >
-                        Zobacz szczegóły
+                        {t("map.seedetails")}
                       </Link>
                     </div>
                   </Popup>

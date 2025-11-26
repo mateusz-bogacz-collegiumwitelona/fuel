@@ -64,7 +64,6 @@ export default function Dashboard() {
                 setEmail(userEmail ?? "Zalogowany użytkownik");
 
                 await Promise.all([
-                    fetchRequests(token),
                     fetchProposalStats(token),
                     fetchNearestStations(token)
                 ]);
@@ -85,7 +84,6 @@ export default function Dashboard() {
                     setEmail("Zalogowany użytkownik");
 
                     await Promise.all([
-                        fetchRequests(null),
                         fetchProposalStats(null),
                         fetchNearestStations(null)
                     ]);
@@ -102,40 +100,6 @@ export default function Dashboard() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
         document.documentElement.lang = i18n.language;
     }, [i18n.language]);
-
-    async function fetchRequests(token: string | null) {
-        setRequestsLoading(true);
-        try {
-            const headers: Record<string, string> = { Accept: "application/json" };
-            if (token) headers["Authorization"] = `Bearer ${token}`;
-
-            const res = await fetch(`${API_BASE}/api/user/requests`, {
-                headers,
-                credentials: "include",
-            });
-            if (!res.ok) throw new Error("fetch-error");
-            const data = await res.json();
-            setRequests(data);
-        } catch (err) {
-            console.warn("Nie udało się pobrać zgłoszeń — używam danych przykładowych.", err);
-            setRequests([
-                {
-                    id: "1",
-                    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-                    title: "Propozycja: korekta ceny na stacji X",
-                    status: "pending",
-                },
-                {
-                    id: "2",
-                    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
-                    title: "Propozycja: dodanie nowej stacji Y",
-                    status: "accepted",
-                },
-            ]);
-        } finally {
-            setRequestsLoading(false);
-        }
-    }
 
     async function fetchNearestStations(token: string | null) {
         setStationsLoading(true);
@@ -413,7 +377,7 @@ export default function Dashboard() {
                     <h2 className="text-xl font-semibold mb-10">{t("dashboard.nearest")}</h2>
 
                     {stationsLoading ? (
-                        <div>Ładowanie najbliższych stacji... (upewnij się, że zezwoliłeś na dostęp do lokalizacji)</div>
+                        <div>{t("dashboard.nearestload")}</div>
                     ) : stationsError ? (
                         <div className="text-red-400">{stationsError}</div>
                     ) : stations && stations.length > 0 ? (
@@ -427,18 +391,18 @@ export default function Dashboard() {
                                         <h2 className="card-title">{s.name}</h2>
 
                                         {s.name && (
-                                            <p className="text-sm text-gray-200">{`nazwa stacji = ${s.name}`}</p>
+                                            <p className="text-sm text-gray-200">{t("dashboard.stationname")}{`${s.name}`}</p>
                                         )}
 
                                         <p className="text-sm text-gray-600">
-                                            {`ulica = ${s.street ?? "-"}`}{s.houseNumber !== undefined && s.houseNumber !== null ? ` ${s.houseNumber}` : ""}
+                                            {t("dashboard.street")}{`${s.street ?? "-"}`}{s.houseNumber !== undefined && s.houseNumber !== null ? ` ${s.houseNumber}` : ""}
                                         </p>
 
                                         {s.city && (
-                                            <p className="text-sm text-gray-600">{`miasto = ${s.city}`}</p>
+                                            <p className="text-sm text-gray-600">{t("dashboard.city")}{`${s.city}`}</p>
                                         )}
 
-                                        <p className="text-sm text-gray-600">{`kod pocztowy = ${s.postalcode ?? "-"}`}</p>
+                                        <p className="text-sm text-gray-600">{t("dashboard.postalcode")}{`${s.postalcode ?? "-"}`}</p>
 
                                         {s.distanceMeters !== undefined && s.distanceMeters !== null && (
                                             <p className="text-sm text-gray-500">{t("dashboard.dostance")} {formatDistance(s.distanceMeters)}</p>
@@ -496,38 +460,8 @@ export default function Dashboard() {
                     ) : (
                         <div className="text-gray-300">{t("dashboard.nostatistics")}</div>
                     )}
-
-                    <div className="mt-6">
-                        <h3 className="font-semibold mb-3">{t("dashboard.yourreports")}</h3>
-                        {requestsLoading ? (
-                            <div>{t("dashboard.loading")}</div>
-                        ) : requests && requests.length > 0 ? (
-                            <div className="flex flex-col gap-3">
-                                {requests.map((r) => (
-                                    <div key={r.id} className="p-4 bg-base-100 rounded flex items-center justify-between">
-                                        <div>
-                                            <div className="font-medium">{r.title}</div>
-                                            <div className="text-sm text-base-content">{formatDate(r.createdAt)}</div>
-                                        </div>
-
-                                        <div className="text-sm">
-                                            <span
-                                                className={`badge ${r.status === "accepted" ? "badge-success" : r.status === "rejected" ? "badge-error" : "badge-ghost"
-                                                    }`}
-                                            >
-                                                {r.status}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-base-content">{t("dashboard.noyourreports")}</div>
-                        )}
-                    </div>
                 </section>
             </main>
-
             <Footer />
         </div>
     );
