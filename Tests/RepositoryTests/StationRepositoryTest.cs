@@ -3,6 +3,7 @@ using Data.Interfaces;
 using Data.Models;
 using Data.Reopsitories;
 using DTO.Requests;
+using DTO.Responses;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -373,6 +374,234 @@ namespace Tests.RepositoryTests
             Assert.Equal("Brand2", result.ToList().First().BrandName);
             Assert.Equal("Brand1", result.ToList().Skip(1).First().BrandName);
             _output.WriteLine("Success, GetStationListAsync orders stations by distance correctly");
+        }
+
+        [Fact]
+        public async Task GetStationProfileAsyncTest_SuccessWhenCorrectStationReturned()
+        {
+            //Arrange
+            var request = new FindStationRequest
+            {
+                BrandName = "Brand1",
+                HouseNumber = "1",
+                City = "TestCity1",
+                Street = "TestStreet1"
+            };
+
+            //Act
+            var result = await _repository.GetStationProfileAsync(request);
+
+            //Assert
+            Assert.NotNull(result);
+            Assert.Equal("Brand1", result.BrandName);
+            Assert.Equal("1", result.HouseNumber);
+            Assert.Equal("TestCity1", result.City);
+            Assert.Equal("TestStreet1", result.Street);
+            Assert.Equal("ON", result.FuelPrice.First().FuelCode);
+            _output.WriteLine("Success, GetStationProfile fetches correct station");
+        }
+
+        [Fact]
+        public async Task GetStationProfileAsyncTest_StationDoesntExist_SuccessIfNull()
+        {
+            //Arrange
+            var request = new FindStationRequest
+            {
+                BrandName = "BadBrand",
+                HouseNumber = "123",
+                City = "BadCity",
+                Street = "BadStreet"
+            };
+
+            //Act
+            var result = await _repository.GetStationProfileAsync(request);
+
+            //Assert
+            Assert.Null(result);
+            _output.WriteLine("Success, GetStationProfileAsync returns null when requesting a non-existent station");
+        }
+
+        [Fact]
+        public async Task FindStationByDataAsyncTest_NullStation_SuccessIfReturnsNull()
+        {
+            //Arrange
+            //-
+
+            //Act
+            var result = await _repository.FindStationByDataAsync("BadBrand", "BadStreet", "BadNumber", "BadCity");
+
+            //Assert
+            Assert.Null(result);
+            _output.WriteLine("Success, FindStationByDataAsync retunrs null when requesting a non-existent station");
+        }
+
+        [Fact]
+        public async Task FindStationByDataAsyncTest_SuccessWhenReturnsStation()
+        {
+            //Arrange
+            //-
+
+            //Act
+            var result = await _repository.FindStationByDataAsync("Brand1", "TestStreet1", "1", "TestCity1");
+
+            //Assert
+            Assert.NotNull(result);
+            Assert.NotEmpty(result.FuelPrice);
+            _output.WriteLine("Success, FindStationByDataAsync returns the station and its fuelPrice");
+        }
+
+        [Fact]
+        public async Task GetStationsListForAdminAsyncTest_NoFilter_SuccessIfReturnsAll()
+        {
+            //Arrange
+            var request = new TableRequest();
+
+            //Act
+            var result = await _repository.GetStationsListForAdminAsync(request);
+
+            //Assert
+            Assert.NotNull(result);
+            Assert.Equal(2, result.Count);
+            _output.WriteLine("Success, GetStationListForAdminAsync returns all stations with no filter");
+        }
+
+        [Fact]
+        public async Task GetStationsListForAdminAsyncTest_BrandFilter_SuccessIfReturnsBRand2()
+        {
+            //Arrange
+            var request = new TableRequest
+            {
+                Search = "Brand2"
+            };
+
+            //Act
+            var result = await _repository.GetStationsListForAdminAsync(request);
+
+            //Assert
+            Assert.NotNull(result);
+            Assert.Equal(1, result.Count);
+            _output.WriteLine("Success, GetStationListForAdminAsync returns correct station by searching through brands");
+        }
+
+        [Fact]
+        public async Task GetStationsListForAdminAsyncTest_StreetFilter_SuccessIfReturnsBrand2()
+        {
+            //Arrange
+            var request = new TableRequest
+            {
+                Search = "TestStreet2"
+            };
+
+            //Act
+            var result = await _repository.GetStationsListForAdminAsync(request);
+
+            //Assert
+            Assert.NotNull(result);
+            Assert.Equal(1, result.Count);
+            Assert.Equal("Brand2", result.ToList().First().BrandName);
+            _output.WriteLine("Success, GetStationListForAdminAsync returns correct station by searching through streets");
+        }
+
+        [Fact]
+        public async Task GetStationsListForAdminAsyncTest_HouseNumberFilter_SuccessIfReturnsBrand2()
+        {
+            //Arrange
+            var request = new TableRequest
+            {
+                Search = "2"
+            };
+
+            //Act
+            var result = await _repository.GetStationsListForAdminAsync(request);
+
+            //Assert
+            Assert.NotNull(result);
+            Assert.Equal(1, result.Count);
+            Assert.Equal("Brand2", result.ToList().First().BrandName);
+            _output.WriteLine("Success, GetStationListForAdminAsync returns correct station by searching through house numbers");
+        }
+
+        [Fact]
+        public async Task GetStationsListForAdminAsyncTest_CityFilter_SuccessIfReturnsBrand2()
+        {
+            //Arrange
+            var request = new TableRequest
+            {
+                Search = "TestCity2"
+            };
+
+            //Act
+            var result = await _repository.GetStationsListForAdminAsync(request);
+
+            //Assert
+            Assert.NotNull(result);
+            Assert.Equal(1, result.Count);
+            Assert.Equal("Brand2", result.ToList().First().BrandName);
+            _output.WriteLine("Success, GetStationListForAdminAsync returns correct station by searching through city names");
+        }
+
+        [Fact]
+        public async Task GetStationsListForAdminAsyncTest_PostalFilter_SuccessIfReturnsBrand2()
+        {
+            //Arrange
+            var request = new TableRequest
+            {
+                Search = "00-002"
+            };
+
+            //Act
+            var result = await _repository.GetStationsListForAdminAsync(request);
+
+            //Assert
+            Assert.NotNull(result);
+            Assert.Equal(1, result.Count);
+            Assert.Equal("Brand2", result.ToList().First().BrandName);
+            _output.WriteLine("Success, GetStationListForAdminAsync returns correct station by searching through postal codes");
+        }
+
+        [Fact]
+        public async Task GetStationsListForAdminAsyncTest_BadFilter_SuccessIfReturnsEmpty()
+        {
+            //Arrange
+            var request = new TableRequest
+            {
+                Search = "Bad search"
+            };
+
+            //Act
+            var result = await _repository.GetStationsListForAdminAsync(request);
+
+            //Assert
+            Assert.Empty(result);
+            _output.WriteLine("Success, GetStationListForAdminAsync returns empty when looking for non existent station");
+        }
+
+        [Fact]
+        public async Task IsStationExistAsyncTest_DoesntExist_SuccessIfReturnsFalse()
+        {
+            //Arrange
+            //-
+
+            //Act
+            var result = await _repository.IsStationExistAsync("Bad", "Bad", "Bad", "Bad");
+
+            //Assert
+            Assert.False(result);
+            _output.WriteLine("Success, IsStationExistAsync returns false when station doesn't exist");
+        }
+
+        [Fact]
+        public async Task IsStationExistAsyncTest_GoodData_SuccessIfReturnsTrue()
+        {
+            //Arrange
+            //-
+
+            //Act
+            var result = await _repository.IsStationExistAsync("brand1","teststreet1", "1","testcity1");
+
+            //Assert
+            Assert.True(result);
+            _output.WriteLine("Success, IsStationExistAsync returns true when station exists");
         }
     }
 }
