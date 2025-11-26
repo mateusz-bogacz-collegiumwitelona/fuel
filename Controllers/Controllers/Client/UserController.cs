@@ -329,14 +329,14 @@ namespace Controllers.Controllers.Client
         /// **Description:**  
         /// Creates a new user report record in the system.  
         /// The email of the reporting user (notifier) is automatically extracted from the JWT token.  
-        /// The report contains the email of the reported user and a detailed description of the reason.
+        /// The report contains the user name of the reported user and a detailed description of the reason.
         ///
         /// **Example request:**
         /// ```http
         /// POST /api/user/report
         ///
         /// {
-        ///   "reportedEmail": "user2@example.pl",
+        ///   "reportedUserName": "user2",
         ///   "reason": "User has been repeatedly sending spam messages in chat rooms for the past few days."
         /// }
         /// ```
@@ -379,7 +379,6 @@ namespace Controllers.Controllers.Client
         ///
         /// **Notes:**
         /// - The notifier's email is automatically extracted from the JWT token (no need to send it manually).
-        /// - The `reportedEmail` field must contain a valid, existing user email address.
         /// - The `reason` field must be between **50 and 1000 characters** long and describe the reason for reporting.
         /// - Reports about administrators are automatically rejected.
         /// - A user cannot report themselves.
