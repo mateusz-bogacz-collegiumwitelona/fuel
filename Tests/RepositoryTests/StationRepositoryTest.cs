@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
+using Services.Helpers;
 using System.IO;
 using Xunit.Abstractions;
 
@@ -28,12 +29,13 @@ namespace Tests.RepositoryTests
 
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
-                .Options;
-
-            var _brandRepo = new Mock<IBrandRepository>();
+                .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning)).Options;
+            
             _context = new ApplicationDbContext(options);
+            var _brandMock = new Mock<ILogger<BrandRepository>>();
+            var _brandRepoMock = new BrandRepository(_context, _brandMock.Object);
             _loggerMock = new Mock<ILogger<StationRepository>>();
-            _fuelMock = new Mock<IFuelTypeRepository>();
+            var _fuelRepoMock = new FuelTypeRepository(_context, _loggerMock.Object);
 
             var geometryFactory = NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
 
@@ -93,7 +95,7 @@ namespace Tests.RepositoryTests
                 new FuelPrice { StationId = Station2.Id, FuelType = lpg, Price = 3 });
 
             _context.SaveChanges();
-            _repository = new StationRepository(_context, _loggerMock.Object, _brandRepo.Object, _fuelMock.Object);
+            _repository = new StationRepository(_context, _loggerMock.Object, _brandRepoMock, _fuelRepoMock);
         }
 
         [Fact]
@@ -602,6 +604,411 @@ namespace Tests.RepositoryTests
             //Assert
             Assert.True(result);
             _output.WriteLine("Success, IsStationExistAsync returns true when station exists");
+        }
+
+        [Fact]
+        public async Task EditStationAsyncTest_BadStation_SuccessIfReturnsFalse()
+        {
+            //Arrange
+            var request = new EditStationRequest
+            {
+                FindStation = new FindStationRequest
+                {
+                    BrandName = "BadBrand",
+                    Street = "BadStreet",
+                    HouseNumber = "123123",
+                    City = "BadCity"
+                }
+            };
+
+            //Act
+            var result = await _repository.EditStationAsync(request);
+
+            //Assert
+            Assert.False(result);
+            _loggerMock.Verify(
+                x => x.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Station not found for edit")),
+                    It.IsAny<Exception>(),
+                    It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
+                Times.Once);
+            _output.WriteLine("Success, EditStationAsync returns false when station is not found");
+        }
+
+        [Fact]
+        public async Task EditStationAsyncTest_AddressUpdate_SuccessIfAddressUpdated()
+        {
+            //Arrange
+            var stationToUpdate = await _context.Stations.Include(s => s.Address).FirstAsync();
+            var oldAddress = stationToUpdate.Address;
+            var request = new EditStationRequest
+            {
+                FindStation = new FindStationRequest
+                {
+                    BrandName = stationToUpdate.Brand.Name,
+                    Street = stationToUpdate.Address.Street,
+                    HouseNumber = stationToUpdate.Address.HouseNumber,
+                    City = stationToUpdate.Address.City,
+                },
+                NewCity = "NewCity",
+                NewStreet = "NewStreet",
+                NewHouseNumber = "100",
+                NewBrandName = "Brand2",
+                NewPostalCode = "00-100",
+                NewLatitude = 15.0,
+                NewLongitude = 15.0
+            };
+
+            //Act
+            var result = await _repository.EditStationAsync(request);
+            var updatedStation = await _context.Stations.Include(s => s.Address).Include(s => s.Brand).FirstAsync();
+
+            //Assert
+            Assert.True(result);
+            Assert.Equal("NewCity", updatedStation.Address.City);
+            Assert.Equal("NewStreet", updatedStation.Address.Street);
+            Assert.Equal("100", updatedStation.Address.HouseNumber);
+            Assert.Equal("Brand2", updatedStation.Brand.Name);
+            Assert.Equal("00-100", updatedStation.Address.PostalCode);
+            Assert.Equal(15.0, updatedStation.Address.Location.Y);
+            Assert.Equal(15.0, updatedStation.Address.Location.X);
+            _output.WriteLine("Success, EditStationAsync correctly edits the station info");
+        }
+
+        [Fact]
+        public async Task EditStationAsyncTest_UpdateFuel_SuccessIfPriceUpdated()
+        {
+            //Arrange
+            var stationToUpdate = await _context.Stations.Include(s => s.Address).FirstAsync();
+            var dieselUpdatedPrice = new AddFuelTypeAndPriceRequest
+            {
+                Code = "ON",
+                Price = 7.0m,
+                Name = "Diesel"
+            };
+            var request = new EditStationRequest
+            {
+                FindStation = new FindStationRequest
+                {
+                    BrandName = "Brand1",
+                    City = "TestCity1",
+                    HouseNumber = "1",
+                    Street = "TestStreet1"
+                },
+                FuelType = new List<AddFuelTypeAndPriceRequest> { dieselUpdatedPrice },
+            };
+
+            //Act
+            var result = await _repository.EditStationAsync(request);
+            var updatedStation = await _context.Stations.Include(s => s.Address).FirstAsync();
+            
+            //Assert
+            Assert.True(result);
+            Assert.Equal(stationToUpdate, updatedStation);
+            Assert.Equal(7.0m, _context.FuelPrices.ToList().First().Price);
+            Assert.Equal(3, _context.FuelPrices.ToList().Skip(1).First().Price);
+            _output.WriteLine("Success, EditStationAsync updates price of a certain fuel type for a certain station");
+        }
+
+        [Fact]
+        public async Task EditStationAsyncTest_DeleteFuelTypeAddNewOne_SuccessIfFuelsSwapped()
+        {
+            //Arrange
+            var stationToUpdate = await _context.Stations.Include(s => s.Address).FirstAsync();
+            var dieselDeletedLPGAdded = new AddFuelTypeAndPriceRequest
+            {
+                Name = "Lpg gas",
+                Code = "LPG",
+                Price = 3.0m
+            };
+            var request = new EditStationRequest
+            {
+                FindStation = new FindStationRequest
+                {
+                    BrandName = "Brand1",
+                    City = "TestCity1",
+                    HouseNumber = "1",
+                    Street = "TestStreet1"
+                },
+                FuelType = new List<AddFuelTypeAndPriceRequest> { dieselDeletedLPGAdded },
+            };
+
+            //Act
+            var result = await _repository.EditStationAsync(request);
+            var updatedStation = await _context.Stations.Include(s => s.Address).FirstAsync();
+
+            //Assert
+            Assert.Single(updatedStation.FuelPrice.ToList());
+            Assert.Equal("Lpg gas", updatedStation.FuelPrice.ToList().First().FuelType.Name);
+            Assert.Equal(3.0m, updatedStation.FuelPrice.ToList().First().Price);
+            _output.WriteLine("Success, EditStationAsync correctly deletes and adds new fuel types to station.");
+        }
+
+        [Fact]
+        public async Task EditStationAsyncTest_BadFuel_SuccessIfException()
+        {
+            //Arrange
+            var stationToUpdate = await _context.Stations.Include(s => s.Address).FirstAsync();
+            var dieselDeletedLPGAdded = new AddFuelTypeAndPriceRequest
+            {
+                Name = "LPG gas",
+                Code = "BadCode",
+                Price = 3.0m
+            };
+            var request = new EditStationRequest
+            {
+                FindStation = new FindStationRequest
+                {
+                    BrandName = "Brand1",
+                    City = "TestCity1",
+                    HouseNumber = "1",
+                    Street = "TestStreet1"
+                },
+                FuelType = new List<AddFuelTypeAndPriceRequest> { dieselDeletedLPGAdded },
+            };
+
+            //Act n Assert
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _repository.EditStationAsync(request));
+            _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Error editing station")),
+                It.IsAny<InvalidOperationException>(),
+                It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
+            Times.Once);
+        }
+
+        [Fact]
+        public async Task GetStationInfoForEditTest_BadStation_SuccessIfReturnsNull()
+        {
+            //Arrange
+            var request = new FindStationRequest
+            {
+                BrandName = "BadBrand",
+                City = "BadCity",
+                HouseNumber = "BadNumber",
+                Street = "BadStreet"
+            };
+
+            //Act
+            var result = await _repository.GetStationInfoForEdit(request);
+
+            //Assert
+            Assert.Null(result);
+            _output.WriteLine("Success, GetStationInfoForEdit returns null when station doesn't exist");
+        }
+
+        [Fact]
+        public async Task GetStationInfoForEditTest_StationExist_SuccessIfReturnsStation2()
+        {
+            //Arrange
+            var request = new FindStationRequest
+            {
+                BrandName = "Brand2",
+                City = "TestCity2",
+                Street = "TestStreet2",
+                HouseNumber = "2"
+            };
+
+            //Act
+            var result = await _repository.GetStationInfoForEdit(request);
+
+            //Assert
+            Assert.NotNull(result);
+            Assert.Equal("Brand2", result.BrandName);
+        }
+
+        [Fact]
+        public async Task AddNewStationAsyncTest_SuccessIfStationAdded()
+        {
+            //Arrange
+            var newFuelType = new AddFuelTypeAndPriceRequest
+            {
+                Name = "LPG gas",
+                Code = "LPG",
+                Price = 5.0m
+            };
+            var request = new AddStationRequest
+            {
+                BrandName = "Brand3",
+                City = "TestCity3",
+                HouseNumber = "3",
+                Latitude = 30.0,
+                Longitude = 30.0,
+                PostalCode = "00-003",
+                Street = "TestStreet3",
+                FuelTypes = new List<AddFuelTypeAndPriceRequest>
+                {
+                    newFuelType
+                }
+            };
+
+            //Act
+            var result = await _repository.AddNewStationAsync(request);
+
+            //Assert
+            Assert.True(result);
+            Assert.Equal(3, _context.FuelPrices.ToList().Count());
+            Assert.Equal(3, _context.Stations.ToList().Count());
+            _output.WriteLine("Success, AddNewStationAsync adds a new station.");
+        }
+
+        [Fact]
+        public async Task AddNewStationAsyncTest_BadFuelType_SuccessIfExcThrown()
+        {
+            //Arrange
+            var badFuelType = new AddFuelTypeAndPriceRequest
+            {
+                Name = "BAD gas",
+                Code = "BAD",
+                Price = 5.0m
+            };
+            var request = new AddStationRequest
+            {
+                BrandName = "Brand3",
+                City = "TestCity3",
+                HouseNumber = "3",
+                Latitude = 30.0,
+                Longitude = 30.0,
+                PostalCode = "00-003",
+                Street = "TestStreet3",
+                FuelTypes = new List<AddFuelTypeAndPriceRequest>
+                {
+                    badFuelType
+                }
+            };
+
+            //Act && Assert
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _repository.AddNewStationAsync(request));
+            _output.WriteLine("Success, AddNewStationAsync throws an exception when given a nonexistent fuel type");
+        }
+
+        [Fact]
+        public async Task DeleteStationAsyncTest_SuccessIfStation2Deleted()
+        {
+            //Arrange
+            var request = new FindStationRequest
+            {
+                BrandName = "Brand2",
+                City = "TestCity2",
+                HouseNumber = "2",
+                Street = "TestStreet2"
+            };
+
+            //Act
+            var result = await _repository.DeleteStationAsync(request);
+
+            //Assert
+            Assert.Equal(1, _context.Stations.Count());
+            Assert.Equal("Brand1", _context.Stations.ToList().First().Brand.Name);
+        }
+
+        [Fact]
+        public async Task DeleteStationAsyncTest_BadStation_SuccessIfExcThrown()
+        {
+            //Arrange
+            var request = new FindStationRequest
+            {
+                BrandName = "BadBrand",
+                City = "BadCity",
+                HouseNumber = "BadNumber",
+                Street = "BadStreet"
+            };
+
+            //Act and Assert
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _repository.DeleteStationAsync(request));
+            _output.WriteLine("Success, DeleteStationAsync throws an exception when trying to delete a nonexistent station");
+        }
+
+        [Fact]
+        public async Task GetPriceProposaByStationAsyncTest_ZeroProposals_SuccessIfReturnsEmpty()
+        {
+            //Arrange
+            var request = new FindStationRequest
+            {
+                BrandName = "Brand2",
+                City = "TestCity2",
+                HouseNumber = "2",
+                Street = "TestStreet2"
+            };
+
+            //Act
+            var result = await _repository.GetPriceProposaByStationAsync(request);
+
+            //Assert
+            Assert.Empty(result);
+            _output.WriteLine("Success, GetPriceProposaByStationAsync returns empty list when station has no pending proposals");
+        }
+
+        [Fact]
+        public async Task GetPriceProposaByStationAsyncTest_SuccessIfReturnsPendingProposals()
+        {
+            //Arrange
+            var station1 = _context.Stations.First(s => s.Brand.Name == "Brand1");
+            var fuel1 = _context.FuelTypes.First(ft => ft.Code == "ON");
+            var user = new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                Email = "user@test.com",
+                UserName = "TestUser"
+            };
+            _context.Users.Add(user);
+            _context.PriceProposals.AddRange
+                (
+                new PriceProposal
+                {
+                    Id = Guid.NewGuid(),
+                    StationId = station1.Id,
+                    UserId = user.Id,
+                    FuelTypeId = fuel1.Id,
+                    ProposedPrice = 100,
+                    Status = Data.Enums.PriceProposalStatus.Pending,
+                    CreatedAt = DateTime.UtcNow,
+                    PhotoUrl = "url1",
+                    Token = Guid.NewGuid().ToString(),
+                },
+                new PriceProposal
+                {
+                    Id = Guid.NewGuid(),
+                    StationId = station1.Id,
+                    UserId = user.Id,
+                    FuelTypeId = fuel1.Id,
+                    ProposedPrice = 30,
+                    Status = Data.Enums.PriceProposalStatus.Accepted,
+                    CreatedAt = DateTime.UtcNow,
+                    PhotoUrl = "url2",
+                    Token = Guid.NewGuid().ToString(),
+                },
+                new PriceProposal
+                {
+                    Id = Guid.NewGuid(),
+                    StationId = station1.Id,
+                    UserId = user.Id,
+                    FuelTypeId = fuel1.Id,
+                    ProposedPrice = 10,
+                    Status = Data.Enums.PriceProposalStatus.Pending,
+                    CreatedAt = DateTime.UtcNow,
+                    PhotoUrl = "url3",
+                    Token = Guid.NewGuid().ToString(),
+                }
+                );
+            await _context.SaveChangesAsync();
+            var request = new FindStationRequest
+            {
+                BrandName = "Brand1",
+                City = "TestCity1",
+                HouseNumber = "1",
+                Street = "TestStreet1"
+            };
+
+            //Act
+            var result = await _repository.GetPriceProposaByStationAsync(request);
+
+            //Assert
+            Assert.Equal(2, result.Count());
         }
     }
 }
