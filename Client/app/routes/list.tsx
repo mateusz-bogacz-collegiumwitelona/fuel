@@ -457,32 +457,29 @@ export default function ListPage() {
                 <div className="flex items-center justify-between mb-6">
                     <h1 className="text-2xl md:text-3xl font-bold">{t("list.stationlist")}</h1>
                     <a href="/dashboard" className="btn btn-outline">
-                        ← Powrót do dashboardu
+                        {t("list.dashboardback")}
                     </a>
                 </div>
 
-                {/* Collapsible Filters */}
                 <section className="mb-6">
                     <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-xl font-semibold">Filtry</h2>
                         <button
                             onClick={() => setFiltersOpen(prev => !prev)}
                             aria-expanded={filtersOpen}
-                            className="btn btn-outline btn-sm"
-                        >
-                            Filtry {filtersOpen ? '↑' : '↓'}
+                            className="btn btn-outline btn-sm">
+
+                            {t("list.filters")} {filtersOpen ? '↑' : '↓'}
                         </button>
                     </div>
 
                     <div className={`overflow-hidden transition-all duration-300 bg-base-300 rounded-xl shadow-md ${filtersOpen ? 'p-6 max-h-[2000px] opacity-100' : 'p-0 max-h-0 opacity-0'}`}>
-                        {/* Location */}
-                        {/* Address (autocomplete) */}
+
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Adres</label>
+                            <label className="block text-sm font-medium mb-2">{t("list.address")}</label>
                             <div className="relative">
                                 <input
                                     type="text"
-                                    placeholder="Wpisz adres (np. Warszawa, Marszałkowska 1)"
+                                    placeholder={t("list.typeaddress")}
                                     value={address}
                                     onChange={(e) => {
                                         const v = e.target.value;
@@ -518,24 +515,23 @@ export default function ListPage() {
                                     className="btn btn-sm btn-outline"
                                     onClick={() => geocodeAddress(address)}
                                 >
-                                    Szukaj adresu
+                                    {t("list.searchaddress")}
                                 </button>
                                 <button
                                     type="button"
                                     className="btn btn-sm"
                                     onClick={() => applyAddress()}
                                 >
-                                    Użyj tego adresu
+                                    {t("list.useaddress")}
                                 </button>
                                 <button onClick={getUserLocation} className="btn btn-sm btn-outline ml-auto">
-                                    Użyj mojej lokalizacji
+                                    {t("list.usealocalization")}
                                 </button>
                             </div>
                         </div>
 
-                        {/* Fuel Types */}
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Rodzaj paliwa</label>
+                            <label className="block text-sm font-medium mb-2">{t("list.fueltype")}</label>
 
                             <div className="relative inline-block">
                                 <button
@@ -543,13 +539,16 @@ export default function ListPage() {
                                     className="btn"
                                     onClick={() => setFuelsOpen(v => !v)}
                                 >
-                                    {selectedFuelTypes.length > 0 ? selectedFuelTypes.join(', ') : 'Wybierz paliwa'} {fuelsOpen ? '▲' : '▼'}
+                                    {selectedFuelTypes.length > 0
+                                        ? selectedFuelTypes.join(', ')
+                                        : t("list.choosefuel")
+                                    } {fuelsOpen ? '▲' : '▼'}
                                 </button>
 
                                 {fuelsOpen && (
                                     <ul className="dropdown menu w-64 rounded-box bg-base-100 shadow-sm mt-2 p-2 z-50">
                                         {availableFuelTypes.length === 0 ? (
-                                            <li className="p-2 text-sm text-gray-500">Brak dostępnych rodzajów paliw</li>
+                                            <li className="p-2 text-sm text-gray-500">{t("list.nofuel")}</li>
                                         ) : (
                                             availableFuelTypes.map((ft) => (
                                                 <li key={ft}>
@@ -568,16 +567,15 @@ export default function ListPage() {
                             </div>
                         </div>
 
-                        {/* Brand */}
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Marka</label>
+                            <label className="block text-sm font-medium mb-2">{t("list.mark")}</label>
                             <div className="relative inline-block w-full">
                                 <button
                                     type="button"
                                     className="btn w-full justify-between"
                                     onClick={() => setBrandsOpen(b => !b)}
                                 >
-                                    {brandName || 'Wybierz markę'} {brandsOpen ? '▲' : '▼'}
+                                    {brandName || t("list.choosemark")} {brandsOpen ? '▲' : '▼'}
                                 </button>
 
                                 {brandsOpen && (
@@ -602,7 +600,7 @@ export default function ListPage() {
                                                 </li>
                                             ))}
                                             {availableBrands.length === 0 && (
-                                                <li className="p-2 text-sm text-gray-500">Brak marek w bazie</li>
+                                                <li className="p-2 text-sm text-gray-500">{t("list.nomark")}</li>
                                             )}
                                         </ul>
                                     </div>
@@ -610,13 +608,12 @@ export default function ListPage() {
                             </div>
                         </div>
 
-                        {/* Price Range */}
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Zakres cen</label>
+                            <label className="block text-sm font-medium mb-2">{t("list.pricerange")}</label>
                             <div className="grid grid-cols-2 gap-3">
                                 <input
                                     type="number"
-                                    placeholder="Min cena"
+                                    placeholder={t("list.minprice")}
                                     value={minPrice}
                                     onChange={(e) => setMinPrice(e.target.value)}
                                     className="input input-bordered input-sm"
@@ -624,7 +621,7 @@ export default function ListPage() {
                                 />
                                 <input
                                     type="number"
-                                    placeholder="Max cena"
+                                    placeholder={t("list.maxprice")}
                                     value={maxPrice}
                                     onChange={(e) => setMaxPrice(e.target.value)}
                                     className="input input-bordered input-sm"
@@ -633,21 +630,8 @@ export default function ListPage() {
                             </div>
                         </div>
 
-                        {/* Brand */}
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Marka</label>
-                            <input
-                                type="text"
-                                placeholder="np. Orlen, Shell, BP..."
-                                value={brandName}
-                                onChange={(e) => setBrandName(e.target.value)}
-                                className="input input-bordered input-sm w-full"
-                            />
-                        </div>
-
-                        {/* Sorting */}
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Sortowanie</label>
+                            <label className="block text-sm font-medium mb-2">{t("list.sort")}</label>
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => {
@@ -656,7 +640,7 @@ export default function ListPage() {
                                     }}
                                     className={`btn btn-sm ${sortColumn === "distance" ? "btn-primary" : "btn-outline"}`}
                                 >
-                                    Odległość
+                                    {t("list.distance")}
                                 </button>
                                 <button
                                     onClick={() => {
@@ -665,34 +649,33 @@ export default function ListPage() {
                                     }}
                                     className={`btn btn-sm ${sortColumn === "price" ? "btn-primary" : "btn-outline"}`}
                                 >
-                                    Cena
+                                    {t("list.price")}
                                 </button>
                                 <select
                                     value={sortDirection}
                                     onChange={(e) => setSortDirection(e.target.value as "asc" | "desc")}
                                     className="select select-sm select-bordered"
                                 >
-                                    <option value="asc">Rosnąco</option>
-                                    <option value="desc">Malejąco</option>
+                                    <option value="asc">{t("list.ascending")}</option>
+                                    <option value="desc">{t("list.descending")}</option>
                                 </select>
                             </div>
                         </div>
 
                         <button onClick={handleSearch} className="btn btn-primary w-full">
-                            Szukaj stacji
+                            {t("list.searchstation")}
                         </button>
 
                     </div>
                 </section>
 
-                {/* Results */}
                 <section className="bg-base-300 p-6 rounded-xl shadow-md">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-xl font-semibold">
-                            Wyniki ({totalCount ?? 0})
+                            {t("list.results")} ({totalCount ?? 0})
                         </h2>
                         <div className="flex items-center gap-2">
-                            <label className="text-sm">Wyników na stronę:</label>
+                            <label className="text-sm">{t("list.muchresults")}</label>
                             <select
                                 value={pageSize}
                                 onChange={(e) => {
@@ -711,7 +694,7 @@ export default function ListPage() {
                     {loading ? (
                         <div className="text-center py-8">
                             <span className="loading loading-spinner loading-lg"></span>
-                            <p className="mt-2">Ładowanie stacji...</p>
+                            <p className="mt-2">{t("list.stationloading")}</p>
                         </div>
                     ) : error ? (
                         <div className="alert alert-error">
@@ -723,13 +706,13 @@ export default function ListPage() {
                                 <table className="table table-zebra w-full">
                                     <thead>
                                     <tr>
-                                        <th>Nazwa</th>
-                                        <th>PB95</th>
-                                        <th>Diesel</th>
-                                        <th>LPG</th>
-                                        <th>Miasto</th>
-                                        <th>Ulica</th>
-                                        <th>Akcje</th>
+                                        <th>{t("list.name")}</th>
+                                        <th>{t("list.pb95")}</th>
+                                        <th>{t("list.diesel")}</th>
+                                        <th>{t("list.lpg")}</th>
+                                        <th>{t("list.city")}</th>
+                                        <th>{t("list.street")}</th>
+                                        <th>{t("list.action")}</th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -750,7 +733,7 @@ export default function ListPage() {
                                                         href={`/map?lat=${s.latitude ?? ""}&lon=${s.longitude ?? ""}`}
                                                         className="btn btn-xs btn-outline"
                                                     >
-                                                        Mapa
+                                                        {t("list.map")}
                                                     </a>
                                                 </div>
                                             </td>
@@ -763,7 +746,7 @@ export default function ListPage() {
                             <div className="mt-6 flex justify-between items-center">
                                 {renderPageButtons()}
                                 <div className="text-sm text-gray-400">
-                                    Strona {pageNumber} / {totalPages}
+                                    {t("list.page")} {pageNumber} / {totalPages}
                                 </div>
                             </div>
                         </>
