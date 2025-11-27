@@ -1,6 +1,7 @@
 import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
+import { useTranslation } from "react-i18next";
 
 const API_BASE = "http://localhost:5111";
 
@@ -41,6 +42,7 @@ type Station = {
 type SortColumn = "distance" | "price" | null;
 
 export default function ListPage() {
+    const { t, i18n } = useTranslation();
     const [email, setEmail] = React.useState<string | null>(null);
     const [stations, setStations] = React.useState<Station[] | null>(null);
     const [loading, setLoading] = React.useState(true);
@@ -453,7 +455,7 @@ export default function ListPage() {
 
             <main className="mx-auto max-w-7xl px-4 py-8">
                 <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-2xl md:text-3xl font-bold">Lista stacji benzynowych</h1>
+                    <h1 className="text-2xl md:text-3xl font-bold">{t("list.stationlist")}</h1>
                     <a href="/dashboard" className="btn btn-outline">
                         ← Powrót do dashboardu
                     </a>

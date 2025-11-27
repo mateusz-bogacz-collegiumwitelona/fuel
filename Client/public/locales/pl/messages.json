@@ -32,7 +32,7 @@
   },
 
   "list": {
-    "title": "Lista stacji",
+    "stationlist": "Lista stacji",
     "dashboardback": "← Powrót do dashboardu"
   },
 
