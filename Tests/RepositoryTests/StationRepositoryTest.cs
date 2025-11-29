@@ -9,8 +9,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
-using Services.Helpers;
-using System.IO;
 using Xunit.Abstractions;
 
 namespace Tests.RepositoryTests
@@ -21,7 +19,6 @@ namespace Tests.RepositoryTests
         private readonly Mock<ILogger<StationRepository>> _loggerMock;
         private readonly StationRepository _repository;
         private readonly ITestOutputHelper _output;
-        private readonly Mock<IFuelTypeRepository> _fuelMock;
 
         public StationRepositoryTest(ITestOutputHelper output)
         {
@@ -126,7 +123,7 @@ namespace Tests.RepositoryTests
             var result = await _repository.GetAllStationsForMapAsync(request);
 
             //Assert
-            Assert.Equal(1, result.Count());
+            Assert.Single(result);
             Assert.Equal("Brand2", result.ToList().First().BrandName);
             _output.WriteLine("Success, GetAllStationsForMapAsync returns the correct brand using the brand filter");
         }
@@ -268,7 +265,7 @@ namespace Tests.RepositoryTests
             var result = await _repository.GetStationListAsync(request);
 
             //Assert
-            Assert.Equal(1, result.Count());
+            Assert.Single(result);
             Assert.Equal("Brand2", result.ToList().First().BrandName);
             _output.WriteLine("Success, GetStationListAsync returns correct station when using the distance filter");
         }
@@ -288,7 +285,7 @@ namespace Tests.RepositoryTests
             var result = await _repository.GetStationListAsync(request);
 
             //Assert
-            Assert.Equal(1, result.Count());
+            Assert.Single(result);
             Assert.Equal("Brand2", result.First().BrandName);
             _output.WriteLine("Success, GetStationListAsync returns correct station when using the fuel type filter");
         }
@@ -309,7 +306,7 @@ namespace Tests.RepositoryTests
             var result = await _repository.GetStationListAsync(request);
 
             //Assert
-            Assert.Equal(1, result.Count());
+            Assert.Single(result);
             Assert.Equal("Brand1", result.ToList().First().BrandName);
             _output.WriteLine("Sucecss, GetStationListAsync works correctly with price filter");
         }
@@ -329,7 +326,7 @@ namespace Tests.RepositoryTests
             var result = await _repository.GetStationListAsync(request);
 
             //Assert
-            Assert.Equal(1, result.Count());
+            Assert.Single(result);
             Assert.Equal("Brand2", result.ToList().First().BrandName);
             _output.WriteLine("Success, GetStationListAsync returns correct station with a brand filter");
         }
@@ -481,7 +478,7 @@ namespace Tests.RepositoryTests
 
             //Assert
             Assert.NotNull(result);
-            Assert.Equal(1, result.Count);
+            Assert.Single(result);
             _output.WriteLine("Success, GetStationListForAdminAsync returns correct station by searching through brands");
         }
 
@@ -499,7 +496,7 @@ namespace Tests.RepositoryTests
 
             //Assert
             Assert.NotNull(result);
-            Assert.Equal(1, result.Count);
+            Assert.Single(result);
             Assert.Equal("Brand2", result.ToList().First().BrandName);
             _output.WriteLine("Success, GetStationListForAdminAsync returns correct station by searching through streets");
         }
@@ -518,7 +515,7 @@ namespace Tests.RepositoryTests
 
             //Assert
             Assert.NotNull(result);
-            Assert.Equal(1, result.Count);
+            Assert.Single(result);
             Assert.Equal("Brand2", result.ToList().First().BrandName);
             _output.WriteLine("Success, GetStationListForAdminAsync returns correct station by searching through house numbers");
         }
@@ -537,7 +534,7 @@ namespace Tests.RepositoryTests
 
             //Assert
             Assert.NotNull(result);
-            Assert.Equal(1, result.Count);
+            Assert.Single(result);
             Assert.Equal("Brand2", result.ToList().First().BrandName);
             _output.WriteLine("Success, GetStationListForAdminAsync returns correct station by searching through city names");
         }
@@ -556,7 +553,7 @@ namespace Tests.RepositoryTests
 
             //Assert
             Assert.NotNull(result);
-            Assert.Equal(1, result.Count);
+            Assert.Single(result);
             Assert.Equal("Brand2", result.ToList().First().BrandName);
             _output.WriteLine("Success, GetStationListForAdminAsync returns correct station by searching through postal codes");
         }
@@ -632,7 +629,7 @@ namespace Tests.RepositoryTests
                     It.IsAny<EventId>(),
                     It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Station not found for edit")),
                     It.IsAny<Exception>(),
-                    It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
+                    It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
                 Times.Once);
             _output.WriteLine("Success, EditStationAsync returns false when station is not found");
         }
@@ -777,7 +774,7 @@ namespace Tests.RepositoryTests
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Error editing station")),
                 It.IsAny<InvalidOperationException>(),
-                It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
             Times.Once);
         }
 

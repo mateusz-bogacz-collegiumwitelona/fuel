@@ -1,16 +1,9 @@
 ﻿using Data.Context;
 using Data.Models;
 using Data.Reopsitories;
-using DTO.Requests;
-using DTO.Responses;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Serilog;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Xunit.Abstractions;
 
 namespace Tests.RepositoryTests

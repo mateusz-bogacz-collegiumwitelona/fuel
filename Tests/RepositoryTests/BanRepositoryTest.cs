@@ -1,19 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Data.Context;
-using Data.Interfaces;
+﻿using Data.Context;
 using Data.Models;
 using Data.Reopsitories;
 using DTO.Requests;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Moq;
-using NetTopologySuite;
-using NetTopologySuite.Geometries;
-using Services.Helpers;
 using Xunit.Abstractions;
 
 namespace Tests.RepositoryTests

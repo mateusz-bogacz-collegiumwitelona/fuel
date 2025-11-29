@@ -1,7 +1,6 @@
 ﻿using Data.Context;
 using Data.Models;
 using Data.Reopsitories;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;

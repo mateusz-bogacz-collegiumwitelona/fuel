@@ -5,7 +5,6 @@ using Data.Reopsitories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Runtime.Intrinsics.X86;
 using Xunit.Abstractions;
 
 namespace Tests.RepositoryTests
@@ -53,9 +52,9 @@ namespace Tests.RepositoryTests
             //Assert
             var report = await _context.ReportUserRecords.FirstOrDefaultAsync();
             Assert.True(result);
-            Assert.Equal("TestReport", report.Description);
-            Assert.Equal(user1.Id, report.ReportingUserId);
-            Assert.Equal(user2.Id, report.ReportedUserId);
+            Assert.Equal("TestReport", report?.Description);
+            Assert.Equal(user1.Id, report?.ReportingUserId);
+            Assert.Equal(user2.Id, report?.ReportedUserId);
             _output.WriteLine("Success, ReportUserAsync successfuly creates a report.");
         }
 
@@ -63,7 +62,6 @@ namespace Tests.RepositoryTests
         public async Task GetUserReportAsyncTest_SuccessIfOnlyPendingReportReturned()
         {
             //Arrange
-            var reason = "TestReport";
             var user1 = new ApplicationUser
             {
                 Id = Guid.NewGuid(),
@@ -105,7 +103,7 @@ namespace Tests.RepositoryTests
             var result = await _repository.GetUserReportAsync(user2.Id);
 
             //Assert
-            Assert.Equal(1, result.Count);
+            Assert.Single(result);
             Assert.Equal("ReportingUser", result.First().ReportingUserName);
             Assert.Equal("reasonPending", result.First().Reason);
             Assert.Equal(reportPending.Status.ToString(), result.First().Status);
@@ -156,8 +154,8 @@ namespace Tests.RepositoryTests
             //Assert
             var reportAcceptUpdate = await _context.ReportUserRecords.FindAsync(ReportAccept.Id);
             Assert.True(result);
-            Assert.Equal(ReportStatusEnum.Accepted, reportAcceptUpdate.Status);
-            Assert.Equal(ReportAccept.Id, reportAcceptUpdate.Id);
+            Assert.Equal(ReportStatusEnum.Accepted, reportAcceptUpdate?.Status);
+            Assert.Equal(ReportAccept.Id, reportAcceptUpdate?.Id);
             _output.WriteLine("Success, ChangeRepostStatusToAcceptedAsync changes the pending status to accepted.");
         }
 
@@ -165,10 +163,15 @@ namespace Tests.RepositoryTests
         public async Task ChangeRepostStatusToAcceptedAsyncTest_ReportNotFound_SuccessIfReturnsFalse()
         {
             //Arrange
-            //-
+            var admin = new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                UserName = "admin",
+                Email = "admin@test.com"
+            };
             
             //Act
-            var result = await _repository.ChangeRepostStatusToAcceptedAsync(Guid.Empty, Guid.Empty, null, DateTime.UtcNow);
+            var result = await _repository.ChangeRepostStatusToAcceptedAsync(Guid.Empty, Guid.Empty, admin, DateTime.UtcNow);
 
             //Assert
             Assert.False(result);
@@ -178,7 +181,7 @@ namespace Tests.RepositoryTests
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Report not found")),
                 It.IsAny<Exception>(),
-                It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
             Times.Once);
             _output.WriteLine("Succes, ChangeRepostStatusToAcceptedAsync returns and throws an error when given bad data");
         }
@@ -227,8 +230,8 @@ namespace Tests.RepositoryTests
             //Assert
             var reportRejectUpdate = await _context.ReportUserRecords.FindAsync(ReportReject.Id);
             Assert.True(result);
-            Assert.Equal(ReportStatusEnum.Rejected, reportRejectUpdate.Status);
-            Assert.Equal(ReportReject.Id, reportRejectUpdate.Id);
+            Assert.Equal(ReportStatusEnum.Rejected, reportRejectUpdate?.Status);
+            Assert.Equal(ReportReject.Id, reportRejectUpdate?.Id);
             _output.WriteLine("Success, ChangeRepostStatusToRejectedAsync changes the pending status to rejected.");
         }
 
@@ -236,10 +239,15 @@ namespace Tests.RepositoryTests
         public async Task ChangeRepostStatusToRejectAsyncTest_ReportNotFound_SuccessIfReturnsFalse()
         {
             //Arrange
-            //-
+            var admin = new ApplicationUser
+            {
+                UserName = "admin",
+                Email = "admin@test.com",
+                Id = Guid.NewGuid(),
+            };
 
             //Act
-            var result = await _repository.ChangeRepostStatusToRejectAsync(Guid.Empty, Guid.Empty, null, DateTime.UtcNow);
+            var result = await _repository.ChangeRepostStatusToRejectAsync(Guid.Empty, Guid.Empty, admin, DateTime.UtcNow);
 
             //Assert
             Assert.False(result);
@@ -249,7 +257,7 @@ namespace Tests.RepositoryTests
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Report not found")),
                 It.IsAny<Exception>(),
-                It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
             Times.Once);
             _output.WriteLine("Succes, ChangeRepostStatusToRejectAsync returns and throws an error when given bad data");
         }

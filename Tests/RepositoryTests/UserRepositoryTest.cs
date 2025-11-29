@@ -1,18 +1,11 @@
 ﻿using Data.Context;
-using Data.Helpers;
 using Data.Models;
 using Data.Reopsitories;
-using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Xunit;
 using Xunit.Abstractions;
 namespace Tests.RepositoryTests
 {
@@ -33,7 +26,7 @@ namespace Tests.RepositoryTests
             _context = new ApplicationDbContext(options);
             _loggerMock = new Mock<ILogger<UserRepository>>();
             var _userMock = new Mock<IUserStore<ApplicationUser>>();
-            _userManagerMock = new Mock<UserManager<ApplicationUser>>(_userMock.Object, null, null, null, null, null, null, null, null);
+            _userManagerMock = new Mock<UserManager<ApplicationUser>>(_userMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
             _repository = new UserRepository(_context, _loggerMock.Object, _userManagerMock.Object);
         }
 
@@ -116,7 +109,7 @@ namespace Tests.RepositoryTests
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("not found for deletion")),
                 It.IsAny<Exception>(),
-                It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
+                It.Is<Func<It.IsAnyType, Exception?, string>>((v, t) => true)),
             Times.Once);
             _output.WriteLine("Success, DeleteUserAsync returns an error when trying to delete a non existent user");
         }
@@ -168,7 +161,7 @@ namespace Tests.RepositoryTests
 
             //Assert
             Assert.NotEmpty(result);
-            Assert.Equal(1, result.ToList().Count());
+            Assert.Single(result);
             Assert.Equal(user1.UserName, result.ToList().First().UserName);
             _output.WriteLine("Success, GetUserListAsync returns a list of users excluding deleted ones,.");
         }
@@ -268,9 +261,9 @@ namespace Tests.RepositoryTests
             //Assert
             var report = await _context.ReportUserRecords.FirstOrDefaultAsync();
             Assert.True(result);
-            Assert.Equal("TestReport", report.Description);
-            Assert.Equal(user1.Id, report.ReportingUserId);
-            Assert.Equal(user2.Id, report.ReportedUserId);
+            Assert.Equal("TestReport", report?.Description);
+            Assert.Equal(user1.Id, report?.ReportingUserId);
+            Assert.Equal(user2.Id, report?.ReportedUserId);
             _output.WriteLine("Success, ReportUserAsync successfuly creates a report.");
         }
     }

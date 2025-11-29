@@ -57,7 +57,7 @@ namespace Tests.RepositoryTests
             var result = await _repository.GetBrandToListAsync(request);
 
             //Assert
-            Assert.Equal(1, result.Count);
+            Assert.Single(result);
             Assert.All(result, b => Assert.Contains("2", b.Name.ToLower()));
             _output.WriteLine("Test passed: GetBrandToListAsync() returns correct brand after applying a filter");
         }
@@ -205,15 +205,14 @@ namespace Tests.RepositoryTests
             string newName = "Brand1AAA";
 
             var brandBeforeUpdate = await _context.Brand.FirstOrDefaultAsync(r => r.Name == oldName);
-            var oldUpdateTime = brandBeforeUpdate.UpdatedAt;
+            var oldUpdateTime = brandBeforeUpdate?.UpdatedAt;
 
             //Act
             var result = await _repository.EditBrandAsync(oldName, newName);
             var brandAfterUpdate = await _context.Brand.FirstOrDefaultAsync(r => r.Name == newName);
 
             //Assert
-            Assert.NotNull(result);
-            Assert.True(brandAfterUpdate.UpdatedAt > oldUpdateTime);
+            Assert.True(brandAfterUpdate?.UpdatedAt > oldUpdateTime);
             _output.WriteLine("Test passed: EditBrandAsync() changes the UpdatedAt time");
         }
 
@@ -282,7 +281,7 @@ namespace Tests.RepositoryTests
 
             //Assert
             Assert.True(result);
-            Assert.Equal(1, resultCount.Count);
+            Assert.Single(resultCount);
             Assert.All(resultCount, b => Assert.Contains("2", b.Name.ToLower()));
             _output.WriteLine("Test passed: DeleteBrandAsync() deletes the correct brand");
         }
