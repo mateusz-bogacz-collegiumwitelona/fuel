@@ -13,20 +13,9 @@ import type {
   StationFormValues,
 } from "../components/gas-station-modals";
 
-const API_BASE = "http://localhost:5111";
+import { useAdminGuard } from "../components/useAdminGuard";
 
-function parseJwt(token: string | null) {
-  if (!token) return null;
-  try {
-    const payload = token.split(".")[1];
-    const decoded = atob(payload);
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    return JSON.parse(decodeURIComponent(escape(decoded)));
-  } catch {
-    return null;
-  }
-}
+const API_BASE = "http://localhost:5111";
 
 type StationListResponseData = {
   items: AdminStation[];
@@ -37,7 +26,8 @@ type StationListResponseData = {
 };
 
 export default function GasStationAdminPage() {
-  const [email, setEmail] = React.useState<string | null>(null);
+  const { state, email } = useAdminGuard();
+
   const [stations, setStations] = React.useState<AdminStation[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -46,55 +36,19 @@ export default function GasStationAdminPage() {
   const [pageSize] = React.useState(10);
   const [totalPages, setTotalPages] = React.useState(1);
 
-
   const [search, setSearch] = React.useState("");
-  const [authChecked, setAuthChecked] = React.useState(false);
 
   const [activeModal, setActiveModal] =
     React.useState<"add" | "edit" | "delete" | null>(null);
   const [selectedStation, setSelectedStation] =
     React.useState<AdminStation | null>(null);
 
-
   React.useEffect(() => {
-    (async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const expiration = localStorage.getItem("token_expiration");
-
-        if (token && expiration && new Date(expiration) > new Date()) {
-          const decoded = parseJwt(token);
-          const userEmail = (decoded && (decoded.email || decoded.sub)) || null;
-          setEmail(userEmail ?? "Zalogowany administrator");
-          setAuthChecked(true);
-          return;
-        }
-
-        const refreshRes = await fetch(`${API_BASE}/api/refresh`, {
-          method: "POST",
-          headers: { Accept: "application/json" },
-          credentials: "include",
-        });
-
-        if (refreshRes.ok) {
-          setEmail("Zalogowany administrator");
-          setAuthChecked(true);
-        } else {
-          if (typeof window !== "undefined") window.location.href = "/login";
-        }
-      } catch (err) {
-        console.error(err);
-        if (typeof window !== "undefined") window.location.href = "/login";
-      }
-    })();
-  }, []);
-
-  React.useEffect(() => {
-    if (!authChecked) return;
+    if (state !== "allowed") return;
     (async () => {
       await loadStationsFromApi(pageNumber, pageSize, search);
     })();
-  }, [authChecked, pageNumber, pageSize, search]);
+  }, [state, pageNumber, pageSize, search]);
 
   async function loadStationsFromApi(
     page: number,
@@ -172,6 +126,19 @@ export default function GasStationAdminPage() {
     setActiveModal(null);
     setSelectedStation(null);
   };
+
+  if (state === "checking") {
+    return (
+      <div className="min-h-screen bg-base-200 flex items-center justify-center">
+        <span className="loading loading-spinner loading-lg" />
+      </div>
+    );
+  }
+
+  if (state !== "allowed") {
+    return null;
+  }
+
 
   /* ------------------ DODAWANIE / EDYCJA / USUWANIE ------------------ */
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import "leaflet/dist/leaflet.css";

@@ -16,18 +16,9 @@ import type {
   BanInfo,
 } from "../components/user-admin-modals";
 
-const API_BASE = "http://localhost:5111";
+import { useAdminGuard } from "../components/useAdminGuard";
 
-function parseJwt(token: string | null) {
-  if (!token) return null;
-  try {
-    const payload = token.split(".")[1];
-    const decoded = atob(payload);
-    return JSON.parse(decodeURIComponent(escape(decoded)));
-  } catch {
-    return null;
-  }
-}
+const API_BASE = "http://localhost:5111";
 
 type UserListResponseData = {
   items: AdminUser[];
@@ -40,7 +31,8 @@ type UserListResponseData = {
 };
 
 export default function UserAdminPage() {
-  const [email, setEmail] = React.useState<string | null>(null);
+  const { state, email } = useAdminGuard();
+
   const [users, setUsers] = React.useState<AdminUser[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -66,39 +58,17 @@ export default function UserAdminPage() {
   const [banInfoError, setBanInfoError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    if (state !== "allowed") return;
     (async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const expiration = localStorage.getItem("token_expiration");
-
-        if (token && expiration && new Date(expiration) > new Date()) {
-          const decoded = parseJwt(token);
-          const userEmail = (decoded && (decoded.email || decoded.sub)) || null;
-          setEmail(userEmail ?? "Zalogowany administrator");
-          await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
-          return;
-        }
-
-        const refreshRes = await fetch(`${API_BASE}/api/refresh`, {
-          method: "POST",
-          headers: { Accept: "application/json" },
-          credentials: "include",
-        });
-
-        if (refreshRes.ok) {
-          setEmail("Zalogowany administrator");
-          await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
-        } else {
-          if (typeof window !== "undefined") window.location.href = "/login";
-        }
-      } catch (err) {
-        console.error(err);
-        if (typeof window !== "undefined") window.location.href = "/login";
-      } finally {
-        setLoading(false);
-      }
+      await loadUsersFromApi(
+        pageNumber,
+        pageSize,
+        search,
+        sortBy,
+        sortDirection,
+      );
     })();
-  }, [pageNumber, pageSize, search, sortBy, sortDirection]);
+  }, [state, pageNumber, pageSize, search, sortBy, sortDirection]);
 
   async function loadUsersFromApi(
     page: number,
@@ -229,7 +199,6 @@ export default function UserAdminPage() {
     setBanInfoLoading(false);
   };
 
-
   const handleChangeRoleConfirm = async (form: ChangeRoleForm) => {
     if (!selectedUser) return;
 
@@ -254,7 +223,13 @@ export default function UserAdminPage() {
         );
       }
 
-      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
+      await loadUsersFromApi(
+        pageNumber,
+        pageSize,
+        search,
+        sortBy,
+        sortDirection,
+      );
       closeModal();
     } catch (e) {
       console.error(e);
@@ -287,7 +262,13 @@ export default function UserAdminPage() {
         );
       }
 
-      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
+      await loadUsersFromApi(
+        pageNumber,
+        pageSize,
+        search,
+        sortBy,
+        sortDirection,
+      );
       closeModal();
     } catch (e) {
       console.error(e);
@@ -317,13 +298,31 @@ export default function UserAdminPage() {
         );
       }
 
-      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
+      await loadUsersFromApi(
+        pageNumber,
+        pageSize,
+        search,
+        sortBy,
+        sortDirection,
+      );
       closeModal();
     } catch (e) {
       console.error(e);
       alert(e instanceof Error ? e.message : "Nie udało się odblokować");
     }
   };
+
+  if (state === "checking") {
+    return (
+      <div className="min-h-screen bg-base-200 flex items-center justify-center">
+        <span className="loading loading-spinner loading-lg" />
+      </div>
+    );
+  }
+
+  if (state !== "allowed") {
+    return null;
+  }
 
 
   return (
