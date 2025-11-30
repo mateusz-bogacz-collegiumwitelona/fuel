@@ -434,7 +434,7 @@ namespace Contlollers.Controllers.Client
         [HttpGet("all-brands")]
         public async Task<IActionResult> GetAllBrandsAsync()
         {
-            var result = await _brandServices.GetAllBrandsAsync(); 
+            var result = await _brandServices.GetAllBrandsAsync();
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new
@@ -515,7 +515,7 @@ namespace Contlollers.Controllers.Client
         /// <response code="404">No matching station found</response>
         /// <response code="500">Server error — something went wrong while processing the request</response>
         [HttpGet("profile")]
-        public async Task<IActionResult> GetStationProfileAsync([FromQuery]FindStationRequest request)
+        public async Task<IActionResult> GetStationProfileAsync([FromQuery] FindStationRequest request)
         {
             var result = await _stationServices.GetStationProfileAsync(request);
             return result.IsSuccess
@@ -599,7 +599,7 @@ namespace Contlollers.Controllers.Client
             var (email, error) = GetAuthenticatedUser();
             if (error != null) return error;
 
-            var result = await _priceProposalServices.AddNewProposalAsync(email ,request);
+            var result = await _priceProposalServices.AddNewProposalAsync(email, request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new
@@ -640,6 +640,83 @@ namespace Contlollers.Controllers.Client
         public async Task<IActionResult> GetAllFuelTypeCodesAsync()
         {
             var result = await _fuelTypeServices.GetAllFuelTypeCodesAsync();
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Get price proposals for a specific gas station.
+        /// </summary>
+        /// <remarks>
+        /// Description  
+        /// Returns a paginated list of pending price proposals submitted by users for a specific gas station.  
+        ///
+        /// Station Identification  
+        /// All parameters are **required** to uniquely identify a station:
+        /// - **BrandName**: The gas station brand (e.g., "Shell", "BP", "Orlen")
+        /// - **Street**: Street name where the station is located
+        /// - **HouseNumber**: Building/house number of the station
+        /// - **City**: City where the station is located
+        ///
+        /// Pagination  
+        /// - **PageNumber**: Page number to retrieve (default: 1)
+        /// - **PageSize**: Number of items per page (default: 10)
+        ///
+        /// Example request  
+        /// ```
+        /// GET /api/station/price-proposal?BrandName=Shell&amp;Street=aleja%20Aleksandra%20Brücknera&amp;HouseNumber=53&amp;City=Wrocław&amp;PageNumber=1&amp;PageSize=10
+        /// ```
+        ///
+        /// Example response  
+        /// ```json
+        /// {
+        ///   "isSuccess": true,
+        ///   "data": {
+        ///     "items": [
+        ///       {
+        ///         "userName": "User4",
+        ///         "fuelCode": "PB95",
+        ///         "proposedPrice": 6.47,
+        ///         "createdAt": "2025-10-28T17:21:39.810956Z"
+        ///       },
+        ///       {
+        ///         "userName": "User5",
+        ///         "fuelCode": "E85",
+        ///         "proposedPrice": 6.71,
+        ///         "createdAt": "2025-11-06T17:21:39.811112Z"
+        ///       }
+        ///     ],
+        ///     "pageNumber": 1,
+        ///     "pageSize": 10,
+        ///     "totalCount": 5,
+        ///     "totalPages": 1,
+        ///     "hasPreviousPage": false,
+        ///     "hasNextPage": false
+        ///   },
+        ///   "message": "price proposals retrieved successfully",
+        ///   "statusCode": 200,
+        ///   "errors": null
+        /// }
+        /// ```
+        ///
+        /// Notes  
+        /// - If the station is not found, an empty result set is returned with `totalCount: 0`.
+        /// - Price proposals include the username of the submitter, fuel type code, proposed price, and submission timestamp.
+        /// </remarks>
+        /// <param name="request">Station identification parameters (BrandName, Street, HouseNumber, City)</param>
+        /// <param name="pagged">Pagination parameters (PageNumber, PageSize)</param>
+        /// <response code="200">Price proposals successfully retrieved (may be empty if station not found)</response>
+        /// <response code="500">An unexpected server error occurred</response>
+        [HttpGet("price-proposal")]
+        public async Task<IActionResult> GetPriceProposaByStationAsync([FromQuery] FindStationRequest request, [FromQuery] GetPaggedRequest pagged)
+        {
+            var result = await _stationServices.GetPriceProposalByStationAsync(request, pagged);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

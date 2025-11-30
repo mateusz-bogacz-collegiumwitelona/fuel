@@ -36,7 +36,7 @@ namespace Services.Services
         {
             try
             {
-                if (string.IsNullOrEmpty(request.ReportedEmail))
+                if (string.IsNullOrEmpty(request.ReportedUserName))
                 {
                     _logger.LogWarning("Reported email is null or empty");
                     return Result<bool>.Bad(
@@ -77,10 +77,10 @@ namespace Services.Services
                         );
                 }
 
-                var reportedUser = await _userManager.FindByEmailAsync(request.ReportedEmail);
+                var reportedUser = await _userManager.FindByNameAsync(request.ReportedUserName);
                 if (reportedUser == null)
                 {
-                    _logger.LogWarning("Reported user with email {Email} not found.", request.ReportedEmail);
+                    _logger.LogWarning("Reported user with email {Email} not found.", request.ReportedUserName);
                     return Result<bool>.Bad(
                         "Reported user not found",
                         StatusCodes.Status404NotFound,
@@ -116,7 +116,7 @@ namespace Services.Services
 
                 if (!result)
                 {
-                    _logger.LogError("Failed to report user with email {Email}.", request.ReportedEmail);
+                    _logger.LogError("Failed to report user with email {Email}.", request.ReportedUserName);
                     return Result<bool>.Bad(
                         "Failed to report user",
                         StatusCodes.Status500InternalServerError,
@@ -134,8 +134,8 @@ namespace Services.Services
             {
                 _logger.LogError(
                     ex,
-                    "An error occurred while reporting user with email: {reportedEmail} by notifier: {notifierEmail}",
-                    request.ReportedEmail,
+                    "An error occurred while reporting user : {reportedUserName} by notifier: {notifierEmail}",
+                    request.ReportedUserName,
                     notifierEmail);
                 return Result<bool>.Bad(
                     "Internal Server Error",

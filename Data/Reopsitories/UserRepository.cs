@@ -26,26 +26,6 @@ namespace Data.Reopsitories
             _logger = logger;
         }
 
-        public async Task<GetUserInfoResponse> GetUserInfoAsync(string email)
-            => await _context.Users
-            .Where(u => u.Email == email)
-            .Select(u => new GetUserInfoResponse
-            {
-                UserName = u.UserName,
-                Email = u.Email,
-                CreatedAt = u.CreatedAt,
-                ProposalStatistics = new GetProposalStatisticResponse
-                {
-                    TotalProposals = (int)u.ProposalStatistic.TotalProposals,
-                    ApprovedProposals = (int)u.ProposalStatistic.ApprovedProposals,
-                    RejectedProposals = (int)u.ProposalStatistic.RejectedProposals,
-                    AcceptedRate = (int)u.ProposalStatistic.AcceptedRate,
-                    Points = (int)u.ProposalStatistic.Points,
-                    UpdatedAt = u.ProposalStatistic.UpdatedAt,
-                }
-            })
-            .FirstOrDefaultAsync();
-
         public async Task<bool> IsUserDeleted(ApplicationUser user)
          => await _context.Users
                 .Where(u => u.Id == user.Id && u.IsDeleted)
