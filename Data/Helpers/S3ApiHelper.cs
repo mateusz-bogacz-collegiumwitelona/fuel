@@ -1,18 +1,19 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Data.Interfaces;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Minio;
 using Minio.DataModel.Args;
 using Minio.Exceptions;
 using System.Diagnostics;
-using System.Text.RegularExpressions;
 
 namespace Data.Helpers
 {
-    public class S3ApiHelper
+    public class S3ApiHelper: IS3ApiHelper
     {
         private readonly IMinioClient _minioClient;
         private readonly IConfiguration _config;
         private readonly ILogger<S3ApiHelper> _logger;
+        private readonly string _publicUrl;
 
         public S3ApiHelper(
             IMinioClient minioClient,
@@ -22,6 +23,13 @@ namespace Data.Helpers
             _minioClient = minioClient;
             _config = config;
             _logger = logger;
+            _publicUrl = _config["MinIO:PublicUrl"] ?? "http://localhost:9000";
+        }
+
+        public string GetPublicUrl(string objectPath, string? bucketName = null)
+        {
+            var targetBucket = bucketName ?? _config["MinIO:BucketName"];
+            return $"{_publicUrl}/{targetBucket}/{objectPath}";
         }
 
         public async Task<string> UploadFileAsync(
