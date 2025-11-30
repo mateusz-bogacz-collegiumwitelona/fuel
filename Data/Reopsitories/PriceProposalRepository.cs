@@ -16,13 +16,13 @@ namespace Data.Repositories
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PriceProposalRepository> _logger;
-        private readonly S3ApiHelper _s3ApiHelper;
+        private readonly IS3ApiHelper _s3ApiHelper;
         private readonly IConfiguration _config;
 
         public PriceProposalRepository(
             ApplicationDbContext context,
             ILogger<PriceProposalRepository> logger,
-            S3ApiHelper s3ApiHelper,
+            IS3ApiHelper s3ApiHelper,
             IConfiguration config)
         {
             _context = context;
@@ -167,7 +167,7 @@ namespace Data.Repositories
             string bucketName = _config["MinIO:BucketName"] ?? "fuel-prices";
             string path = proposal.PhotoUrl;
 
-            string photoUrl = await _s3ApiHelper.GetPresignedUrlAsync(path, bucketName);
+            string photoUrl = _s3ApiHelper.GetPublicUrl(path, bucketName);
 
             return new GetPriceProposalResponse
             {
