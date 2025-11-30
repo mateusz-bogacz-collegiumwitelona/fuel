@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import "leaflet/dist/leaflet.css";
+import { API_BASE } from "../components/api";
 
 type FuelPrice = {
   fuelCode: string;
@@ -75,14 +76,17 @@ export default function StationProfilePage() {
   const getMarkerIcon = (brand: string) => {
     if (!L) return undefined;
     const normalizedBrand = Object.keys(brandColors).find(
-      (key) => key.toLowerCase() === brand.toLowerCase()
+      (key) => key.toLowerCase() === brand.toLowerCase(),
     );
     const color = normalizedBrand
       ? brandColors[normalizedBrand]
       : brandColors.Default;
 
     return new L.Icon({
-      iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
+      iconUrl:
+        "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-" +
+        color +
+        ".png",
       shadowUrl:
         "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-shadow.png",
       iconSize: [25, 41],
@@ -104,8 +108,6 @@ export default function StationProfilePage() {
         setLoading(true);
         setError(null);
 
-        const token = localStorage.getItem("token");
-
         const qs = new URLSearchParams({
           brandName,
           street,
@@ -114,15 +116,14 @@ export default function StationProfilePage() {
         });
 
         const response = await fetch(
-          `http://localhost:5111/api/station/profile?${qs.toString()}`,
+          `${API_BASE}/api/station/profile?${qs.toString()}`,
           {
             method: "GET",
             headers: {
               Accept: "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
             credentials: "include",
-          }
+          },
         );
 
         if (!response.ok) {
@@ -147,13 +148,13 @@ export default function StationProfilePage() {
   const buildGoogleMapsUrl = (st: StationProfile) => {
     const query = `${st.brandName} ${st.street} ${st.houseNumber}, ${st.city}`;
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-      query
+      query,
     )}`;
   };
 
   const buildGoogleMapsDirectionsUrl = (lat: number, lng: number) => {
-  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-};
+    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  };
 
 
   return (

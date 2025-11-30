@@ -1,24 +1,8 @@
 import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
-
-const API_BASE = "http://localhost:5111";
-
-// Helper: decode JWT payload (same approach as other pages)
-function parseJwt(token: string | null) {
-  if (!token) return null;
-  try {
-    const payload = token.split(".")[1];
-    const decoded = atob(payload);
-    try {
-      return JSON.parse(decodeURIComponent(escape(decoded)));
-    } catch {
-      return JSON.parse(decoded);
-    }
-  } catch (e) {
-    return null;
-  }
-}
+import { API_BASE } from "../components/api";
+import { useUserGuard } from "../components/useUserGuard";
 
 type ProposalStats = {
   totalProposals?: number;
@@ -36,7 +20,11 @@ type UserProfile = {
 };
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = React.useState<"account" | "general" | "appearance">("account");
+  const { state, email } = useUserGuard();
+
+  const [activeTab, setActiveTab] = React.useState<
+    "account" | "general" | "appearance"
+  >("account");
 
   const [user, setUser] = React.useState<UserProfile | null>(null);
   const [loadingUser, setLoadingUser] = React.useState(true);
@@ -55,26 +43,28 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = React.useState("");
   const [confirmNewPassword, setConfirmNewPassword] = React.useState("");
   const [changingPassword, setChangingPassword] = React.useState(false);
-  const [passwordMessage, setPasswordMessage] = React.useState<string | null>(null);
+  const [passwordMessage, setPasswordMessage] = React.useState<string | null>(
+    null,
+  );
 
   React.useEffect(() => {
+    if (state !== "allowed") return;
+
     (async () => {
       setLoadingUser(true);
       setUserError(null);
       try {
-        const token = localStorage.getItem("token");
         const headers: Record<string, string> = { Accept: "application/json" };
-        if (token) headers["Authorization"] = `Bearer ${token}`;
 
-        const res = await fetch(`${API_BASE}/api/user`, {
+        const res = await fetch(`${API_BASE}/api/me`, {
           method: "GET",
           headers,
           credentials: "include",
         });
 
         if (!res.ok) {
-          // try a fallback endpoint used in other pages (/api/user/me)
-          const fallback = await fetch(`${API_BASE}/api/user/me`, {
+          // fallback na endpoint /api/me
+          const fallback = await fetch(`${API_BASE}/api/me`, {
             method: "GET",
             headers,
             credentials: "include",
@@ -98,12 +88,14 @@ export default function SettingsPage() {
         setNewEmail(data.email ?? "");
       } catch (err) {
         console.error("Nie udało się pobrać profilu użytkownika:", err);
-        setUserError("Nie udało się pobrać profilu. Upewnij się, że jesteś zalogowany.");
+        setUserError(
+          "Nie udało się pobrać profilu. Upewnij się, że jesteś zalogowany.",
+        );
       } finally {
         setLoadingUser(false);
       }
     })();
-  }, []);
+  }, [state]);
 
   // Validation helpers
   function validateEmailFormat(email: string) {
@@ -113,9 +105,14 @@ export default function SettingsPage() {
 
   function validatePasswordRules(pw: string) {
     if (pw.length < 6) return "Hasło musi mieć co najmniej 6 znaków.";
-    if (!/[A-Z]/.test(pw)) return "Hasło musi zawierać przynajmniej jedną wielką literę.";
-    if (!/[0-9]/.test(pw)) return "Hasło musi zawierać przynajmniej jedną cyfrę.";
-    if (!/[!@#$%^&*(),.?":{}|<>\\/;\\[\\]\\-_=+~`]/.test(pw)) return "Hasło musi zawierać przynajmniej jeden znak specjalny.";
+    if (!/[A-Z]/.test(pw))
+      return "Hasło musi zawierać przynajmniej jedną wielką literę.";
+    if (!/[0-9]/.test(pw))
+      return "Hasło musi zawierać przynajmniej jedną cyfrę.";
+    if (
+      !/[!@#$%^&*(),.?":{}|<>\\/;\\[\\]\\-_=+~`]/.test(pw)
+    )
+      return "Hasło musi zawierać przynajmniej jeden znak specjalny.";
     return null;
   }
 
@@ -130,15 +127,18 @@ export default function SettingsPage() {
         return;
       }
 
-      const token = localStorage.getItem("token");
       const headers: Record<string, string> = { Accept: "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await fetch(`${API_BASE}/api/user/change-name?userName=${encodeURIComponent(toSend)}`, {
-        method: "POST",
-        headers,
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${API_BASE}/api/user/change-name?userName=${encodeURIComponent(
+          toSend,
+        )}`,
+        {
+          method: "POST",
+          headers,
+          credentials: "include",
+        },
+      );
 
       const data = await res.json().catch(() => null);
       if (!res.ok || (data && data.success === false)) {
@@ -168,15 +168,18 @@ export default function SettingsPage() {
         return;
       }
 
-      const token = localStorage.getItem("token");
       const headers: Record<string, string> = { Accept: "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await fetch(`${API_BASE}/api/user/change-email?newEmail=${encodeURIComponent(toSend)}`, {
-        method: "POST",
-        headers,
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${API_BASE}/api/user/change-email?newEmail=${encodeURIComponent(
+          toSend,
+        )}`,
+        {
+          method: "POST",
+          headers,
+          credentials: "include",
+        },
+      );
 
       const data = await res.json().catch(() => null);
       if (!res.ok || (data && data.success === false)) {
@@ -185,7 +188,9 @@ export default function SettingsPage() {
         return;
       }
 
-      setEmailMessage("Email zmieniony pomyślnie. Możesz potrzebować ponownego zalogowania.");
+      setEmailMessage(
+        "Email zmieniony pomyślnie. Możesz potrzebować ponownego zalogowania.",
+      );
       setUser((u) => (u ? { ...u, email: toSend } : u));
     } catch (err) {
       console.error("change-email error:", err);
@@ -216,12 +221,10 @@ export default function SettingsPage() {
         return;
       }
 
-      const token = localStorage.getItem("token");
       const headers: Record<string, string> = {
         Accept: "application/json",
         "Content-Type": "application/json",
       };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
 
       const body = {
         currentPassword,
@@ -255,6 +258,7 @@ export default function SettingsPage() {
       setChangingPassword(false);
     }
   }
+
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content">

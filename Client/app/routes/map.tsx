@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import "leaflet/dist/leaflet.css";
 import Header from "../components/header";
 import Footer from "../components/footer";
+import { API_BASE } from "../components/api";
 
 type Station = {
   brandName: string;
@@ -58,8 +59,6 @@ export default function MapView() {
 
   const fetchStations = async () => {
     try {
-      const token = localStorage.getItem("token");
-
       const body = {
         brandName: [] as string[],
         locationLatitude: null as number | null,
@@ -67,12 +66,11 @@ export default function MapView() {
         distance: null as number | null,
       };
 
-      const response = await fetch("http://localhost:5111/api/station/map/all", {
+      const response = await fetch(`${API_BASE}/api/station/map/all`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: "include",
         body: JSON.stringify(body),
@@ -102,7 +100,7 @@ export default function MapView() {
     }
 
     const filtered = allStations.filter((s) =>
-      s.brandName.toLowerCase().includes(q)
+      s.brandName.toLowerCase().includes(q),
     );
     setStations(filtered);
   };
@@ -112,9 +110,11 @@ export default function MapView() {
 
   const getMarkerIcon = (brand: string) => {
     const normalizedBrand = Object.keys(brandColors).find(
-      (key) => key.toLowerCase() === brand.toLowerCase()
+      (key) => key.toLowerCase() === brand.toLowerCase(),
     );
-    const color = normalizedBrand ? brandColors[normalizedBrand] : brandColors.Default;
+    const color = normalizedBrand
+      ? brandColors[normalizedBrand]
+      : brandColors.Default;
     return new L.Icon({
       iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
       shadowUrl:
@@ -125,6 +125,7 @@ export default function MapView() {
       shadowSize: [41, 41],
     });
   };
+
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content">
