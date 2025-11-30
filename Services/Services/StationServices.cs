@@ -1,14 +1,10 @@
-﻿using Data.Enums;
-using Data.Interfaces;
-using Data.Reopsitories;
+﻿using Data.Interfaces;
 using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 
 namespace Services.Services
 {
@@ -542,6 +538,5 @@ namespace Services.Services
                             CacheService.CacheExpiry.Short
                         );
         }
-        
     }
 }

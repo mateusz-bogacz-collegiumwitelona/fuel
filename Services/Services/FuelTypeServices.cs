@@ -15,15 +15,18 @@ namespace Services.Services
         private readonly IFuelTypeRepository _fuelTypeRepository;
         private readonly ILogger<FuelTypeServices> _logger;
         private readonly CacheService _cache;
+        private readonly IStationRepository _stationRepository;
 
         public FuelTypeServices(
             IFuelTypeRepository fuelTypeRepository,
             ILogger<FuelTypeServices> logger,
-            CacheService cache)
+            CacheService cache,
+            IStationRepository stationRepository)
         {
             _fuelTypeRepository = fuelTypeRepository;
             _logger = logger;
             _cache = cache;
+            _stationRepository = stationRepository;
         }
 
         public async Task<Result<List<string>>> GetAllFuelTypeCodesAsync()
@@ -291,5 +294,74 @@ namespace Services.Services
                 );
             }
         }
+
+        public async Task<Result<bool>> AssignFuelTypeToStationAsync(AssignFuelTypeToStationRequest request)
+        {
+            try
+            {
+                var fuelType = await _fuelTypeRepository.FindFuelTypeByCodeAsync(request.Code);
+
+                if (fuelType == null)
+                {
+                    _logger.LogWarning("Fuel type not found for assignment.");
+                    return Result<bool>.Bad(
+                        "Fuel type not found.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "No fuel type found with the provided code." },
+                        false);
+                }
+
+                var station = await _stationRepository.FindStationByDataAsync(
+                    request.Station.BrandName,
+                    request.Station.Street,
+                    request.Station.HouseNumber,
+                    request.Station.City
+                    );
+
+                if (station == null)
+                {
+                    _logger.LogWarning("Station not found for assignment.");
+                    return Result<bool>.Bad(
+                        "Station not found.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "No station found with the provided details." },
+                        false);
+                }
+
+                var result = await _fuelTypeRepository.AssignFuelTypeToStationAsync(
+                    fuelType.Id, 
+                    station.Id, 
+                    request.Price
+                    );
+
+                if (!result)
+                {
+                    _logger.LogWarning("Failed to assign fuel type to station.");
+                    return Result<bool>.Bad(
+                        "Failed to assign fuel type to station.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Could not assign the fuel type to the station." },
+                        false);
+                }
+
+                await _cache.InvalidateStationCacheAsync();
+                await _cache.InvalidateFuelTypeCacheAsync();
+
+                return Result<bool>.Good(
+                    "Fuel type assigned to station successfully.",
+                    StatusCodes.Status200OK,
+                    true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while assigning fuel type to station: {ex.Message} | {ex.InnerException}");
+                return Result<bool>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" },
+                    false);
+            }
+        }
+
     }
 }

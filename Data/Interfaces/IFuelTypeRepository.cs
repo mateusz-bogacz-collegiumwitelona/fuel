@@ -18,5 +18,6 @@ namespace Data.Interfaces
         Task<bool> AddFuelTypeAsync(string name, string code);
         Task<bool> EditFuelTypeAsync(FuelType fuelType, string? name, string? code);
         Task<bool> DeleteFuelTypeAsync(FuelType fuelType);
+        Task<bool> AssignFuelTypeToStationAsync(Guid fuelTypeId, Guid stationId, decimal price);
     }
 }

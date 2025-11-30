@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
+using Services.Services;
 
 namespace Controllers.Controllers.Admin
 {
@@ -14,10 +15,12 @@ namespace Controllers.Controllers.Admin
     public class StationController : ControllerBase
     {
         private readonly IStationServices _stationServices;
+        private readonly IFuelTypeServices _fuelTypeServices;
 
-        public StationController(IStationServices stationServices)
+        public StationController(IStationServices stationServices, IFuelTypeServices fuelTypeServices)
         {
             _stationServices = stationServices;
+            _fuelTypeServices = fuelTypeServices;
         }
 
         /// <summary>
@@ -381,6 +384,81 @@ namespace Controllers.Controllers.Admin
         public async Task<IActionResult> DeleteStationAsync([FromBody] FindStationRequest request)
         {
             var result = await _stationServices.DeleteStationAsync(request);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    data = result.Data
+                });
+        }
+
+        /// <summary>
+        /// Assigns a fuel type to a station with a specified price
+        /// </summary>
+        /// <remarks>
+        /// Creates a new fuel price entry that associates a fuel type with a station.
+        /// This establishes that the station offers this particular type of fuel at the given price.
+        /// 
+        /// Sample request:
+        /// 
+        ///     POST /api/admin/fuel-type/assign-fuel-type
+        ///     {
+        ///       "station": {
+        ///         "brandName": "Orlen",
+        ///         "street": "Marszałkowska",
+        ///         "houseNumber": "10",
+        ///         "city": "Warszawa"
+        ///       },
+        ///       "code": "PB95",
+        ///       "price": 6.49
+        ///     }
+        ///     
+        /// **Important Notes:**
+        /// - All fields are required to properly identify the station and fuel type
+        /// - Station must exist in the system (matched by brand name and full address)
+        /// - Fuel type must exist in the system (matched by code, e.g., "PB95", "ON", "LPG")
+        /// - Price must be greater than zero (minimum 0.01)
+        /// - If the fuel type is already assigned to this station, the operation will fail
+        /// - Brand name and address matching is case-insensitive
+        /// - After successful assignment, station and fuel type caches will be invalidated
+        /// 
+        /// **Common fuel type codes:**
+        /// - PB95 - Unleaded 95 octane
+        /// - PB98 - Unleaded 98 octane
+        /// - ON - Diesel
+        /// - LPG - Liquefied petroleum gas
+        /// - E85 - Ethanol fuel blend
+        /// 
+        /// </remarks>
+        /// <param name="request">Contains station identification details, fuel type code, and initial price</param>
+        /// <returns>Result indicating success or failure of the assignment</returns>
+        /// <response code="200">Fuel type assigned to station successfully</response>
+        /// <response code="400">
+        /// Bad request - possible reasons:
+        /// - Fuel type already assigned to this station
+        /// - Invalid price value
+        /// - Validation errors in request data
+        /// </response>
+        /// <response code="404">
+        /// Not found - possible reasons:
+        /// - Station not found with provided details
+        /// - Fuel type not found with provided code
+        /// </response>
+        /// <response code="401">Unauthorized - valid JWT token required</response>
+        /// <response code="403">Forbidden - Admin role required</response>
+        /// <response code="500">Internal server error</response>
+        [HttpPost("assign-fuel-type")]
+        public async Task<IActionResult> AssignStationToFuelTypeAsync([FromBody] AssignFuelTypeToStationRequest request)
+        {
+            var result = await _fuelTypeServices.AssignFuelTypeToStationAsync(request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, new
                 {
