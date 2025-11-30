@@ -271,7 +271,7 @@ builder.Services.AddScoped<IReportService, ReportService>();
 //register helpers
 builder.Services.AddScoped<EmailSender>();
 builder.Services.AddScoped<EmailBodys>();
-builder.Services.AddScoped<IS3ApiHelper, S3ApiHelper>();
+builder.Services.AddScoped<IStorage, S3ApiHelper>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenFactory, TokenFactory>();
 builder.Services.AddScoped<CacheService>();

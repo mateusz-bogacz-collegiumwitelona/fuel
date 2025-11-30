@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace Data.Helpers
 {
-    public class S3ApiHelper: IS3ApiHelper
+    public class S3ApiHelper: IStorage
     {
         private readonly IMinioClient _minioClient;
         private readonly IConfiguration _config;
