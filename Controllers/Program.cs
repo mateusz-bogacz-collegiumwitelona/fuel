@@ -198,15 +198,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         );
 });
 
-// add connection to redis
-var redisHost = builder.Configuration["Redis:Host"] ?? "redis";
-var redisPort = builder.Configuration["Redis:Port"] ?? "6379";
-
 //register identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
+// add connection to redis
+var redisHost = builder.Configuration["Redis:Host"] ?? "redis";
+var redisPort = builder.Configuration["Redis:Port"] ?? "6379";
 
 var options = new ConfigurationOptions
 {
@@ -272,7 +271,7 @@ builder.Services.AddScoped<IReportService, ReportService>();
 //register helpers
 builder.Services.AddScoped<EmailSender>();
 builder.Services.AddScoped<EmailBodys>();
-builder.Services.AddScoped<S3ApiHelper>();
+builder.Services.AddScoped<IS3ApiHelper, S3ApiHelper>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenFactory, TokenFactory>();
 builder.Services.AddScoped<CacheService>();
