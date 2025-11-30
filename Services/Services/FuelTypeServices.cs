@@ -1,9 +1,7 @@
 ﻿using Data.Interfaces;
-using Data.Reopsitories;
 using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;
@@ -363,5 +361,36 @@ namespace Services.Services
             }
         }
 
+        public async Task<Result<List<GetFuelPriceAndCodeResponse>>> GetFuelPriceForStationAsync(FindStationRequest request)
+        {
+            try
+            {
+                var result = await _fuelTypeRepository.GetFuelPriceForStationAsync(request);
+                
+                if (result == null || !result.Any())
+                {
+                    _logger.LogWarning("No fuel prices found for the specified station.");
+                    return Result<List<GetFuelPriceAndCodeResponse>>.Bad(
+                        "No fuel prices found for the specified station.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "No fuel prices available for the given station." }
+                        );
+                }
+                
+                return Result<List<GetFuelPriceAndCodeResponse>>.Good(
+                    "Fuel prices retrieved successfully.",
+                    StatusCodes.Status200OK,
+                    result
+                    );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while retrieving fuel prices for station: {ex.Message} | {ex.InnerException}");
+                return Result<List<GetFuelPriceAndCodeResponse>>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" });
+            }
+        }
     }
 }

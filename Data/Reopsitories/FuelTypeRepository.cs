@@ -136,5 +136,22 @@ namespace Data.Reopsitories
             var result = await _context.SaveChangesAsync();
             return result > 0;
         }
+
+        public async Task<List<GetFuelPriceAndCodeResponse>> GetFuelPriceForStationAsync(FindStationRequest request)
+            => await _context.FuelPrices.Include(fp => fp.FuelType)
+                    .Where(fp =>
+                        fp.Station.Brand.Name == request.BrandName &&
+                        fp.Station.Address.Street == request.Street &&
+                        fp.Station.Address.HouseNumber == request.HouseNumber &&
+                        fp.Station.Address.City == request.City
+                    )
+                    .Select(fp => new GetFuelPriceAndCodeResponse
+                    {
+                        FuelCode = fp.FuelType.Code,
+                        Price = fp.Price,
+                        ValidFrom = fp.ValidFrom
+                    }
+                    ).ToListAsync();
+
     }
 }

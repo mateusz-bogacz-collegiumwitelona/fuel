@@ -409,7 +409,7 @@ namespace Controllers.Controllers.Admin
         /// 
         /// Sample request:
         /// 
-        ///     POST /api/admin/fuel-type/assign-fuel-type
+        ///     POST api/admin/station/fuel-type/assign
         ///     {
         ///       "station": {
         ///         "brandName": "Orlen",
@@ -455,10 +455,92 @@ namespace Controllers.Controllers.Admin
         /// <response code="401">Unauthorized - valid JWT token required</response>
         /// <response code="403">Forbidden - Admin role required</response>
         /// <response code="500">Internal server error</response>
-        [HttpPost("assign-fuel-type")]
+        [HttpPost("fuel-type/assign")]
         public async Task<IActionResult> AssignStationToFuelTypeAsync([FromBody] AssignFuelTypeToStationRequest request)
         {
             var result = await _fuelTypeServices.AssignFuelTypeToStationAsync(request);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    data = result.Data
+                });
+        }
+
+        /// <summary>
+        /// Retrieves all fuel types and their prices available at a specific station
+        /// </summary>
+        /// <remarks>
+        /// Returns a list of all fuel types offered at the specified station along with their current prices and validity dates.
+        /// Station is identified by brand name and complete address details provided as query parameters.
+        /// 
+        /// Sample request:
+        /// 
+        ///     GET /api/admin/station/fuel-type?BrandName=Orlen&amp;Street=Marszałkowska&amp;HouseNumber=10&amp;City=Warszawa
+        ///     
+        /// Sample response:
+        /// 
+        ///     {
+        ///       "success": true,
+        ///       "message": "Fuel prices retrieved successfully.",
+        ///       "data": [
+        ///         {
+        ///           "fuelCode": "PB95",
+        ///           "price": 6.49,
+        ///           "validFrom": "2024-11-28T10:30:00Z"
+        ///         },
+        ///         {
+        ///           "fuelCode": "ON",
+        ///           "price": 6.29,
+        ///           "validFrom": "2024-11-28T10:30:00Z"
+        ///         },
+        ///         {
+        ///           "fuelCode": "LPG",
+        ///           "price": 3.15,
+        ///           "validFrom": "2024-11-27T14:20:00Z"
+        ///         }
+        ///       ]
+        ///     }
+        ///     
+        /// **Important Notes:**
+        /// - All query parameters are required to uniquely identify the station
+        /// - Brand name and address matching is case-insensitive
+        /// - Returns only fuel types that have been explicitly assigned to this station
+        /// - If a station doesn't offer any fuel types yet, you'll receive a 404 response
+        /// - ValidFrom indicates when the current price became effective
+        /// - Prices are returned with 2 decimal precision
+        /// 
+        /// **Query Parameters:**
+        /// - **BrandName**: The name of the fuel station brand (e.g., "Orlen", "BP", "Shell")
+        /// - **Street**: Street name where the station is located
+        /// - **HouseNumber**: Building/house number of the station
+        /// - **City**: City where the station is located
+        /// 
+        /// </remarks>
+        /// <param name="request">Station identification details provided as query parameters</param>
+        /// <returns>List of fuel types with their codes, prices, and validity dates</returns>
+        /// <response code="200">Fuel prices retrieved successfully - returns list of available fuel types</response>
+        /// <response code="404">
+        /// Not found - possible reasons:
+        /// - Station not found with provided details
+        /// - Station exists but has no fuel types assigned yet
+        /// </response>
+        /// <response code="400">Bad request - missing or invalid query parameters</response>
+        /// <response code="401">Unauthorized - valid JWT token required</response>
+        /// <response code="403">Forbidden - Admin role required</response>
+        /// <response code="500">Internal server error</response>
+        [HttpGet("fuel-type")]
+        public async Task<IActionResult> GetFuelPriceForStationAsync([FromQuery] FindStationRequest request)
+        {
+            var result = await _fuelTypeServices.GetFuelPriceForStationAsync(request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, new
                 {
