@@ -153,5 +153,24 @@ namespace Data.Reopsitories
                     }
                     ).ToListAsync();
 
+        public async Task<bool> ChangeFuelPriceAsync(Guid stationId, Guid fuelTypeId, decimal price)
+        {
+            var fuelPrice = await _context.FuelPrices.FirstOrDefaultAsync(fp => fp.StationId == stationId && fp.FuelTypeId == fuelTypeId);
+            
+            if (fuelPrice == null)
+            {
+                _logger.LogWarning("Fuel price not found for Station ID {StationId} and FuelType ID {FuelTypeId}.", stationId, fuelTypeId);
+                return false;
+            }
+            
+            fuelPrice.Price = price;
+            fuelPrice.UpdatedAt = DateTime.UtcNow;
+            fuelPrice.ValidFrom = DateTime.UtcNow;
+            
+            var result = await _context.SaveChangesAsync();
+            
+            return result > 0;
+        }
+
     }
 }

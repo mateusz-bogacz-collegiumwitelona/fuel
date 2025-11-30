@@ -2,7 +2,7 @@
 
 namespace DTO.Requests
 {
-    public class AssignFuelTypeToStationRequest
+    public class ManageStationFuelPriceRequest
     {
         public FindStationRequest Station { get; set; }
        

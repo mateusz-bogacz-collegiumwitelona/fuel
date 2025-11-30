@@ -11,7 +11,8 @@ namespace Services.Interfaces
         Task<Result<bool>> AddFuelTypeAsync(AddFuelTypeRequest request);
         Task<Result<bool>> EditFuelTypeAsync(EditFuelTypeRequest request);
         Task<Result<bool>> DeleteFuelTypeAsync(string code);
-        Task<Result<bool>> AssignFuelTypeToStationAsync(AssignFuelTypeToStationRequest request);
+        Task<Result<bool>> AssignFuelTypeToStationAsync(ManageStationFuelPriceRequest request);
         Task<Result<List<GetFuelPriceAndCodeResponse>>> GetFuelPriceForStationAsync(FindStationRequest request);
+        Task<Result<bool>> ChangeFuelPriceAsync(ManageStationFuelPriceRequest request);
     }
 }

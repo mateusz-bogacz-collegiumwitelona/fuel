@@ -456,7 +456,7 @@ namespace Controllers.Controllers.Admin
         /// <response code="403">Forbidden - Admin role required</response>
         /// <response code="500">Internal server error</response>
         [HttpPost("fuel-type/assign")]
-        public async Task<IActionResult> AssignStationToFuelTypeAsync([FromBody] AssignFuelTypeToStationRequest request)
+        public async Task<IActionResult> AssignStationToFuelTypeAsync([FromBody] ManageStationFuelPriceRequest request)
         {
             var result = await _fuelTypeServices.AssignFuelTypeToStationAsync(request);
             return result.IsSuccess
@@ -541,6 +541,107 @@ namespace Controllers.Controllers.Admin
         public async Task<IActionResult> GetFuelPriceForStationAsync([FromQuery] FindStationRequest request)
         {
             var result = await _fuelTypeServices.GetFuelPriceForStationAsync(request);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    data = result.Data
+                });
+        }
+
+
+        /// <summary>
+        /// Updates the price of an existing fuel type at a specific station
+        /// </summary>
+        /// <remarks>
+        /// Changes the current price for a fuel type that is already assigned to the specified station.
+        /// The fuel type must be previously assigned to this station - use the assign endpoint first if needed.
+        /// 
+        /// Sample request:
+        /// 
+        ///     PATCH /api/admin/station/fuel-type/change-price
+        ///     {
+        ///       "station": {
+        ///         "brandName": "Orlen",
+        ///         "street": "Marszałkowska",
+        ///         "houseNumber": "10",
+        ///         "city": "Warszawa"
+        ///       },
+        ///       "code": "PB95",
+        ///       "price": 6.59
+        ///     }
+        ///     
+        /// Sample success response (200):
+        /// 
+        ///     {
+        ///       "success": true,
+        ///       "message": "Fuel price changed successfully for the station.",
+        ///       "data": true
+        ///     }
+        ///     
+        /// Sample error response (404 - fuel type not assigned):
+        /// 
+        ///     {
+        ///       "success": false,
+        ///       "message": "Failed to change fuel price for the station.",
+        ///       "errors": [
+        ///         "Could not change the fuel price for the station."
+        ///       ],
+        ///       "data": false
+        ///     }
+        ///     
+        /// **Important Notes:**
+        /// - The fuel type must already be assigned to this station before you can update its price
+        /// - If the fuel type is not assigned to the station, you'll receive a 400 error
+        /// - To assign a new fuel type, use POST /api/admin/station/assign-fuel-type first
+        /// - All station identification fields (brandName, street, houseNumber, city) are required
+        /// - Station and fuel type must exist in the system
+        /// - Price must be greater than zero (minimum 0.01)
+        /// - The ValidFrom timestamp will be set to the current UTC time when price is updated
+        /// - Station and fuel price caches will be automatically invalidated after successful update
+        /// 
+        /// **Common fuel type codes:**
+        /// - PB95 - Unleaded 95 octane
+        /// - PB98 - Unleaded 98 octane
+        /// - ON - Diesel
+        /// - LPG - Liquefied petroleum gas
+        /// - E85 - Ethanol fuel blend
+        /// 
+        /// **Workflow:**
+        /// 1. First assign fuel type to station: POST /assign-fuel-type
+        /// 2. Then update prices as needed: PATCH /change-price
+        /// 3. Users will see updated prices immediately after cache refresh
+        /// 
+        /// </remarks>
+        /// <param name="request">Contains station identification, fuel type code, and new price</param>
+        /// <returns>Result indicating success or failure of the price update operation</returns>
+        /// <response code="200">Fuel price updated successfully - price change is now effective</response>
+        /// <response code="400">
+        /// Bad request - possible reasons:
+        /// - Fuel type is not assigned to this station (assign it first)
+        /// - Invalid price value (must be greater than zero)
+        /// - Validation errors in request data
+        /// </response>
+        /// <response code="404">
+        /// Not found - possible reasons:
+        /// - Station not found with the provided details
+        /// - Fuel type not found with the provided code
+        /// </response>
+        /// <response code="401">Unauthorized - valid JWT token required</response>
+        /// <response code="403">Forbidden - Admin role required</response>
+        /// <response code="500">Internal server error occurred during processing</response>
+        [HttpPatch("fuel-type/change-price")]
+        public async Task<IActionResult> ChangeFuelPriceAsync([FromBody] ManageStationFuelPriceRequest request)
+        {
+            var result = await _fuelTypeServices.ChangeFuelPriceAsync(request);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, new
                 {

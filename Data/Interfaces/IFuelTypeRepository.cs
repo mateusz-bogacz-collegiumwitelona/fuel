@@ -15,5 +15,6 @@ namespace Data.Interfaces
         Task<bool> DeleteFuelTypeAsync(FuelType fuelType);
         Task<bool> AssignFuelTypeToStationAsync(Guid fuelTypeId, Guid stationId, decimal price);
         Task<List<GetFuelPriceAndCodeResponse>> GetFuelPriceForStationAsync(FindStationRequest request);
+        Task<bool> ChangeFuelPriceAsync(Guid stationId, Guid fuelTypeId, decimal price);
     }
 }

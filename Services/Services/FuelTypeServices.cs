@@ -31,7 +31,6 @@ namespace Services.Services
         {
             try
             {
-
                 var result = await _cache.GetOrSetAsync(
                     CacheService.CacheKeys.AllFuelTypeCodes,
                     async () => await _fuelTypeRepository.GetAllFuelTypeCodesAsync(),
@@ -293,7 +292,7 @@ namespace Services.Services
             }
         }
 
-        public async Task<Result<bool>> AssignFuelTypeToStationAsync(AssignFuelTypeToStationRequest request)
+        public async Task<Result<bool>> AssignFuelTypeToStationAsync(ManageStationFuelPriceRequest request)
         {
             try
             {
@@ -327,8 +326,8 @@ namespace Services.Services
                 }
 
                 var result = await _fuelTypeRepository.AssignFuelTypeToStationAsync(
-                    fuelType.Id, 
-                    station.Id, 
+                    fuelType.Id,
+                    station.Id,
                     request.Price
                     );
 
@@ -344,6 +343,7 @@ namespace Services.Services
 
                 await _cache.InvalidateStationCacheAsync();
                 await _cache.InvalidateFuelTypeCacheAsync();
+                await _cache.InvalidateFuelPriceCacheAsync(request.Station.BrandName, request.Station.City);
 
                 return Result<bool>.Good(
                     "Fuel type assigned to station successfully.",
@@ -365,8 +365,14 @@ namespace Services.Services
         {
             try
             {
-                var result = await _fuelTypeRepository.GetFuelPriceForStationAsync(request);
-                
+                var cacheKey = _cache.GenerateCacheKey($"{CacheService.CacheKeys.FuelPriceByStation}:{request.BrandName}:{request.City}:{request.Street}");
+
+                var result = await _cache.GetOrSetListAsync(
+                    cacheKey,
+                    async () => await _fuelTypeRepository.GetFuelPriceForStationAsync(request),
+                    CacheService.CacheExpiry.Medium
+                );
+
                 if (result == null || !result.Any())
                 {
                     _logger.LogWarning("No fuel prices found for the specified station.");
@@ -374,14 +380,14 @@ namespace Services.Services
                         "No fuel prices found for the specified station.",
                         StatusCodes.Status404NotFound,
                         new List<string> { "No fuel prices available for the given station." }
-                        );
+                    );
                 }
-                
+
                 return Result<List<GetFuelPriceAndCodeResponse>>.Good(
                     "Fuel prices retrieved successfully.",
                     StatusCodes.Status200OK,
                     result
-                    );
+                );
             }
             catch (Exception ex)
             {
@@ -390,6 +396,74 @@ namespace Services.Services
                     "An error occurred while processing your request.",
                     StatusCodes.Status500InternalServerError,
                     new List<string> { $"{ex.Message} | {ex.InnerException}" });
+            }
+        }
+
+        public async Task<Result<bool>> ChangeFuelPriceAsync(ManageStationFuelPriceRequest request)
+        {
+            try
+            {
+                var station = await _stationRepository.FindStationByDataAsync(
+                    request.Station.BrandName,
+                    request.Station.Street,
+                    request.Station.HouseNumber,
+                    request.Station.City
+                    );
+
+                if (station == null)
+                {
+                    _logger.LogWarning("Station not found for fuel price change.");
+                    return Result<bool>.Bad(
+                        "Station not found.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "No station found with the provided details." },
+                        false);
+                }
+
+                var fuelType = await _fuelTypeRepository.FindFuelTypeByCodeAsync(request.Code);
+
+                if (fuelType == null)
+                {
+                    _logger.LogWarning("Fuel type not found for fuel price change.");
+                    return Result<bool>.Bad(
+                        "Fuel type not found.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "No fuel type found with the provided code." },
+                        false);
+                }
+
+                var result = await _fuelTypeRepository.ChangeFuelPriceAsync(
+                    station.Id,
+                    fuelType.Id,
+                    request.Price
+                    );
+
+                if (!result)
+                {
+                    _logger.LogWarning("Failed to change fuel price for the station.");
+                    return Result<bool>.Bad(
+                        "Failed to change fuel price for the station.",
+                        StatusCodes.Status400BadRequest,
+                        new List<string> { "Could not change the fuel price for the station." },
+                        false);
+                }
+
+                await _cache.InvalidateStationCacheAsync();
+                await _cache.InvalidateFuelPriceCacheAsync(request.Station.BrandName, request.Station.City);
+
+                return Result<bool>.Good(
+                    "Fuel price changed successfully for the station.",
+                    StatusCodes.Status200OK,
+                    true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while changing fuel price for station: {ex.Message} | {ex.InnerException}");
+                return Result<bool>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" },
+                    false);
             }
         }
     }
