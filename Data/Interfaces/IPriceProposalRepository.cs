@@ -15,7 +15,6 @@ namespace Data.Interfaces
             IFormFile photo,
             string extension);
         Task<GetPriceProposalResponse> GetPriceProposal(string photoToken);
-        Task<List<GetUserAllProposalPricesResponse>> GetUserAllProposalPricesAsync(Guid userId);
         Task<List<GetStationPriceProposalResponse>> GetAllPriceProposal(TableRequest request);
         Task<bool> ChangePriceProposalStatus(bool isAccepted, PriceProposal priceProposal, ApplicationUser admin);
         Task<PriceProposal> FindPriceProposal(string token);

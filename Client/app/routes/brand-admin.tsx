@@ -14,18 +14,9 @@ import type {
   EditBrandForm,
 } from "../components/brand-admin-modals";
 
-const API_BASE = "http://localhost:5111";
+import { useAdminGuard } from "../components/useAdminGuard";
 
-function parseJwt(token: string | null) {
-  if (!token) return null;
-  try {
-    const payload = token.split(".")[1];
-    const decoded = atob(payload);
-    return JSON.parse(decodeURIComponent(escape(decoded)));
-  } catch {
-    return null;
-  }
-}
+const API_BASE = "http://localhost:5111";
 
 type BrandListResponseData = {
   items: AdminBrand[];
@@ -36,7 +27,8 @@ type BrandListResponseData = {
 };
 
 export default function BrandAdminPage() {
-  const [email, setEmail] = React.useState<string | null>(null);
+  const { state, email } = useAdminGuard();
+
   const [brands, setBrands] = React.useState<AdminBrand[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -56,39 +48,11 @@ export default function BrandAdminPage() {
     React.useState<AdminBrand | null>(null);
 
   React.useEffect(() => {
+    if (state !== "allowed") return;
     (async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const expiration = localStorage.getItem("token_expiration");
-
-        if (token && expiration && new Date(expiration) > new Date()) {
-          const decoded = parseJwt(token);
-          const userEmail = (decoded && (decoded.email || decoded.sub)) || null;
-          setEmail(userEmail ?? "Zalogowany administrator");
-          await loadBrandsFromApi(pageNumber, pageSize, search, sortDirection);
-          return;
-        }
-
-        const refreshRes = await fetch(`${API_BASE}/api/refresh`, {
-          method: "POST",
-          headers: { Accept: "application/json" },
-          credentials: "include",
-        });
-
-        if (refreshRes.ok) {
-          setEmail("Zalogowany administrator");
-          await loadBrandsFromApi(pageNumber, pageSize, search, sortDirection);
-        } else {
-          if (typeof window !== "undefined") window.location.href = "/login";
-        }
-      } catch (err) {
-        console.error(err);
-        if (typeof window !== "undefined") window.location.href = "/login";
-      } finally {
-        setLoading(false);
-      }
+      await loadBrandsFromApi(pageNumber, pageSize, search, sortDirection);
     })();
-  }, [pageNumber, pageSize, search, sortDirection]);
+  }, [state, pageNumber, pageSize, search, sortDirection]);
 
   async function loadBrandsFromApi(
     page: number,
@@ -169,33 +133,32 @@ export default function BrandAdminPage() {
     setSelectedBrand(null);
   };
 
-const handleAddConfirm = async (form: AddBrandForm) => {
-  try {
-    const formData = new FormData();
-    formData.append("name", form.name);
+  const handleAddConfirm = async (form: AddBrandForm) => {
+    try {
+      const formData = new FormData();
+      formData.append("name", form.name);
 
-    const res = await fetch(`${API_BASE}/api/admin/brand/add`, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-      },
-      credentials: "include",
-      body: formData,
-    });
+      const res = await fetch(`${API_BASE}/api/admin/brand/add`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+        },
+        credentials: "include",
+        body: formData,
+      });
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Nie udało się dodać marki (${res.status}): ${text}`);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Nie udało się dodać marki (${res.status}): ${text}`);
+      }
+
+      await loadBrandsFromApi(pageNumber, pageSize, search, sortDirection);
+      closeModal();
+    } catch (e) {
+      console.error(e);
+      alert(e instanceof Error ? e.message : "Nie udało się dodać marki");
     }
-
-    await loadBrandsFromApi(pageNumber, pageSize, search, sortDirection);
-    closeModal();
-  } catch (e) {
-    console.error(e);
-    alert(e instanceof Error ? e.message : "Nie udało się dodać marki");
-  }
-};
-
+  };
 
   const handleEditConfirm = async (form: EditBrandForm) => {
     if (!selectedBrand) return;
@@ -216,7 +179,9 @@ const handleAddConfirm = async (form: AddBrandForm) => {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`Nie udało się edytować marki (${res.status}): ${text}`);
+        throw new Error(
+          `Nie udało się edytować marki (${res.status}): ${text}`,
+        );
       }
 
       await loadBrandsFromApi(pageNumber, pageSize, search, sortDirection);
@@ -254,6 +219,19 @@ const handleAddConfirm = async (form: AddBrandForm) => {
       alert(e instanceof Error ? e.message : "Nie udało się usunąć marki");
     }
   };
+
+  if (state === "checking") {
+    return (
+      <div className="min-h-screen bg-base-200 flex items-center justify-center">
+        <span className="loading loading-spinner loading-lg" />
+      </div>
+    );
+  }
+
+  if (state !== "allowed") {
+    return null;
+  }
+
 
 
   return (

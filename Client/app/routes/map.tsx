@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import "leaflet/dist/leaflet.css";
 import Header from "../components/header";
 import Footer from "../components/footer";
+import { API_BASE } from "../components/api";
 import { useTranslation } from "react-i18next";
 
 type Station = {
@@ -15,8 +16,9 @@ type Station = {
   longitude: number;
 };
 
-export default function MapView() {
-  const { t, i18n } = useTranslation();
+export default function MapView(): JSX.Element | null {
+  const { t } = useTranslation();
+
   const [stations, setStations] = useState<Station[]>([]);
   const [allStations, setAllStations] = useState<Station[]>([]);
   const [MapComponents, setMapComponents] = useState<{
@@ -43,7 +45,10 @@ export default function MapView() {
     if (typeof window === "undefined") return;
 
     (async () => {
-      const [rl, leaflet] = await Promise.all([import("react-leaflet"), import("leaflet")]);
+      const [rl, leaflet] = await Promise.all([
+        import("react-leaflet"),
+        import("leaflet"),
+      ]);
 
       setL(leaflet);
       setMapComponents({
@@ -57,8 +62,6 @@ export default function MapView() {
 
   const fetchStations = async () => {
     try {
-      const token = localStorage.getItem("token");
-
       const body = {
         brandName: [] as string[],
         locationLatitude: null as number | null,
@@ -66,12 +69,11 @@ export default function MapView() {
         distance: null as number | null,
       };
 
-      const response = await fetch("http://localhost:5111/api/station/map/all", {
+      const response = await fetch(`${API_BASE}/api/station/map/all`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: "include",
         body: JSON.stringify(body),
@@ -100,7 +102,9 @@ export default function MapView() {
       return;
     }
 
-    const filtered = allStations.filter((s) => s.brandName.toLowerCase().includes(q));
+    const filtered = allStations.filter((s) =>
+      (s.brandName ?? "").toLowerCase().includes(q),
+    );
     setStations(filtered);
   };
 
@@ -109,7 +113,7 @@ export default function MapView() {
 
   const getMarkerIcon = (brand: string) => {
     const normalizedBrand = Object.keys(brandColors).find(
-      (key) => key.toLowerCase() === brand.toLowerCase()
+      (key) => key.toLowerCase() === (brand ?? "").toLowerCase(),
     );
     const color = normalizedBrand ? brandColors[normalizedBrand] : brandColors.Default;
     return new L.Icon({

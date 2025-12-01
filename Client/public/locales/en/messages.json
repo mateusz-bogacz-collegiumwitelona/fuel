@@ -84,6 +84,22 @@
     "stationDetails": "Station details"
   },
 
+    "header":{
+    "links":{
+      "settings": "Settings",
+      "dashboard": "Dashboard",
+      "map": "Map",
+      "list": "List",
+      "addproposal": "Change proposal",
+      "foradmin": "For admin",
+      "admindashboard": "Admin dashboard",
+      "brands": "Brands",
+      "users": "Users",
+      "stations": "Stations",
+      "logout": "Logout"
+    }
+  },
+
   "stats": {
     "all": "All reports",
     "accepted": "Accepted",
@@ -106,7 +122,13 @@
       "dashboard": "Dashboard",
       "settings": "Settings",
       "map": "Map",
-      "list": "List"
+      "list": "List",
+      "proposals": "Change proposal",
+      "foradmin": "For admin",
+      "admindashboard": "Admin dashboard",
+      "brands": "Brands",
+      "users": "Users",
+      "stations": "Stations"
     },
     "rightTitle": "Rights & contact",
     "rightText": "All rights reserved. Place license or company info here.",

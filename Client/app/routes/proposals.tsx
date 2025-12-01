@@ -2,9 +2,7 @@ import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { useNavigate } from "react-router";
-
-
-const API_BASE = "http://localhost:5111";
+import { API_BASE } from "../components/api";
 
 function parseJwt(token: string | null) {
   if (!token) return null;
@@ -22,16 +20,7 @@ function parseJwt(token: string | null) {
 }
 
 type ProposalType = "add" | "edit";
-
 type FuelRow = { fuelCode: string; price: string };
-
-type StationIdentifier = {
-  brandName?: string;
-  street?: string;
-  houseNumber?: string;
-  city?: string;
-};
-
 type StationProfile = {
   brandName?: string;
   street?: string;
@@ -43,17 +32,14 @@ type StationProfile = {
   fuelPrice?: { fuelCode: string; price: number; validFrom?: string }[];
 };
 
-// all fuels (dropdown)
 const AVAILABLE_FUEL_TYPES = ["PB95", "PB98", "ON", "LPG", "E85"];
 
 export default function ProposalPage() {
   const navigate = useNavigate();
 
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
-
   const [type, setType] = React.useState<ProposalType>("add");
 
-  // Fields for 'add' proposal (and also used to propose new values for edit)
   const [brandName, setBrandName] = React.useState("");
   const [street, setStreet] = React.useState("");
   const [houseNumber, setHouseNumber] = React.useState<string | number>("");
@@ -62,15 +48,18 @@ export default function ProposalPage() {
   const [latitude, setLatitude] = React.useState<string | number>("");
   const [longitude, setLongitude] = React.useState<string | number>("");
 
-  // Fuel rows for proposed prices
   const [fuelRows, setFuelRows] = React.useState<FuelRow[]>([{ fuelCode: "PB95", price: "" }]);
 
-  // For 'edit' proposals: choose existing station from dropdown
+  // single photo for all prices
+  const [globalFile, setGlobalFile] = React.useState<File | null>(null);
+  const [globalPreview, setGlobalPreview] = React.useState<string | null>(null);
+
+  // edit dropdown stuff
   const [stationsDropdown, setStationsDropdown] = React.useState<StationProfile[]>([]);
   const [selectedStationIndex, setSelectedStationIndex] = React.useState<number | null>(null);
   const [fetchedStation, setFetchedStation] = React.useState<StationProfile | null>(null);
 
-  // Address autocomplete / geocoding for adding station (users prefer address input)
+  // address autocomplete
   const [address, setAddress] = React.useState<string>("");
   const [addressSuggestions, setAddressSuggestions] = React.useState<Array<{ display_name: string; lat: string; lon: string }>>([]);
   const [addressLoading, setAddressLoading] = React.useState<boolean>(false);
@@ -86,15 +75,12 @@ export default function ProposalPage() {
     const decoded = parseJwt(token);
     const email = decoded?.email || decoded?.sub || null;
     if (email) setUserEmail(email);
-
-    // load initial dropdown (first page, up to 100)
     loadStationsForDropdown();
   }, []);
 
   async function loadStationsForDropdown(brandFilter?: string) {
     setFetchingStations(true);
     setError(null);
-
     try {
       const token = localStorage.getItem("token");
       const body: any = {
@@ -124,7 +110,7 @@ export default function ProposalPage() {
 
       if (!res.ok) {
         const txt = await res.text();
-        throw new Error(`Błąd pobierania listy stacji: ${res.status} - ${txt}`);
+        throw new Error(`Błąd pobierania listy stacji: ${res.status} - ${txt || 'brak treści'}`);
       }
 
       const data = await res.json();
@@ -149,7 +135,29 @@ export default function ProposalPage() {
     setFuelRows((p) => p.map((r, i) => (i === idx ? { ...r, ...row } : r)));
   }
 
-  // Geocoding (Nominatim) for address -> lat/lon
+  // handle single global file
+  function handleGlobalFileChange(f: File | null) {
+    setGlobalFile(f);
+    if (globalPreview) {
+      URL.revokeObjectURL(globalPreview);
+      setGlobalPreview(null);
+    }
+    if (f) {
+      const url = URL.createObjectURL(f);
+      setGlobalPreview(url);
+    }
+  }
+
+  React.useEffect(() => {
+    return () => {
+      if (globalPreview) {
+        URL.revokeObjectURL(globalPreview);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Geocoding
   async function geocodeAddress(query: string) {
     if (!query || query.trim().length === 0) {
       setAddressSuggestions([]);
@@ -193,7 +201,6 @@ export default function ProposalPage() {
     setSelectedStationIndex(idx);
     setFetchedStation(st);
 
-    // Prefill proposed values with current station values (user can change them)
     setBrandName(st.brandName ?? "");
     setStreet(st.street ?? "");
     setHouseNumber(st.houseNumber ?? "");
@@ -214,86 +221,175 @@ export default function ProposalPage() {
       }
     }
 
-    if (!brandName || !street || !city) {
-      setError("Uzupełnij przynajmniej markę, ulicę i miasto proponowanej stacji.");
+    if (!brandName || !street || !city || !houseNumber) {
+      setError("Uzupełnij przynajmniej markę, ulicę, numer domu i miasto proponowanej stacji.");
       return false;
     }
 
-    for (const r of fuelRows) {
+    const activeRows = fuelRows.filter((r) => r.fuelCode);
+    if (activeRows.length === 0) {
+      setError("Dodaj przynajmniej jedną proponowaną cenę paliwa.");
+      return false;
+    }
+
+    for (const [i, r] of fuelRows.entries()) {
       if (!r.fuelCode) continue;
-      if (r.price && isNaN(Number(r.price))) {
-        setError(`Nieprawidłowa cena paliwa: ${r.fuelCode || "(brak kodu)"}`);
+      if (!r.price || isNaN(Number(r.price)) || Number(r.price) <= 0) {
+        setError(`Nieprawidłowa cena paliwa w wierszu ${i + 1}: ${r.price}`);
         return false;
       }
+    }
+
+    // Require at least one photo (globalFile). Per request we'll attach the same photo for all prices.
+    if (!globalFile) {
+      setError("Dodaj zdjęcie weryfikujące (jedno zdjęcie wystarczy dla wszystkich cen).");
+      return false;
+    }
+
+    // client-side file checks
+    if (globalFile.size > 5 * 1024 * 1024) {
+      setError("Plik jest za duży (max 5 MB).");
+      return false;
+    }
+    if (!["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(globalFile.type)) {
+      setError("Nieobsługiwany format pliku. Dozwolone: JPEG, JPG, PNG, WEBP.");
+      return false;
     }
 
     return true;
   }
 
-  async function handleSubmit(e?: React.FormEvent) {
-    if (e) e.preventDefault();
-    setError(null);
-    setSuccessMsg(null);
+  // Now we create one request per fuel row, but attach the same globalFile to each request.
+async function handleSubmit(e?: React.FormEvent) {
+  if (e) e.preventDefault();
+  setError(null);
+  setSuccessMsg(null);
 
-    if (!validateForm()) return;
+  if (!validateForm()) return;
 
-    setSubmitting(true);
+  setSubmitting(true);
 
-    try {
-      const token = localStorage.getItem("token");
-      const payload: any = {
-        type,
-        createdBy: userEmail || null,
-        proposed: {
-          brandName: brandName || undefined,
-          street: street || undefined,
-          houseNumber: houseNumber || undefined,
-          city: city || undefined,
-          postalCode: postalCode || undefined,
-          latitude: latitude ? Number(latitude) : undefined,
-          longitude: longitude ? Number(longitude) : undefined,
-          fuelTypes: fuelRows
-            .filter((r) => r.fuelCode)
-            .map((r) => ({ code: r.fuelCode, price: r.price ? Number(r.price) : null })),
-        },
-      };
+  try {
+    const token = localStorage.getItem("token");
 
-      if (type === "edit") {
-        const target = stationsDropdown[selectedStationIndex as number];
-        payload.target = {
-          brandName: target.brandName,
-          street: target.street,
-          houseNumber: target.houseNumber,
-          city: target.city,
-        };
-      }
+    // build array of active rows with index so we can map results clearly
+    const activeRows = fuelRows
+      .map((r, i) => ({ ...r, index: i }))
+      .filter((r) => r.fuelCode);
 
-      const res = await fetch(`${API_BASE}/api/proposal/create`, {
+    // prepare target identification (if edit and station selected)
+    let targetStation: any = null;
+    if (type === "edit" && selectedStationIndex !== null) {
+      targetStation = stationsDropdown[selectedStationIndex];
+    }
+
+    const requests = activeRows.map((row) => {
+      const fd = new FormData();
+        fd.append("BrandName", brandName);
+        fd.append("Street", street);
+        fd.append("HouseNumber", String(houseNumber));
+        fd.append("City", city);
+
+        fd.append("FuelTypeCode", row.fuelCode);
+
+        // Normalize price: zamień przecinek na kropkę i rzuć Number
+        const normalized = String(row.price).replace(',', '.');
+        const priceNum = Number(normalized);
+        fd.append("ProposedPrice", String(priceNum));
+
+        // attach same photo for all rows
+        if (globalFile) fd.append("Photo", globalFile, globalFile.name);
+
+        // target identification dla edit (jeśli wybrano)
+        if (targetStation) {
+          if (targetStation.brandName) fd.append("TargetBrandName", String(targetStation.brandName));
+          if (targetStation.street) fd.append("TargetStreet", String(targetStation.street));
+          if (targetStation.houseNumber !== undefined) fd.append("TargetHouseNumber", String(targetStation.houseNumber));
+          if (targetStation.city) fd.append("TargetCity", String(targetStation.city));
+          const possibleIdKeys = ["id", "stationId", "station_id", "StationId", "Id"];
+          for (const k of possibleIdKeys) {
+            if (k in targetStation && (targetStation as any)[k] != null) {
+              fd.append("TargetStationId", String((targetStation as any)[k]));
+              break;
+            }
+          }
+        }
+
+        for (const pair of fd.entries()) {
+          if (pair[1] instanceof File) {
+            console.log("FORMDATA:", pair[0], (pair[1] as File).name);
+          } else {
+            console.log("FORMDATA:", pair[0], pair[1]);
+          }
+        }
+
+      return fetch(`${API_BASE}/api/station/price-proposal/add`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(payload),
+        body: fd,
+      }).then(async (res) => {
+        const text = await res.text();
+        let parsed: any = null;
+        try { parsed = JSON.parse(text); } catch {}
+        if (!res.ok) {
+          if (parsed && parsed.errors && Array.isArray(parsed.errors) && parsed.errors.length > 0) {
+            const joined = parsed.errors.join("; ");
+            const msg = `${parsed.message ?? `HTTP ${res.status}`}: ${joined}`;
+            throw new Error(msg);
+          }
+          const fallback = parsed?.message || text || `HTTP ${res.status}`;
+          throw new Error(fallback);
+        }
+        return parsed ?? text;
       });
+    });
 
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`Błąd serwera: ${res.status} - ${txt}`);
+    const settled = await Promise.allSettled(requests);
+
+    const successes: string[] = [];
+    const failures: string[] = [];
+
+    settled.forEach((r, i) => {
+      const row = activeRows[i];
+      const code = row.fuelCode;
+      if (r.status === "fulfilled") {
+        const val = r.value;
+        if (val && typeof val === "object" && val.message) {
+          successes.push(`${code}: ${val.message}`);
+        } else {
+          successes.push(`${code}: OK`);
+        }
+      } else {
+        const reason = r.reason;
+        const message = reason?.message ?? String(reason) ?? "Nieznany błąd";
+        failures.push(`${code}: ${message}`);
       }
+    });
 
-      await res.json();
-      setSuccessMsg("Propozycja zapisana. Dziękujemy — administracja ją przejrzy.");
+    if (failures.length === 0) {
+      setSuccessMsg("Wszystkie zgłoszenia zostały wysłane. Dziękujemy — administracja je przejrzy.");
       setFuelRows([{ fuelCode: "PB95", price: "" }]);
-    } catch (e: any) {
-      console.error(e);
-      setError(e?.message ?? "Nie udało się wysłać propozycji.");
-    } finally {
-      setSubmitting(false);
+      if (globalPreview) {
+        URL.revokeObjectURL(globalPreview);
+        setGlobalPreview(null);
+      }
+      setGlobalFile(null);
+    } else {
+      const finalMsg = `${successes.length > 0 ? "Sukcesy:\n- " + successes.join("\n- ") + "\n\n" : ""}Błędy:\n- ${failures.join("\n- ")}`;
+      setError(finalMsg);
     }
+  } catch (e: any) {
+    console.error(e);
+    setError(e?.message ?? "Nie udało się wysłać propozycji.");
+  } finally {
+    setSubmitting(false);
   }
+}
+
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content">
@@ -404,6 +500,24 @@ export default function ProposalPage() {
             </div>
           </div>
 
+          {/* NEW: single photo for all prices */}
+          <div className="mt-4">
+            <label className="block text-sm mb-1">Zdjęcie weryfikujące (jedno zdjęcie wystarczy dla wszystkich cen) — JPEG/PNG/WEBP max 5MB</label>
+            <input
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const f = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                handleGlobalFileChange(f);
+              }}
+            />
+            {globalPreview && (
+              <div className="mt-2">
+                <img src={globalPreview} alt="preview" className="max-w-xs max-h-40 rounded-md shadow-sm" />
+              </div>
+            )}
+          </div>
+
           <div className="mt-4">
             <h3 className="font-medium mb-2">Proponowane ceny / paliwa</h3>
             <div className="space-y-2">
@@ -426,19 +540,20 @@ export default function ProposalPage() {
             </div>
           </div>
 
-          {error && <div className="mt-4 alert alert-error">{error}</div>}
+          {error && <div className="mt-4 alert alert-error whitespace-pre-wrap">{error}</div>}
           {successMsg && <div className="mt-4 alert alert-success">{successMsg}</div>}
 
           <div className="mt-6 flex gap-2">
             <button className="btn btn-primary" type="submit" disabled={submitting}>{submitting ? 'Wysyłanie...' : 'Wyślij propozycję'}</button>
             <button type="button" className="btn btn-outline" onClick={() => {
               setBrandName(""); setStreet(""); setHouseNumber(""); setCity(""); setPostalCode(""); setLatitude(""); setLongitude(""); setFuelRows([{ fuelCode: 'PB95', price: '' }]);
+              if (globalPreview) { URL.revokeObjectURL(globalPreview); setGlobalPreview(null); }
+              setGlobalFile(null);
             }}>Wyczyść</button>
           </div>
         </form>
 
       </main>
-
       <Footer />
     </div>
   );

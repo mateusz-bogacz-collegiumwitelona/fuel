@@ -84,6 +84,22 @@
     "stationDetails": "Szczegóły stacji"
   },
 
+  "header":{
+    "links":{
+      "settings": "Ustawienia",
+      "dashboard": "Panel użytkownika",
+      "map": "Mapa",
+      "list": "Lista",
+      "addproposal": "Propozycje zmian",
+      "foradmin": "Dla admina",
+      "admindashboard": "Panel Admina",
+      "brands": "Marki",
+      "users": "Użytkownicy",
+      "stations": "Stacje",
+      "logout": "Wyloguj"
+    }
+  },
+
   "stats": {
     "all": "Wszystkie zgłoszenia",
     "accepted": "Zaakceptowane",
@@ -106,7 +122,13 @@
       "dashboard": "Dashboard",
       "settings": "Ustawienia",
       "map": "Mapa",
-      "list": "Lista"
+      "list": "Lista",
+      "proposals": "Propozycje zmian",
+      "foradmin": "Dla admina",
+      "admindashboard": "Panel admina",
+      "brands": "Marki",
+      "users": "Użytkownicy",
+      "stations": "Stacje"
     },
     "rightTitle": "Prawa i kontakt",
     "rightText": "Wszelkie prawa zastrzeżone. Możesz podać tu pełną informację o licencji.",
