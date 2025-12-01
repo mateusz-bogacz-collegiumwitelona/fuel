@@ -15,6 +15,7 @@ import type {
 } from "../components/brand-admin-modals";
 
 import { useAdminGuard } from "../components/useAdminGuard";
+import { useTranslation } from "react-i18next";
 
 const API_BASE = "http://localhost:5111";
 
@@ -27,6 +28,7 @@ type BrandListResponseData = {
 };
 
 export default function BrandAdminPage() {
+  const { t } = useTranslation();
   const { state, email } = useAdminGuard();
 
   const [brands, setBrands] = React.useState<AdminBrand[]>([]);
@@ -88,7 +90,7 @@ export default function BrandAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`Błąd pobierania marek (${res.status}): ${text}`);
+        throw new Error(`${t("brandadmin.error_fetch_prefix")} (${res.status}): ${text}`);
       }
 
       const json = await res.json();
@@ -98,7 +100,7 @@ export default function BrandAdminPage() {
         : (json as BrandListResponseData);
 
       if (!data || !Array.isArray(data.items)) {
-        throw new Error("Nieoczekiwany format odpowiedzi marek");
+        throw new Error(t("brandadmin.error_unexpected_response"));
       }
 
       setBrands(data.items);
@@ -106,7 +108,7 @@ export default function BrandAdminPage() {
       setTotalPages(data.totalPages);
     } catch (e: any) {
       console.error(e);
-      setError(e?.message ?? "Nie udało się pobrać listy marek");
+      setError(e?.message ?? t("brandadmin.error_fetch_fallback"));
       setBrands([]);
     } finally {
       setLoading(false);
@@ -149,14 +151,14 @@ export default function BrandAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`Nie udało się dodać marki (${res.status}): ${text}`);
+        throw new Error(`${t("brandadmin.error_add_prefix")} (${res.status}): ${text}`);
       }
 
       await loadBrandsFromApi(pageNumber, pageSize, search, sortDirection);
       closeModal();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : "Nie udało się dodać marki");
+      alert(e instanceof Error ? e.message : t("brandadmin.error_add_fallback"));
     }
   };
 
@@ -179,16 +181,14 @@ export default function BrandAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(
-          `Nie udało się edytować marki (${res.status}): ${text}`,
-        );
+        throw new Error(`${t("brandadmin.error_edit_prefix")} (${res.status}): ${text}`);
       }
 
       await loadBrandsFromApi(pageNumber, pageSize, search, sortDirection);
       closeModal();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : "Nie udało się edytować marki");
+      alert(e instanceof Error ? e.message : t("brandadmin.error_edit_fallback"));
     }
   };
 
@@ -209,14 +209,14 @@ export default function BrandAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`Nie udało się usunąć marki (${res.status}): ${text}`);
+        throw new Error(`${t("brandadmin.error_delete_prefix")} (${res.status}): ${text}`);
       }
 
       await loadBrandsFromApi(pageNumber, pageSize, search, sortDirection);
       closeModal();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : "Nie udało się usunąć marki");
+      alert(e instanceof Error ? e.message : t("brandadmin.error_delete_fallback"));
     }
   };
 
@@ -232,8 +232,6 @@ export default function BrandAdminPage() {
     return null;
   }
 
-
-
   return (
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
       <Header />
@@ -241,23 +239,21 @@ export default function BrandAdminPage() {
       <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-10">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-3xl font-bold">
-              Panel administracyjny – marki stacji
-            </h1>
+            <h1 className="text-3xl font-bold">{t("brandadmin.title")}</h1>
             <p className="text-sm text-base-content/70">
-              {email ? `Zalogowano jako: ${email}` : "Sprawdzanie sesji..."}
+              {email ? t("brandadmin.logged_in_as", { email }) : t("brandadmin.checking_session")}
             </p>
           </div>
           <div className="flex gap-2">
             <a href="/admin-dashboard" className="btn btn-outline btn-sm">
-              ← Powrót do panelu administratora
+              {t("brandadmin.back_to_admin")}
             </a>
             <button
               className="btn btn-primary btn-sm"
               type="button"
               onClick={openAdd}
             >
-              + Dodaj markę
+              {t("brandadmin.add_brand_button")}
             </button>
           </div>
         </div>
@@ -266,7 +262,7 @@ export default function BrandAdminPage() {
           <div className="flex flex-col gap-2 md:flex-row md:items-end">
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Szukaj (nazwa marki)</span>
+                <span className="label-text">{t("brandadmin.search_label")}</span>
               </label>
               <input
                 className="input input-bordered input-sm w-full md:w-64"
@@ -275,13 +271,13 @@ export default function BrandAdminPage() {
                   setSearch(e.target.value);
                   setPageNumber(1);
                 }}
-                placeholder="np. Orlen"
+                placeholder={t("brandadmin.search_placeholder")}
               />
             </div>
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Kierunek sortowania</span>
+                <span className="label-text">{t("brandadmin.sort_label")}</span>
               </label>
               <select
                 className="select select-bordered select-sm"
@@ -290,8 +286,8 @@ export default function BrandAdminPage() {
                   setSortDirection(e.target.value as "asc" | "desc")
                 }
               >
-                <option value="asc">Rosnąco (A–Z)</option>
-                <option value="desc">Malejąco (Z–A)</option>
+                <option value="asc">{t("brandadmin.sort_asc")}</option>
+                <option value="desc">{t("brandadmin.sort_desc")}</option>
               </select>
             </div>
           </div>
@@ -299,22 +295,22 @@ export default function BrandAdminPage() {
 
         <div className="bg-base-300 rounded-xl p-4 shadow-md">
           {loading ? (
-            <div className="text-sm">Ładowanie marek...</div>
+            <div className="text-sm">{t("brandadmin.loading")}</div>
           ) : error ? (
             <div className="text-sm text-error">{error}</div>
           ) : brands.length === 0 ? (
-            <div className="text-sm">Brak marek w systemie.</div>
+            <div className="text-sm">{t("brandadmin.no_brands")}</div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="table table-zebra table-sm w-full">
                   <thead>
                     <tr>
-                      <th>#</th>
-                      <th>Nazwa marki</th>
-                      <th>Utworzono</th>
-                      <th>Zaktualizowano</th>
-                      <th className="text-right">Akcje</th>
+                      <th>{t("brandadmin.table_hash")}</th>
+                      <th>{t("brandadmin.table_name")}</th>
+                      <th>{t("brandadmin.table_created")}</th>
+                      <th>{t("brandadmin.table_updated")}</th>
+                      <th className="text-right">{t("brandadmin.table_actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -339,14 +335,14 @@ export default function BrandAdminPage() {
                               type="button"
                               onClick={() => openEdit(b)}
                             >
-                              edytuj
+                              {t("brandadmin.edit_button")}
                             </button>
                             <button
                               className="btn btn-xs btn-error"
                               type="button"
                               onClick={() => openDelete(b)}
                             >
-                              usuń
+                              {t("brandadmin.delete_button")}
                             </button>
                           </div>
                         </td>
@@ -358,7 +354,7 @@ export default function BrandAdminPage() {
 
               <div className="flex justify-end items-center gap-3 mt-3 text-sm">
                 <span>
-                  Strona {pageNumber} / {totalPages}
+                  {t("brandadmin.page_info", { page: pageNumber, total: totalPages })}
                 </span>
                 <button
                   className="btn btn-xs"

@@ -2,8 +2,10 @@ import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { useAdminGuard } from "../components/useAdminGuard";
+import { useTranslation } from "react-i18next";
 
 export default function AdminDashboard() {
+  const { t } = useTranslation();
   const { state, email } = useAdminGuard();
 
   const handleLogout = () => {
@@ -31,32 +33,32 @@ export default function AdminDashboard() {
       <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-10">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-3xl font-bold mb-1">Panel administratora</h1>
+            <h1 className="text-3xl font-bold mb-1">{t("admin.title")}</h1>
             {email && (
-              <p className="text-sm text-gray-400">Zalogowany jako: {email}</p>
+              <p className="text-sm text-gray-400">
+                {t("admin.logged_in_as", { email })}
+              </p>
             )}
           </div>
           <button className="btn btn-outline btn-sm" onClick={handleLogout}>
-            Wyloguj
+            {t("admin.logout")}
           </button>
         </div>
 
         <div className="bg-base-300 rounded-xl p-6 shadow-md mb-8">
-          <p className="mb-4 text-lg">
-            Witaj w panelu administratora. Wybierz swoje działanie.
-          </p>
+          <p className="mb-4 text-lg">{t("admin.welcome")}</p>
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
             <a href="/brand_admin" className="btn btn-primary w-full">
-              Brand panel
+              {t("admin.brand_panel")}
             </a>
             <a href="/user_admin" className="btn btn-primary w-full">
-              User panel
+              {t("admin.user_panel")}
             </a>
             <a href="/gas_station_admin" className="btn btn-primary w-full">
-              Gas station panel
+              {t("admin.gas_station_panel")}
             </a>
             <a href="/proposals_admin" className="btn btn-primary w-full">
-              Proposal panel
+              {t("admin.proposal_panel")}
             </a>
           </div>
         </div>

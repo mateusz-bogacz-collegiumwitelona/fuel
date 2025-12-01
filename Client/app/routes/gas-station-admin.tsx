@@ -14,6 +14,7 @@ import type {
 } from "../components/gas-station-modals";
 
 import { useAdminGuard } from "../components/useAdminGuard";
+import { useTranslation } from "react-i18next";
 
 const API_BASE = "http://localhost:5111";
 
@@ -26,6 +27,7 @@ type StationListResponseData = {
 };
 
 export default function GasStationAdminPage() {
+  const { t } = useTranslation();
   const { state, email } = useAdminGuard();
 
   const [stations, setStations] = React.useState<AdminStation[]>([]);
@@ -48,7 +50,8 @@ export default function GasStationAdminPage() {
     (async () => {
       await loadStationsFromApi(pageNumber, pageSize, search);
     })();
-  }, [state, pageNumber, pageSize, search]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, pageNumber, pageSize, search, t]);
 
   async function loadStationsFromApi(
     page: number,
@@ -83,7 +86,8 @@ export default function GasStationAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`Błąd pobierania stacji (${res.status}): ${text}`);
+        const msg = t("stationadmin.error_fetch", { status: res.status, text });
+        throw new Error(msg);
       }
 
       const json = await res.json();
@@ -92,7 +96,7 @@ export default function GasStationAdminPage() {
         : json.data;
 
       if (!data || !Array.isArray(data.items)) {
-        throw new Error("Nieoczekiwany format odpowiedzi stacji");
+        throw new Error(t("stationadmin.error_unexpected_response"));
       }
 
       setStations(data.items);
@@ -100,7 +104,7 @@ export default function GasStationAdminPage() {
       setTotalPages(data.totalPages);
     } catch (e: any) {
       console.error(e);
-      setError(e?.message ?? "Nie udało się pobrać listy stacji");
+      setError(e?.message ?? t("stationadmin.error_fetch_fallback"));
       setStations([]);
     } finally {
       setLoading(false);
@@ -126,19 +130,6 @@ export default function GasStationAdminPage() {
     setActiveModal(null);
     setSelectedStation(null);
   };
-
-  if (state === "checking") {
-    return (
-      <div className="min-h-screen bg-base-200 flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg" />
-      </div>
-    );
-  }
-
-  if (state !== "allowed") {
-    return null;
-  }
-
 
   /* ------------------ DODAWANIE / EDYCJA / USUWANIE ------------------ */
 
@@ -169,14 +160,15 @@ export default function GasStationAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`Nie udało się dodać stacji (${res.status}): ${text}`);
+        const msg = t("stationadmin.error_add", { status: res.status, text });
+        throw new Error(msg);
       }
 
       await loadStationsFromApi(pageNumber, pageSize, search);
       closeModal();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : "Nie udało się dodać stacji");
+      alert(e instanceof Error ? e.message : t("stationadmin.error_add_fallback"));
     }
   };
 
@@ -220,16 +212,15 @@ export default function GasStationAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(
-          `Nie udało się edytować stacji (${res.status}): ${text}`,
-        );
+        const msg = t("stationadmin.error_edit", { status: res.status, text });
+        throw new Error(msg);
       }
 
       await loadStationsFromApi(pageNumber, pageSize, search);
       closeModal();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : "Nie udało się edytować stacji");
+      alert(e instanceof Error ? e.message : t("stationadmin.error_edit_fallback"));
     }
   };
 
@@ -254,20 +245,31 @@ export default function GasStationAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(
-          `Nie udało się usunąć stacji (${res.status}): ${text}`,
-        );
+        const msg = t("stationadmin.error_delete", { status: res.status, text });
+        throw new Error(msg);
       }
 
       await loadStationsFromApi(pageNumber, pageSize, search);
       closeModal();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : "Nie udało się usunąć stacji");
+      alert(e instanceof Error ? e.message : t("stationadmin.error_delete_fallback"));
     }
   };
 
   /* ------------------ RENDER ------------------ */
+
+  if (state === "checking") {
+    return (
+      <div className="min-h-screen bg-base-200 flex items-center justify-center">
+        <span className="loading loading-spinner loading-lg" />
+      </div>
+    );
+  }
+
+  if (state !== "allowed") {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
@@ -276,23 +278,21 @@ export default function GasStationAdminPage() {
       <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-10">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-3xl font-bold">
-              Panel administracyjny – stacje paliw
-            </h1>
+            <h1 className="text-3xl font-bold">{t("stationadmin.title")}</h1>
             <p className="text-sm text-base-content/70">
-              {email ? `Zalogowano jako: ${email}` : "Sprawdzanie sesji..."}
+              {email ? t("stationadmin.logged_in_as", { email }) : t("stationadmin.checking_session")}
             </p>
           </div>
           <div className="flex gap-2">
             <a href="/admin-dashboard" className="btn btn-outline btn-sm">
-              ← Powrót do panelu administratora
+              {t("stationadmin.back_to_admin")}
             </a>
             <button
               className="btn btn-primary btn-sm"
               onClick={openAdd}
               type="button"
             >
-              + Dodaj stację paliw
+              {t("stationadmin.add_station_button")}
             </button>
           </div>
         </div>
@@ -301,14 +301,12 @@ export default function GasStationAdminPage() {
         <div className="bg-base-300 rounded-xl p-4 shadow-md mb-4">
           <div className="form-control w-full max-w-xs">
             <label className="label">
-              <span className="label-text">
-                Szukaj (miasto, ulica, marka, kod pocztowy)
-              </span>
+              <span className="label-text">{t("stationadmin.search_label")}</span>
             </label>
             <input
               type="text"
               className="input input-bordered input-sm w-full"
-              placeholder="np. Legnica, Orlen, 59-220..."
+              placeholder={t("stationadmin.search_placeholder")}
               value={search}
               onChange={(e) => {
                 setPageNumber(1);
@@ -321,25 +319,25 @@ export default function GasStationAdminPage() {
         {/* TABELA */}
         <div className="bg-base-300 rounded-xl p-4 shadow-md">
           {loading ? (
-            <div className="text-sm">Ładowanie stacji...</div>
+            <div className="text-sm">{t("stationadmin.loading")}</div>
           ) : error ? (
             <div className="text-sm text-error">{error}</div>
           ) : stations.length === 0 ? (
-            <div className="text-sm">Brak stacji w systemie.</div>
+            <div className="text-sm">{t("stationadmin.no_stations")}</div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="table table-zebra table-sm w-full">
                   <thead>
                     <tr>
-                      <th>#</th>
-                      <th>Marka</th>
-                      <th>Miasto</th>
-                      <th>Ulica</th>
-                      <th>Kod pocztowy</th>
-                      <th>Utworzono</th>
-                      <th>Zaktualizowano</th>
-                      <th className="text-right">Akcje</th>
+                      <th>{t("stationadmin.table_hash")}</th>
+                      <th>{t("stationadmin.table_brand")}</th>
+                      <th>{t("stationadmin.table_city")}</th>
+                      <th>{t("stationadmin.table_street")}</th>
+                      <th>{t("stationadmin.table_postal")}</th>
+                      <th>{t("stationadmin.table_created")}</th>
+                      <th>{t("stationadmin.table_updated")}</th>
+                      <th className="text-right">{t("stationadmin.table_actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -371,14 +369,14 @@ export default function GasStationAdminPage() {
                               type="button"
                               onClick={() => openEdit(s)}
                             >
-                              edytuj
+                              {t("stationadmin.edit_button")}
                             </button>
                             <button
                               className="btn btn-xs btn-error"
                               type="button"
                               onClick={() => openDelete(s)}
                             >
-                              usuń
+                              {t("stationadmin.delete_button")}
                             </button>
                           </div>
                         </td>
@@ -390,7 +388,7 @@ export default function GasStationAdminPage() {
 
               <div className="flex justify-end items-center gap-3 mt-3 text-sm">
                 <span>
-                  Strona {pageNumber} / {totalPages}
+                  {t("stationadmin.page_info", { page: pageNumber, total: totalPages })}
                 </span>
                 <button
                   className="btn btn-xs"

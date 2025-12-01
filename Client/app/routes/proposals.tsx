@@ -3,6 +3,7 @@ import Header from "../components/header";
 import Footer from "../components/footer";
 import { useNavigate } from "react-router";
 import { API_BASE } from "../components/api";
+import { useTranslation } from "react-i18next";
 
 function parseJwt(token: string | null) {
   if (!token) return null;
@@ -35,6 +36,7 @@ type StationProfile = {
 const AVAILABLE_FUEL_TYPES = ["PB95", "PB98", "ON", "LPG", "E85"];
 
 export default function ProposalPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
@@ -110,7 +112,7 @@ export default function ProposalPage() {
 
       if (!res.ok) {
         const txt = await res.text();
-        throw new Error(`Błąd pobierania listy stacji: ${res.status} - ${txt || 'brak treści'}`);
+        throw new Error(`${t("proposal.error_loading_stations")}: ${res.status} - ${txt || t("proposal.no_content")}`);
       }
 
       const data = await res.json();
@@ -118,7 +120,7 @@ export default function ProposalPage() {
       setStationsDropdown(items);
     } catch (e: any) {
       console.error(e);
-      setError(e?.message ?? "Nie udało się załadować listy stacji");
+      setError(e?.message ?? t("proposal.error_loading_stations_fallback"));
       setStationsDropdown([]);
     } finally {
       setFetchingStations(false);
@@ -216,43 +218,43 @@ export default function ProposalPage() {
   function validateForm() {
     if (type === "edit") {
       if (selectedStationIndex === null) {
-        setError("Wybierz stację z listy, której dotyczy zmiana.");
+        setError(t("proposal.error_select_station"));
         return false;
       }
     }
 
     if (!brandName || !street || !city || !houseNumber) {
-      setError("Uzupełnij przynajmniej markę, ulicę, numer domu i miasto proponowanej stacji.");
+      setError(t("proposal.error_fill_required"));
       return false;
     }
 
     const activeRows = fuelRows.filter((r) => r.fuelCode);
     if (activeRows.length === 0) {
-      setError("Dodaj przynajmniej jedną proponowaną cenę paliwa.");
+      setError(t("proposal.error_no_price"));
       return false;
     }
 
     for (const [i, r] of fuelRows.entries()) {
       if (!r.fuelCode) continue;
       if (!r.price || isNaN(Number(r.price)) || Number(r.price) <= 0) {
-        setError(`Nieprawidłowa cena paliwa w wierszu ${i + 1}: ${r.price}`);
+        setError(t("proposal.error_invalid_price_row", { row: i + 1, value: r.price }));
         return false;
       }
     }
 
     // Require at least one photo (globalFile). Per request we'll attach the same photo for all prices.
     if (!globalFile) {
-      setError("Dodaj zdjęcie weryfikujące (jedno zdjęcie wystarczy dla wszystkich cen).");
+      setError(t("proposal.error_no_photo"));
       return false;
     }
 
     // client-side file checks
     if (globalFile.size > 5 * 1024 * 1024) {
-      setError("Plik jest za duży (max 5 MB).");
+      setError(t("proposal.error_file_too_large"));
       return false;
     }
     if (!["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(globalFile.type)) {
-      setError("Nieobsługiwany format pliku. Dozwolone: JPEG, JPG, PNG, WEBP.");
+      setError(t("proposal.error_bad_file_type"));
       return false;
     }
 
@@ -260,31 +262,31 @@ export default function ProposalPage() {
   }
 
   // Now we create one request per fuel row, but attach the same globalFile to each request.
-async function handleSubmit(e?: React.FormEvent) {
-  if (e) e.preventDefault();
-  setError(null);
-  setSuccessMsg(null);
+  async function handleSubmit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    setError(null);
+    setSuccessMsg(null);
 
-  if (!validateForm()) return;
+    if (!validateForm()) return;
 
-  setSubmitting(true);
+    setSubmitting(true);
 
-  try {
-    const token = localStorage.getItem("token");
+    try {
+      const token = localStorage.getItem("token");
 
-    // build array of active rows with index so we can map results clearly
-    const activeRows = fuelRows
-      .map((r, i) => ({ ...r, index: i }))
-      .filter((r) => r.fuelCode);
+      // build array of active rows with index so we can map results clearly
+      const activeRows = fuelRows
+        .map((r, i) => ({ ...r, index: i }))
+        .filter((r) => r.fuelCode);
 
-    // prepare target identification (if edit and station selected)
-    let targetStation: any = null;
-    if (type === "edit" && selectedStationIndex !== null) {
-      targetStation = stationsDropdown[selectedStationIndex];
-    }
+      // prepare target identification (if edit and station selected)
+      let targetStation: any = null;
+      if (type === "edit" && selectedStationIndex !== null) {
+        targetStation = stationsDropdown[selectedStationIndex];
+      }
 
-    const requests = activeRows.map((row) => {
-      const fd = new FormData();
+      const requests = activeRows.map((row) => {
+        const fd = new FormData();
         fd.append("BrandName", brandName);
         fd.append("Street", street);
         fd.append("HouseNumber", String(houseNumber));
@@ -323,72 +325,72 @@ async function handleSubmit(e?: React.FormEvent) {
           }
         }
 
-      return fetch(`${API_BASE}/api/station/price-proposal/add`, {
-        method: "POST",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          Accept: "application/json",
-        },
-        credentials: "include",
-        body: fd,
-      }).then(async (res) => {
-        const text = await res.text();
-        let parsed: any = null;
-        try { parsed = JSON.parse(text); } catch {}
-        if (!res.ok) {
-          if (parsed && parsed.errors && Array.isArray(parsed.errors) && parsed.errors.length > 0) {
-            const joined = parsed.errors.join("; ");
-            const msg = `${parsed.message ?? `HTTP ${res.status}`}: ${joined}`;
-            throw new Error(msg);
+        return fetch(`${API_BASE}/api/station/price-proposal/add`, {
+          method: "POST",
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            Accept: "application/json",
+          },
+          credentials: "include",
+          body: fd,
+        }).then(async (res) => {
+          const text = await res.text();
+          let parsed: any = null;
+          try { parsed = JSON.parse(text); } catch {}
+          if (!res.ok) {
+            if (parsed && parsed.errors && Array.isArray(parsed.errors) && parsed.errors.length > 0) {
+              const joined = parsed.errors.join("; ");
+              const msg = `${parsed.message ?? `HTTP ${res.status}`}: ${joined}`;
+              throw new Error(msg);
+            }
+            const fallback = parsed?.message || text || `HTTP ${res.status}`;
+            throw new Error(fallback);
           }
-          const fallback = parsed?.message || text || `HTTP ${res.status}`;
-          throw new Error(fallback);
-        }
-        return parsed ?? text;
+          return parsed ?? text;
+        });
       });
-    });
 
-    const settled = await Promise.allSettled(requests);
+      const settled = await Promise.allSettled(requests);
 
-    const successes: string[] = [];
-    const failures: string[] = [];
+      const successes: string[] = [];
+      const failures: string[] = [];
 
-    settled.forEach((r, i) => {
-      const row = activeRows[i];
-      const code = row.fuelCode;
-      if (r.status === "fulfilled") {
-        const val = r.value;
-        if (val && typeof val === "object" && val.message) {
-          successes.push(`${code}: ${val.message}`);
+      settled.forEach((r, i) => {
+        const row = activeRows[i];
+        const code = row.fuelCode;
+        if (r.status === "fulfilled") {
+          const val = r.value;
+          if (val && typeof val === "object" && val.message) {
+            successes.push(`${code}: ${val.message}`);
+          } else {
+            successes.push(`${code}: OK`);
+          }
         } else {
-          successes.push(`${code}: OK`);
+          const reason = r.reason;
+          const message = reason?.message ?? String(reason) ?? t("proposal.unknown_error");
+          failures.push(`${code}: ${message}`);
         }
-      } else {
-        const reason = r.reason;
-        const message = reason?.message ?? String(reason) ?? "Nieznany błąd";
-        failures.push(`${code}: ${message}`);
-      }
-    });
+      });
 
-    if (failures.length === 0) {
-      setSuccessMsg("Wszystkie zgłoszenia zostały wysłane. Dziękujemy — administracja je przejrzy.");
-      setFuelRows([{ fuelCode: "PB95", price: "" }]);
-      if (globalPreview) {
-        URL.revokeObjectURL(globalPreview);
-        setGlobalPreview(null);
+      if (failures.length === 0) {
+        setSuccessMsg(t("proposal.success_all_sent"));
+        setFuelRows([{ fuelCode: "PB95", price: "" }]);
+        if (globalPreview) {
+          URL.revokeObjectURL(globalPreview);
+          setGlobalPreview(null);
+        }
+        setGlobalFile(null);
+      } else {
+        const finalMsg = `${successes.length > 0 ? t("proposal.successes") + ":\n- " + successes.join("\n- ") + "\n\n" : ""}${t("proposal.errors")}:\n- ${failures.join("\n- ")}`;
+        setError(finalMsg);
       }
-      setGlobalFile(null);
-    } else {
-      const finalMsg = `${successes.length > 0 ? "Sukcesy:\n- " + successes.join("\n- ") + "\n\n" : ""}Błędy:\n- ${failures.join("\n- ")}`;
-      setError(finalMsg);
+    } catch (e: any) {
+      console.error(e);
+      setError(e?.message ?? t("proposal.error_sending_fallback"));
+    } finally {
+      setSubmitting(false);
     }
-  } catch (e: any) {
-    console.error(e);
-    setError(e?.message ?? "Nie udało się wysłać propozycji.");
-  } finally {
-    setSubmitting(false);
   }
-}
 
 
   return (
@@ -397,44 +399,44 @@ async function handleSubmit(e?: React.FormEvent) {
 
       <main className="mx-auto max-w-4xl px-4 py-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold">Zgłoś propozycję stacji lub zmian na niej</h1>
-          <button className="btn btn-outline btn-sm" onClick={() => navigate(-1)}>← Powrót</button>
+          <h1 className="text-2xl md:text-3xl font-bold">{t("proposal.proposaladd")}</h1>
+          <button className="btn btn-outline btn-sm" onClick={() => navigate(-1)}>{t("proposal.back")}</button>
         </div>
 
         <section className="bg-base-300 rounded-xl p-6 shadow-md mb-6">
-          <p className="text-sm text-base-content/70">Wybierz czy chcesz <strong>dodać nową stację</strong> czy <strong>zgłosić zmianę</strong> dla istniejącej.</p>
+          <p className="text-sm text-base-content/70">{t("proposal.choose_mode")}</p>
 
           <div className="mt-4 flex gap-3">
             <label className={`btn ${type === "add" ? "btn-primary" : "btn-outline"}`}>
               <input type="radio" name="ptype" checked={type === "add"} onChange={() => { setType("add"); setSelectedStationIndex(null); setFetchedStation(null); }} className="hidden" />
-              Dodaj stację
+              {t("proposal.add_station")}
             </label>
             <label className={`btn ${type === "edit" ? "btn-primary" : "btn-outline"}`}>
               <input type="radio" name="ptype" checked={type === "edit"} onChange={() => setType("edit")} className="hidden" />
-              Zmień istniejącą
+              {t("proposal.edit_existing")}
             </label>
           </div>
         </section>
 
         {type === "edit" && (
           <section className="bg-base-300 rounded-xl p-6 shadow-md mb-6">
-            <h2 className="font-semibold mb-3">Wybierz stację z listy (możesz filtrować po marce)</h2>
+            <h2 className="font-semibold mb-3">{t("proposal.select_station_title")}</h2>
 
             <div className="flex gap-2 mb-3">
-              <input className="input input-bordered" placeholder="Filtruj po marce (np. Orlen)" onChange={(e) => { loadStationsForDropdown(e.target.value); }} />
-              <button className="btn" onClick={() => loadStationsForDropdown()}>Odśwież listę</button>
+              <input className="input input-bordered" placeholder={t("proposal.filter_brand_placeholder")} onChange={(e) => { loadStationsForDropdown(e.target.value); }} />
+              <button className="btn" onClick={() => loadStationsForDropdown()}>{t("proposal.refresh_list")}</button>
             </div>
 
             <div className="mb-3">
               {fetchingStations ? (
-                <div>Ładowanie listy stacji...</div>
+                <div>{t("proposal.loading_stations")}</div>
               ) : (
                 <select
                   className="select select-bordered w-full"
                   value={selectedStationIndex !== null ? String(selectedStationIndex) : ""}
                   onChange={(e) => onSelectExistingStation(e.target.value)}
                 >
-                  <option value="">-- Wybierz stację --</option>
+                  <option value="">-- {t("proposal.choose_station_option")} --</option>
                   {stationsDropdown.map((s, idx) => (
                     <option key={`${s.brandName}-${s.city}-${s.street}-${s.houseNumber}-${idx}`} value={String(idx)}>
                       {s.brandName} — {s.city}, {s.street} {s.houseNumber}
@@ -446,15 +448,15 @@ async function handleSubmit(e?: React.FormEvent) {
 
             {fetchedStation && (
               <div className="mt-4 bg-base-100 p-3 rounded-md">
-                <h3 className="font-semibold">Dotychczasowe dane</h3>
+                <h3 className="font-semibold">{t("proposal.station_data_title")}</h3>
                 <p className="text-sm">{fetchedStation.brandName} — {fetchedStation.city}, {fetchedStation.street} {fetchedStation.houseNumber}</p>
-                <p className="text-sm text-base-content/70">Kod pocztowy: {fetchedStation.postalCode ?? '-'}</p>
+                <p className="text-sm text-base-content/70">{t("proposal.postalcode_label")} {fetchedStation.postalCode ?? '-'}</p>
 
                 <div className="mt-3">
-                  <h4 className="font-medium">Ceny paliw (ostatnie)</h4>
+                  <h4 className="font-medium">{t("proposal.prices_last")}</h4>
                   {fetchedStation.fuelPrice && fetchedStation.fuelPrice.length > 0 ? (
                     <table className="table w-full mt-2">
-                      <thead><tr><th>Kod</th><th>Cena</th><th>Ważne od</th></tr></thead>
+                      <thead><tr><th>{t("proposal.code")}</th><th>{t("proposal.price")}</th><th>{t("proposal.valid_from")}</th></tr></thead>
                       <tbody>
                         {fetchedStation.fuelPrice.map((fp, i) => (
                           <tr key={i}><td>{fp.fuelCode}</td><td>{Number(fp.price).toFixed(2)}</td><td>{fp.validFrom ? new Date(fp.validFrom).toLocaleString() : '-'}</td></tr>
@@ -462,7 +464,7 @@ async function handleSubmit(e?: React.FormEvent) {
                       </tbody>
                     </table>
                   ) : (
-                    <p className="text-sm text-base-content/70">Brak danych o cenach.</p>
+                    <p className="text-sm text-base-content/70">{t("proposal.no_price_data")}</p>
                   )}
                 </div>
               </div>
@@ -471,19 +473,19 @@ async function handleSubmit(e?: React.FormEvent) {
         )}
 
         <form onSubmit={handleSubmit} className="bg-base-300 rounded-xl p-6 shadow-md mb-6">
-          <h2 className="font-semibold mb-3">Twoja propozycja (proponowane wartości)</h2>
+          <h2 className="font-semibold mb-3">{t("proposal.form_title")}</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input className="input input-bordered" placeholder="Marka" value={brandName} onChange={(e) => setBrandName(e.target.value)} />
-            <input className="input input-bordered" placeholder="Miasto" value={city} onChange={(e) => setCity(e.target.value)} />
-            <input className="input input-bordered" placeholder="Ulica" value={street} onChange={(e) => setStreet(e.target.value)} />
-            <input className="input input-bordered" placeholder="Nr domu" value={String(houseNumber)} onChange={(e) => setHouseNumber(e.target.value)} />
-            <input className="input input-bordered" placeholder="Kod pocztowy" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
+            <input className="input input-bordered" placeholder={t("proposal.brand_placeholder")} value={brandName} onChange={(e) => setBrandName(e.target.value)} />
+            <input className="input input-bordered" placeholder={t("proposal.city_placeholder")} value={city} onChange={(e) => setCity(e.target.value)} />
+            <input className="input input-bordered" placeholder={t("proposal.street_placeholder")} value={street} onChange={(e) => setStreet(e.target.value)} />
+            <input className="input input-bordered" placeholder={t("proposal.house_placeholder")} value={String(houseNumber)} onChange={(e) => setHouseNumber(e.target.value)} />
+            <input className="input input-bordered" placeholder={t("proposal.postalcode_placeholder")} value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Adres (opcjonalnie — wpisz aby pobrać współrzędne)</label>
+              <label className="block text-sm font-medium mb-2">{t("proposal.address_label")}</label>
               <div className="relative">
-                <input type="text" placeholder="Wpisz adres (np. Warszawa, Marszałkowska 1)" value={address} onChange={(e) => handleAddressChange(e.target.value)} className="input input-bordered w-full" />
+                <input type="text" placeholder={t("proposal.address_placeholder")} value={address} onChange={(e) => handleAddressChange(e.target.value)} className="input input-bordered w-full" />
                 {addressLoading && <span className="loading loading-spinner loading-sm absolute right-2 top-2"></span>}
                 {addressSuggestions.length > 0 && (
                   <ul className="absolute z-50 bg-base-100 w-full mt-1 rounded-md shadow-lg max-h-52 overflow-auto">
@@ -494,15 +496,16 @@ async function handleSubmit(e?: React.FormEvent) {
                 )}
               </div>
               <div className="mt-2 grid grid-cols-2 gap-3">
-                <input className="input input-bordered" placeholder="Szer. geogr. (latitude)" value={String(latitude)} onChange={(e) => setLatitude(e.target.value)} />
-                <input className="input input-bordered" placeholder="Dł. geogr. (longitude)" value={String(longitude)} onChange={(e) => setLongitude(e.target.value)} />
+                <input className="input input-bordered" placeholder={t("proposal.latitude_placeholder")} value={String(latitude)} onChange={(e) => setLatitude(e.target.value)} />
+                <input className="input input-bordered" placeholder={t("proposal.longitude_placeholder")} value={String(longitude)} onChange={(e) => setLongitude(e.target.value)} />
               </div>
             </div>
           </div>
 
           {/* NEW: single photo for all prices */}
           <div className="mt-4">
-            <label className="block text-sm mb-1">Zdjęcie weryfikujące (jedno zdjęcie wystarczy dla wszystkich cen) — JPEG/PNG/WEBP max 5MB</label>
+            <label className="block text-sm mb-1">{t("proposal.photo_label")}</label>
+            <div className="text-sm text-base-content/70 mb-1">{t("proposal.photo_help")}</div>
             <input
               type="file"
               accept="image/jpeg,image/jpg,image/png,image/webp"
@@ -519,24 +522,24 @@ async function handleSubmit(e?: React.FormEvent) {
           </div>
 
           <div className="mt-4">
-            <h3 className="font-medium mb-2">Proponowane ceny / paliwa</h3>
+            <h3 className="font-medium mb-2">{t("proposal.proposed_prices_title")}</h3>
             <div className="space-y-2">
               {fuelRows.map((r, idx) => (
                 <div key={idx} className="flex gap-2 items-center">
                   <select className="select select-bordered w-1/2" value={r.fuelCode} onChange={(e) => updateFuelRow(idx, { fuelCode: e.target.value })}>
-                    <option value="">-- wybierz paliwo --</option>
+                    <option value="">{t("proposal.select_fuel_placeholder")}</option>
                     {AVAILABLE_FUEL_TYPES.map((ft) => (
                       <option key={ft} value={ft}>{ft}</option>
                     ))}
                   </select>
 
-                  <input className="input input-bordered w-1/2" placeholder="Cena (zł)" value={r.price} onChange={(e) => updateFuelRow(idx, { price: e.target.value })} />
-                  <button type="button" className="btn btn-sm btn-outline" onClick={() => removeFuelRow(idx)}>usuń</button>
+                  <input className="input input-bordered w-1/2" placeholder={t("proposal.price_placeholder")} value={r.price} onChange={(e) => updateFuelRow(idx, { price: e.target.value })} />
+                  <button type="button" className="btn btn-sm btn-outline" onClick={() => removeFuelRow(idx)}>{t("proposal.remove_button")}</button>
                 </div>
               ))}
             </div>
             <div className="mt-2">
-              <button type="button" className="btn btn-sm" onClick={addFuelRow}>+ Dodaj paliwo / cenę</button>
+              <button type="button" className="btn btn-sm" onClick={addFuelRow}>{t("proposal.add_fuel_button")}</button>
             </div>
           </div>
 
@@ -544,12 +547,12 @@ async function handleSubmit(e?: React.FormEvent) {
           {successMsg && <div className="mt-4 alert alert-success">{successMsg}</div>}
 
           <div className="mt-6 flex gap-2">
-            <button className="btn btn-primary" type="submit" disabled={submitting}>{submitting ? 'Wysyłanie...' : 'Wyślij propozycję'}</button>
+            <button className="btn btn-primary" type="submit" disabled={submitting}>{submitting ? t("proposal.sending_text") : t("proposal.submit_button")}</button>
             <button type="button" className="btn btn-outline" onClick={() => {
               setBrandName(""); setStreet(""); setHouseNumber(""); setCity(""); setPostalCode(""); setLatitude(""); setLongitude(""); setFuelRows([{ fuelCode: 'PB95', price: '' }]);
               if (globalPreview) { URL.revokeObjectURL(globalPreview); setGlobalPreview(null); }
               setGlobalFile(null);
-            }}>Wyczyść</button>
+            }}>{t("proposal.clear_button")}</button>
           </div>
         </form>
 

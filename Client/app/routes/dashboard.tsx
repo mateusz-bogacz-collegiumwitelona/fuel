@@ -344,7 +344,7 @@ export default function Dashboard(): JSX.Element {
       <main className="mx-auto max-w-350 px-1 py-8">
         {email && (
           <h1 className="text-2xl md:text-3xl font-bold mb-4">
-            {t("dashboard.welcome", { defaultValue: "Witaj," })} {email}
+            {t("dashboard.welcome")} {email}
           </h1>
         )}
 
@@ -419,18 +419,18 @@ export default function Dashboard(): JSX.Element {
                     <h2 className="card-title">{s.name}</h2>
 
                     {s.name && (
-                      <p className="text-sm text-gray-200">{t("dashboard.stationname")}: {s.name}</p>
+                      <p className="text-sm text-gray-200">{t("dashboard.stationname")} {s.name}</p>
                     )}
 
                     <p className="text-sm text-gray-600">
-                      {t("dashboard.street")}: {s.street ?? "-"}{s.houseNumber !== undefined && s.houseNumber !== null ? ` ${s.houseNumber}` : ""}
+                      {t("dashboard.street")} {s.street ?? "-"}{s.houseNumber !== undefined && s.houseNumber !== null ? ` ${s.houseNumber}` : ""}
                     </p>
 
                     {s.city && (
-                      <p className="text-sm text-gray-600">{t("dashboard.city")}: {s.city}</p>
+                      <p className="text-sm text-gray-600">{t("dashboard.city")} {s.city}</p>
                     )}
 
-                    <p className="text-sm text-gray-600">{t("dashboard.postalcode")}: {s.postalcode ?? "-"}</p>
+                    <p className="text-sm text-gray-600">{t("dashboard.postalcode")} {s.postalcode ?? "-"}</p>
 
                     {s.distanceMeters !== undefined && s.distanceMeters !== null && (
                       <p className="text-sm text-gray-500">{t("dashboard.dostance")} {formatDistance(s.distanceMeters)}</p>

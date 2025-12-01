@@ -17,6 +17,7 @@ import type {
 } from "../components/user-admin-modals";
 
 import { useAdminGuard } from "../components/useAdminGuard";
+import { useTranslation } from "react-i18next";
 
 const API_BASE = "http://localhost:5111";
 
@@ -31,6 +32,7 @@ type UserListResponseData = {
 };
 
 export default function UserAdminPage() {
+  const { t } = useTranslation();
   const { state, email } = useAdminGuard();
 
   const [users, setUsers] = React.useState<AdminUser[]>([]);
@@ -68,6 +70,7 @@ export default function UserAdminPage() {
         sortDirection,
       );
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, pageNumber, pageSize, search, sortBy, sortDirection]);
 
   async function loadUsersFromApi(
@@ -105,7 +108,8 @@ export default function UserAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`Błąd pobierania użytkowników (${res.status}): ${text}`);
+        const msg = t("useradmin.error_fetch", { status: res.status, text });
+        throw new Error(msg);
       }
 
       const json = await res.json();
@@ -115,7 +119,7 @@ export default function UserAdminPage() {
         : (json as UserListResponseData);
 
       if (!data || !Array.isArray(data.items)) {
-        throw new Error("Nieoczekiwany format odpowiedzi użytkowników");
+        throw new Error(t("useradmin.error_unexpected_response"));
       }
 
       setUsers(data.items);
@@ -123,7 +127,7 @@ export default function UserAdminPage() {
       setTotalPages(data.totalPages);
     } catch (e: any) {
       console.error(e);
-      setError(e?.message ?? "Nie udało się pobrać listy użytkowników");
+      setError(e?.message ?? t("useradmin.error_fetch_fallback"));
       setUsers([]);
     } finally {
       setLoading(false);
@@ -169,7 +173,7 @@ export default function UserAdminPage() {
       if (!res.ok) {
         const text = await res.text();
         setBanInfoError(
-          `Nie udało się pobrać informacji o banie (${res.status}): ${text}`,
+          t("useradmin.error_fetch_baninfo", { status: res.status, text }),
         );
         setBanInfo(null);
       } else {
@@ -182,9 +186,7 @@ export default function UserAdminPage() {
       }
     } catch (e: any) {
       console.error(e);
-      setBanInfoError(
-        e?.message ?? "Nie udało się pobrać informacji o banie",
-      );
+      setBanInfoError(e?.message ?? t("useradmin.error_fetch_baninfo_fallback"));
       setBanInfo(null);
     } finally {
       setBanInfoLoading(false);
@@ -219,7 +221,7 @@ export default function UserAdminPage() {
       if (!res.ok) {
         const text = await res.text();
         throw new Error(
-          `Nie udało się zmienić roli użytkownika (${res.status}): ${text}`,
+          t("useradmin.error_change_role", { status: res.status, text }),
         );
       }
 
@@ -231,9 +233,9 @@ export default function UserAdminPage() {
         sortDirection,
       );
       closeModal();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : "Nie udało się zmienić roli");
+      alert(e instanceof Error ? e.message : t("useradmin.error_change_role_fallback"));
     }
   };
 
@@ -257,9 +259,7 @@ export default function UserAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(
-          `Nie udało się zbanować użytkownika (${res.status}): ${text}`,
-        );
+        throw new Error(t("useradmin.error_ban", { status: res.status, text }));
       }
 
       await loadUsersFromApi(
@@ -270,9 +270,9 @@ export default function UserAdminPage() {
         sortDirection,
       );
       closeModal();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : "Nie udało się zbanować");
+      alert(e instanceof Error ? e.message : t("useradmin.error_ban_fallback"));
     }
   };
 
@@ -293,9 +293,7 @@ export default function UserAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(
-          `Nie udało się odblokować użytkownika (${res.status}): ${text}`,
-        );
+        throw new Error(t("useradmin.error_unlock", { status: res.status, text }));
       }
 
       await loadUsersFromApi(
@@ -306,9 +304,9 @@ export default function UserAdminPage() {
         sortDirection,
       );
       closeModal();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : "Nie udało się odblokować");
+      alert(e instanceof Error ? e.message : t("useradmin.error_unlock_fallback"));
     }
   };
 
@@ -324,7 +322,6 @@ export default function UserAdminPage() {
     return null;
   }
 
-
   return (
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
       <Header />
@@ -332,15 +329,13 @@ export default function UserAdminPage() {
       <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-10">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-3xl font-bold">
-              Panel administracyjny – użytkownicy
-            </h1>
+            <h1 className="text-3xl font-bold">{t("useradmin.title")}</h1>
             <p className="text-sm text-base-content/70">
-              {email ? `Zalogowano jako: ${email}` : "Sprawdzanie sesji..."}
+              {email ? t("useradmin.logged_in_as", { email }) : t("useradmin.checking_session")}
             </p>
           </div>
           <a href="/admin-dashboard" className="btn btn-outline btn-sm">
-            ← Powrót do panelu administratora
+            {t("useradmin.back_to_admin")}
           </a>
         </div>
 
@@ -349,7 +344,7 @@ export default function UserAdminPage() {
           <div className="flex flex-col gap-2 md:flex-row md:items-end">
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Szukaj (nazwa, e-mail, rola)</span>
+                <span className="label-text">{t("useradmin.search_label")}</span>
               </label>
               <input
                 className="input input-bordered input-sm w-full md:w-64"
@@ -358,13 +353,13 @@ export default function UserAdminPage() {
                   setSearch(e.target.value);
                   setPageNumber(1);
                 }}
-                placeholder="np. user@example.pl"
+                placeholder={t("useradmin.search_placeholder")}
               />
             </div>
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Sortowanie</span>
+                <span className="label-text">{t("useradmin.sort_label")}</span>
               </label>
               <select
                 className="select select-bordered select-sm"
@@ -374,17 +369,17 @@ export default function UserAdminPage() {
                   setPageNumber(1);
                 }}
               >
-                <option value="username">Nazwa użytkownika</option>
-                <option value="email">E-mail</option>
-                <option value="roles">Rola</option>
-                <option value="isBanned">Status bana</option>
-                <option value="createdAt">Data utworzenia</option>
+                <option value="username">{t("useradmin.sort_username")}</option>
+                <option value="email">{t("useradmin.sort_email")}</option>
+                <option value="roles">{t("useradmin.sort_roles")}</option>
+                <option value="isBanned">{t("useradmin.sort_isBanned")}</option>
+                <option value="createdAt">{t("useradmin.sort_createdAt")}</option>
               </select>
             </div>
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Kierunek sortowania</span>
+                <span className="label-text">{t("useradmin.sort_dir_label")}</span>
               </label>
               <select
                 className="select select-bordered select-sm"
@@ -393,8 +388,8 @@ export default function UserAdminPage() {
                   setSortDirection(e.target.value as "asc" | "desc")
                 }
               >
-                <option value="asc">Rosnąco</option>
-                <option value="desc">Malejąco</option>
+                <option value="asc">{t("useradmin.sort_dir_asc")}</option>
+                <option value="desc">{t("useradmin.sort_dir_desc")}</option>
               </select>
             </div>
           </div>
@@ -403,24 +398,24 @@ export default function UserAdminPage() {
         {/* TABELA UŻYTKOWNIKÓW */}
         <div className="bg-base-300 rounded-xl p-4 shadow-md">
           {loading ? (
-            <div className="text-sm">Ładowanie użytkowników...</div>
+            <div className="text-sm">{t("useradmin.loading")}</div>
           ) : error ? (
             <div className="text-sm text-error">{error}</div>
           ) : users.length === 0 ? (
-            <div className="text-sm">Brak użytkowników.</div>
+            <div className="text-sm">{t("useradmin.no_users")}</div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="table table-zebra table-sm w-full">
                   <thead>
                     <tr>
-                      <th>#</th>
-                      <th>Nazwa użytkownika</th>
-                      <th>E-mail</th>
-                      <th>Role</th>
-                      <th>Data utworzenia</th>
-                      <th>Status</th>
-                      <th className="text-right">Akcje</th>
+                      <th>{t("useradmin.table_hash")}</th>
+                      <th>{t("useradmin.table_username")}</th>
+                      <th>{t("useradmin.table_email")}</th>
+                      <th>{t("useradmin.table_roles")}</th>
+                      <th>{t("useradmin.table_created")}</th>
+                      <th>{t("useradmin.table_status")}</th>
+                      <th className="text-right">{t("useradmin.table_actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -438,11 +433,11 @@ export default function UserAdminPage() {
                         <td>
                           {u.isBanned ? (
                             <span className="badge badge-error badge-sm">
-                              Zbanowany
+                              {t("useradmin.banned")}
                             </span>
                           ) : (
                             <span className="badge badge-success badge-sm">
-                              Aktywny
+                              {t("useradmin.active")}
                             </span>
                           )}
                         </td>
@@ -453,7 +448,7 @@ export default function UserAdminPage() {
                               type="button"
                               onClick={() => openRoleModal(u)}
                             >
-                              rola
+                              {t("useradmin.role_button")}
                             </button>
                             {!u.isBanned && (
                               <button
@@ -461,7 +456,7 @@ export default function UserAdminPage() {
                                 type="button"
                                 onClick={() => openBanModal(u)}
                               >
-                                ban
+                                {t("useradmin.ban_button")}
                               </button>
                             )}
                             {u.isBanned && (
@@ -471,14 +466,14 @@ export default function UserAdminPage() {
                                   type="button"
                                   onClick={() => openReviewModal(u)}
                                 >
-                                  szczegóły bana
+                                  {t("useradmin.ban_details")}
                                 </button>
                                 <button
                                   className="btn btn-xs btn-primary"
                                   type="button"
                                   onClick={() => openUnlockModal(u)}
                                 >
-                                  odblokuj
+                                  {t("useradmin.unlock_button")}
                                 </button>
                               </>
                             )}
@@ -492,7 +487,7 @@ export default function UserAdminPage() {
 
               <div className="flex justify-end items-center gap-3 mt-3 text-sm">
                 <span>
-                  Strona {pageNumber} / {totalPages}
+                  {t("useradmin.page_info", { page: pageNumber, total: totalPages })}
                 </span>
                 <button
                   className="btn btn-xs"

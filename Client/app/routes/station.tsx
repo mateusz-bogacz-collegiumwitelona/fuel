@@ -4,6 +4,7 @@ import Header from "../components/header";
 import Footer from "../components/footer";
 import "leaflet/dist/leaflet.css";
 import { API_BASE } from "../components/api";
+import { useTranslation } from "react-i18next";
 
 type FuelPrice = {
   fuelCode: string;
@@ -23,6 +24,7 @@ type StationProfile = {
 };
 
 export default function StationProfilePage() {
+  const { t } = useTranslation();
   const { brandName, city, street, houseNumber } = useParams<{
     brandName: string;
     city: string;
@@ -98,7 +100,7 @@ export default function StationProfilePage() {
 
   useEffect(() => {
     if (!brandName || !street || !houseNumber || !city) {
-      setError("Brak danych stacji w adresie URL.");
+      setError(t("station.missing_url_data"));
       setLoading(false);
       return;
     }
@@ -113,7 +115,7 @@ export default function StationProfilePage() {
           street,
           houseNumber,
           city,
-        });
+        } as any);
 
         const response = await fetch(
           `${API_BASE}/api/station/profile?${qs.toString()}`,
@@ -127,21 +129,21 @@ export default function StationProfilePage() {
         );
 
         if (!response.ok) {
-          throw new Error(`Błąd serwera: ${response.status}`);
+          throw new Error(`${t("station.fetch_error_prefix")} ${response.status}`);
         }
 
         const data: StationProfile = await response.json();
         setStation(data);
       } catch (e: any) {
-        console.error("Błąd pobierania profilu stacji:", e);
-        setError(e.message ?? "Nie udało się pobrać danych stacji.");
+        console.error(t("station.fetch_error_prefix"), e);
+        setError(e?.message ? `${t("station.fetch_error_prefix")} ${e.message}` : t("station.fetch_error_fallback"));
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [brandName, street, houseNumber, city]);
+  }, [brandName, street, houseNumber, city, t]);
 
   const { MapContainer, TileLayer, Marker, Popup } = MapComponents;
 
@@ -156,22 +158,21 @@ export default function StationProfilePage() {
     return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
   };
 
-
   return (
     <div className="min-h-screen bg-base-200 text-base-content">
       <Header />
 
       <main className="mx-auto max-w-6xl px-4 py-5">
         <div className="mb-5 flex items-center justify-between gap-4">
+          <h1 className="text-2xl md:text-3xl font-bold text-right">
+            {t("station.title")}
+          </h1>
           <button
             className="btn btn-outline btn-sm"
             onClick={() => navigate(-1)}
           >
-            ← Wróć
+            {t("station.back")}
           </button>
-          <h1 className="text-2xl md:text-3xl font-bold text-right">
-            Szczegóły stacji
-          </h1>
         </div>
 
         {loading && (
@@ -195,31 +196,30 @@ export default function StationProfilePage() {
               <p className="text-sm md:text-base">
                 {station.city}, {station.street} {station.houseNumber}
               </p>
-<div className="mt-3 flex gap-2">
-              <a
-                href={buildGoogleMapsUrl(station)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-sm btn-outline mt-3"
-              >
-                Otwórz w Google Maps
-              </a>
+              <div className="mt-3 flex gap-2">
+                <a
+                  href={buildGoogleMapsUrl(station)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-sm btn-outline mt-3"
+                >
+                  {t("station.open_google_maps")}
+                </a>
 
-              <a
-  href={buildGoogleMapsDirectionsUrl(station.latitude, station.longitude)}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="btn btn-sm btn-outline mt-3"
->
-  Nawiguj
-</a>
-</div>
-
+                <a
+                  href={buildGoogleMapsDirectionsUrl(station.latitude, station.longitude)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-sm btn-outline mt-3"
+                >
+                  {t("station.directions")}
+                </a>
+              </div>
             </section>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <section className="bg-base-300 rounded-xl p-4 shadow-md ">
-                <h3 className="text-lg font-semibold mb-3">Mapa stacji</h3>
+                <h3 className="text-lg font-semibold mb-3">{t("station.map_title")}</h3>
                 <div className="h-72 rounded-lg overflow-hidden bg-base-100">
                   {MapContainer && L ? (
                     <MapContainer
@@ -239,30 +239,30 @@ export default function StationProfilePage() {
                         <Popup>
                           <strong>{station.brandName}</strong>
                           <br />
-                          {station.city}, {station.street}{" "}
+                          {station.city}, {station.street} {" "}
                           {station.houseNumber}
                         </Popup>
                       </Marker>
                     </MapContainer>
                   ) : (
                     <div className="flex items-center justify-center h-full text-sm text-base-content/70">
-                      Ładowanie mapy...
+                      {t("station.map_loading")}
                     </div>
                   )}
                 </div>
               </section>
 
               <section className="bg-base-300 rounded-xl p-6 shadow-md">
-                <h3 className="text-lg font-semibold mb-3">Ceny paliw</h3>
+                <h3 className="text-lg font-semibold mb-3">{t("station.fuel_prices_title")}</h3>
 
                 {station.fuelPrice && station.fuelPrice.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="table table-zebra w-full">
                       <thead>
                         <tr>
-                          <th>Kod paliwa</th>
-                          <th>Cena [zł]</th>
-                          <th>Ważne od</th>
+                          <th>{t("station.fuel_code")}</th>
+                          <th>{t("station.price_pln")}</th>
+                          <th>{t("station.valid_from")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -282,7 +282,7 @@ export default function StationProfilePage() {
                   </div>
                 ) : (
                   <p className="text-sm text-base-content/70">
-                    Brak danych o cenach paliw dla tej stacji.
+                    {t("station.no_price_data")}
                   </p>
                 )}
               </section>
