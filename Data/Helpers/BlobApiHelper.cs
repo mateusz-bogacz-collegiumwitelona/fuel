@@ -1,16 +1,20 @@
 ﻿using Azure.Storage.Blobs;
+using Data.Config;
 using Data.Interfaces;
+using Microsoft.Extensions.Options;
 
 namespace Data.Helpers
 {
     public class BlobApiHelper : IStorage
     {
         private readonly BlobContainerClient _blob;
-
-        public BlobApiHelper(BlobServiceClient blobServiceClient, string containerName)
+        private readonly string _publicUrl;
+        public BlobApiHelper(BlobServiceClient blobServiceClient, IOptions<BlobConfig> options)
         {
+            var containerName = options.Value.ContainerName;
             _blob = blobServiceClient.GetBlobContainerClient(containerName);
             _blob.CreateIfNotExists();
+            _publicUrl = options.Value.PublicUrl;
         }
 
         public async Task<string> UploadFileAsync(Stream photo, string fileName, string contentType, string? bucketName = null, string? subPath = null)
@@ -29,10 +33,6 @@ namespace Data.Helpers
             return isGood;
         }
 
-        public string GetPublicUrl(string objectPath, string? bucketName = null)
-        {
-            var blobClient = _blob.GetBlobClient(objectPath);
-            return blobClient.Uri.ToString();
-        }
+        public string GetPublicUrl(string objectPath, string? bucketName = null) => $"{_publicUrl}/{objectPath}";
     }
 }
