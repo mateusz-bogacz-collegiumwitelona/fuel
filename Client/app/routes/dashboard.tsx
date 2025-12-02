@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { useTranslation } from "react-i18next";
@@ -14,10 +15,10 @@ type RequestItem = {
 
 type Station = {
   id?: string;
-  name: string;
+  brandName: string;
   street: string;
   houseNumber: number;
-  postalcode: string;
+  postalCode: string;
   latitude?: number;
   longitude?: number;
   city?: string;
@@ -414,13 +415,9 @@ export default function Dashboard(): JSX.Element {
           ) : stations && stations.length > 0 ? (
             <div className="grid md:grid-cols-3 gap-30">
               {stations.map((s, idx) => (
-                <div key={s.id ?? `${s.name}-${idx}`} className="card bg-base-100 w-96 shadow-sm">
+                <div key={s.id ?? `${s.brandName}-${idx}`} className="card bg-base-100 w-96 shadow-sm">
                   <div className="card-body">
-                    <h2 className="card-title">{s.name}</h2>
-
-                    {s.name && (
-                      <p className="text-sm text-gray-200">{t("dashboard.stationname")} {s.name}</p>
-                    )}
+                    <h2 className="card-title">{s.brandName}</h2>
 
                     <p className="text-sm text-gray-600">
                       {t("dashboard.street")} {s.street ?? "-"}{s.houseNumber !== undefined && s.houseNumber !== null ? ` ${s.houseNumber}` : ""}
@@ -430,10 +427,10 @@ export default function Dashboard(): JSX.Element {
                       <p className="text-sm text-gray-600">{t("dashboard.city")} {s.city}</p>
                     )}
 
-                    <p className="text-sm text-gray-600">{t("dashboard.postalcode")} {s.postalcode ?? "-"}</p>
+                    <p className="text-sm text-gray-600">{t("dashboard.postalcode")} {s.postalCode ?? "-"}</p>
 
                     {s.distanceMeters !== undefined && s.distanceMeters !== null && (
-                      <p className="text-sm text-gray-500">{t("dashboard.dostance")} {formatDistance(s.distanceMeters)}</p>
+                      <p className="text-sm text-gray-500">{t("dashboard.distance")} {formatDistance(s.distanceMeters)}</p>
                     )}
 
                     <div className="card-actions justify-center mt-2">
@@ -443,12 +440,14 @@ export default function Dashboard(): JSX.Element {
                       >
                         {t("dashboard.showonmap")}
                       </a>
-                      <a
-                        href={`/list#${encodeURIComponent(s.id ?? s.name ?? String(idx))}`}
-                        className="btn btn-outline btn-primary"
-                      >
-                        {t("dashboard.stationdetails")}
-                      </a>
+                      <Link
+                            to={`/station/${encodeURIComponent(s.brandName)}/${encodeURIComponent(s.city)}/${encodeURIComponent(
+                              s.street
+                              )}/${encodeURIComponent(s.houseNumber)}`}
+                              className="btn btn-outline btn-secondary"
+                              >
+                              {t("dashboard.stationdetails")}
+                        </Link>
                     </div>
                   </div>
                 </div>

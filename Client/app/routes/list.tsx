@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Link } from "react-router";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { useTranslation } from "react-i18next";
@@ -735,6 +736,15 @@ export default function ListPage() {
                                                     >
                                                         {t("list.map")}
                                                     </a>
+
+                                                    <Link
+                                                        to={`/station/${encodeURIComponent(s.brandName)}/${encodeURIComponent(s.city)}/${encodeURIComponent(
+                                                        s.street
+                                                        )}/${encodeURIComponent(s.houseNumber)}`}
+                                                        className="btn btn-xs btn-outline"
+                                                        >
+                                                            {t("map.seedetails")}
+                                                    </Link>
                                                 </div>
                                             </td>
                                         </tr>

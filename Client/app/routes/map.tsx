@@ -172,7 +172,7 @@ export default function MapView(): JSX.Element | null {
                         to={`/station/${encodeURIComponent(s.brandName)}/${encodeURIComponent(s.city)}/${encodeURIComponent(
                           s.street
                         )}/${encodeURIComponent(s.houseNumber)}`}
-                        className="btn btn-xs btn-base mt-2"
+                        className="btn btn-outline btn-secondary"
                       >
                         {t("map.seedetails")}
                       </Link>

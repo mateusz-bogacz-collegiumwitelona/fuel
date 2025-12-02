@@ -10,7 +10,6 @@
     "city": "miasto = ",
     "postalcode": "kod pocztowy = ",
     "distance": "Odległość",
-    "dostance": "Odległość",
     "showonmap": "Pokaż na mapie",
     "stationdetails": "Szczegóły stacji",
     "nostations": "Brak dostępnych stacji",
@@ -27,7 +26,7 @@
     "fuelstationmap": "Mapa stacji benzynowych",
     "dashboardback": "← Powrót do dashboardu",
     "search": "Szukaj",
-    "seedetails": "Zobacz szczehóły",
+    "seedetails": "Zobacz szczegóły",
     "stationname": "Wpisz nazwę stacji (np. Orlen)"
   },
 
