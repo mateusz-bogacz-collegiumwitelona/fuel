@@ -1,5 +1,7 @@
-﻿/*using Data.Context;
+﻿using Data.Context;
+using Data.Enums;
 using Data.Helpers;
+using Data.Interfaces;
 using Data.Models;
 using Data.Repositories;
 using Microsoft.AspNetCore.Http;
@@ -20,7 +22,7 @@ namespace Tests.RepositoryTests
         private readonly ApplicationDbContext _context;
         private readonly PriceProposalRepository _repository;
         private readonly Mock<ILogger<PriceProposalRepository>> _loggerMock;
-        private readonly Mock<S3ApiHelper> _s3ApiHelperMock;
+        private readonly Mock<IS3ApiHelper> _s3ApiHelperMock;
         private readonly Mock<IConfiguration> _configMock;
         private readonly ITestOutputHelper _output;
         private readonly Mock<IMinioClient> _minioMock;
@@ -46,7 +48,7 @@ namespace Tests.RepositoryTests
             _configMock = new Mock<IConfiguration>();
             _minioMock = new Mock<IMinioClient>();
             _helperLogMock = new Mock<ILogger<S3ApiHelper>>();
-            _s3ApiHelperMock = new Mock<S3ApiHelper>(MockBehavior.Strict, _minioMock.Object, _configMock.Object, _helperLogMock.Object);
+            _s3ApiHelperMock = new Mock<IS3ApiHelper>(MockBehavior.Strict);
 
             _address = new StationAddress
             {
@@ -73,6 +75,7 @@ namespace Tests.RepositoryTests
             _context.FuelTypes.Add(_fuel);
             _context.Brand.Add(_brand);
             _context.Stations.Add(_station);
+            _configMock.Setup(x => x["MinIO:BucketName"]).Returns(_bucket);
 
             _context.SaveChanges();
         }
@@ -95,14 +98,131 @@ namespace Tests.RepositoryTests
             var extension = ".png";
             var file = MockFile(extension);
             var url = "http://minio/test.jpg";
-            _s3ApiHelperMock.Setup(s => s.UploadFileAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), _bucket, It.IsAny<string>())).ReturnsAsync(url);
-
+            _s3ApiHelperMock.Setup(x => x.UploadFileAsync(
+            It.IsAny<Stream>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            _bucket,
+            It.IsAny<string>()
+            )).ReturnsAsync(url);
             //Act
             var result = await _repository.AddNewPriceProposalAsync(_user, _station, _fuel, 5.0m, file.Object, extension);
 
             //Assert
             Assert.True(result);
+            _s3ApiHelperMock.Verify(x => x.UploadFileAsync(
+            It.IsAny<Stream>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            _bucket,
+            It.IsAny<string>()
+            ),
+            Times.Once());
+            Assert.Equal(5.0m, _context.PriceProposals.ToList().First().ProposedPrice);
+            _output.WriteLine("Success, AddNewPriceProposalAsync uploads a proposal");
+        }
+
+        [Fact]
+        public async Task AddNewPriceProposalAsyncTest_BadExtension_SuccessIfPriceProposalsEmpty()
+        {
+            //Arrange
+            var extension = ".mp4";
+            var file = MockFile(extension);
+            var url = "http://minio/test.jpg";
+            _s3ApiHelperMock.Setup(x => x.UploadFileAsync(
+            It.IsAny<Stream>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            _bucket,
+            It.IsAny<string>()
+            )).ReturnsAsync(url);
+            //Act
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _repository.AddNewPriceProposalAsync(_user, _station, _fuel, 5.0m, file.Object, extension));
+
+            //Assert
+            Assert.Empty(_context.PriceProposals.ToList());
+            _s3ApiHelperMock.Verify(x => x.UploadFileAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never());
+            _output.WriteLine("Success, AddNewPriceProposalAsyncTest doesnt add a proposal when it gets an unsuported extension");
+        }
+
+        [Fact]
+        public async Task AddNewPriceProposalAsyncTest_BadUrl_SuccessIfException()
+        {
+            //Arrange
+            var extension = ".mp4";
+            var file = MockFile(extension);
+
+            //Act
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _repository.AddNewPriceProposalAsync(_user, _station, _fuel, 5.0m, file.Object, extension));
+
+            //Assert
+            Assert.Empty(_context.PriceProposals.ToList());
+            _s3ApiHelperMock.Verify(x => x.UploadFileAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never());
+            _output.WriteLine("Success, AddNewPriceProposalAsync doesn't add a proposal if UploadFileAsync returns a bad url");
+        }
+
+        [Fact]
+        public async Task GetPriceProposalTest_SuccessIfProposalGet()
+        {
+            //Arrange
+            var photoToken = "token";
+            var path = "valid/path.jpg";
+            var url = "https://minio.com/valid/path123.jpg";
+            var price = 5.0m;
+            var createdAt = DateTime.UtcNow;
+
+            var proposal = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = _user,
+                UserId = _user.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = price,
+                Token = photoToken,
+                PhotoUrl = path,
+                CreatedAt = createdAt,
+                Status = PriceProposalStatus.Pending,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+            _context.PriceProposals.Add(proposal);
+            await _context.SaveChangesAsync();
+
+            _s3ApiHelperMock.Setup(x => x.GetPublicUrl(path, _bucket)).Returns(url).Verifiable();
+
+            //Act
+            var result = await _repository.GetPriceProposal(photoToken);
+
+            //Assert
+            Assert.NotNull(result);
+            Assert.Equal(photoToken, result.Token);
+            Assert.Equal(url, result.PhotoUrl);
+            Assert.Equal(_brand.Name, result.BrandName);
+            Assert.Equal(_address.Street, result.Street);
+            _output.WriteLine("Success, GetPriceProposal returns the correct proposal");
+        }
+
+        [Fact]
+        public async Task GetPriceProposalTest_BadToekn_SuccessIfNullReturned()
+        {
+            //Arrange
+            //-
+
+            //Act
+            var result = await _repository.GetPriceProposal(null);
+
+            //Assert
+            _s3ApiHelperMock.Verify(x => x.GetPublicUrl(It.IsAny<string>(), It.IsAny<string>()), Times.Never());
+            Assert.Null(result);
+            _loggerMock.Verify(x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("not found")),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
+                Times.Once);
+            _output.WriteLine("Success, GetPriceProposal returns null when given a bad token");
         }
     }
 }
-*/
