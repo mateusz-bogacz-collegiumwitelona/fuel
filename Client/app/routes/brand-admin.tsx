@@ -16,8 +16,7 @@ import type {
 
 import { useAdminGuard } from "../components/useAdminGuard";
 import { useTranslation } from "react-i18next";
-
-const API_BASE = "http://localhost:5111";
+import { API_BASE } from "../components/api";
 
 type BrandListResponseData = {
   items: AdminBrand[];
@@ -90,7 +89,9 @@ export default function BrandAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`${t("brandadmin.error_fetch_prefix")} (${res.status}): ${text}`);
+        throw new Error(
+          `${t("brandadmin.error_fetch_prefix")} (${res.status}): ${text}`,
+        );
       }
 
       const json = await res.json();
@@ -151,14 +152,18 @@ export default function BrandAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`${t("brandadmin.error_add_prefix")} (${res.status}): ${text}`);
+        throw new Error(
+          `${t("brandadmin.error_add_prefix")} (${res.status}): ${text}`,
+        );
       }
 
       await loadBrandsFromApi(pageNumber, pageSize, search, sortDirection);
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : t("brandadmin.error_add_fallback"));
+      alert(
+        e instanceof Error ? e.message : t("brandadmin.error_add_fallback"),
+      );
     }
   };
 
@@ -181,14 +186,18 @@ export default function BrandAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`${t("brandadmin.error_edit_prefix")} (${res.status}): ${text}`);
+        throw new Error(
+          `${t("brandadmin.error_edit_prefix")} (${res.status}): ${text}`,
+        );
       }
 
       await loadBrandsFromApi(pageNumber, pageSize, search, sortDirection);
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : t("brandadmin.error_edit_fallback"));
+      alert(
+        e instanceof Error ? e.message : t("brandadmin.error_edit_fallback"),
+      );
     }
   };
 
@@ -209,16 +218,92 @@ export default function BrandAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`${t("brandadmin.error_delete_prefix")} (${res.status}): ${text}`);
+        throw new Error(
+          `${t("brandadmin.error_delete_prefix")} (${res.status}): ${text}`,
+        );
       }
 
       await loadBrandsFromApi(pageNumber, pageSize, search, sortDirection);
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : t("brandadmin.error_delete_fallback"));
+      alert(
+        e instanceof Error
+          ? e.message
+          : t("brandadmin.error_delete_fallback"),
+      );
     }
   };
+
+
+  const goToPage = (p: number) => {
+    if (p < 1 || p > totalPages || p === pageNumber) return;
+    setPageNumber(p);
+  };
+
+  function renderPageButtons() {
+    const pages: number[] = [];
+    const windowSize = 5;
+    let start = Math.max(1, pageNumber - Math.floor(windowSize / 2));
+    let end = start + windowSize - 1;
+
+    if (end > totalPages) {
+      end = totalPages;
+      start = Math.max(1, end - windowSize + 1);
+    }
+
+    for (let i = start; i <= end; i++) pages.push(i);
+
+    return (
+      <div className="flex items-center gap-2">
+        <button
+          className="btn btn-sm"
+          onClick={() => goToPage(1)}
+          disabled={pageNumber === 1}
+          type="button"
+        >
+          «1
+        </button>
+
+        <button
+          className="btn btn-sm"
+          onClick={() => goToPage(pageNumber - 1)}
+          disabled={pageNumber === 1}
+          type="button"
+        >
+          ←
+        </button>
+
+        {pages.map((p) => (
+          <button
+            key={p}
+            className={`btn btn-sm ${p === pageNumber ? "btn-active" : ""}`}
+            onClick={() => goToPage(p)}
+            type="button"
+          >
+            {p}
+          </button>
+        ))}
+
+        <button
+          className="btn btn-sm"
+          onClick={() => goToPage(pageNumber + 1)}
+          disabled={pageNumber === totalPages}
+          type="button"
+        >
+          →
+        </button>
+        <button
+          className="btn btn-sm"
+          onClick={() => goToPage(totalPages)}
+          disabled={pageNumber === totalPages}
+          type="button"
+        >
+          {totalPages} »
+        </button>
+      </div>
+    );
+  }
 
   if (state === "checking") {
     return (
@@ -241,7 +326,9 @@ export default function BrandAdminPage() {
           <div>
             <h1 className="text-3xl font-bold">{t("brandadmin.title")}</h1>
             <p className="text-sm text-base-content/70">
-              {email ? t("brandadmin.logged_in_as", { email }) : t("brandadmin.checking_session")}
+              {email
+                ? t("brandadmin.logged_in_as", { email })
+                : t("brandadmin.checking_session")}
             </p>
           </div>
           <div className="flex gap-2">
@@ -262,7 +349,9 @@ export default function BrandAdminPage() {
           <div className="flex flex-col gap-2 md:flex-row md:items-end">
             <div className="form-control">
               <label className="label">
-                <span className="label-text">{t("brandadmin.search_label")}</span>
+                <span className="label-text">
+                  {t("brandadmin.search_label")}
+                </span>
               </label>
               <input
                 className="input input-bordered input-sm w-full md:w-64"
@@ -277,7 +366,9 @@ export default function BrandAdminPage() {
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">{t("brandadmin.sort_label")}</span>
+                <span className="label-text">
+                  {t("brandadmin.sort_label")}
+                </span>
               </label>
               <select
                 className="select select-bordered select-sm"
@@ -310,7 +401,9 @@ export default function BrandAdminPage() {
                       <th>{t("brandadmin.table_name")}</th>
                       <th>{t("brandadmin.table_created")}</th>
                       <th>{t("brandadmin.table_updated")}</th>
-                      <th className="text-right">{t("brandadmin.table_actions")}</th>
+                      <th className="text-right">
+                        {t("brandadmin.table_actions")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -352,28 +445,14 @@ export default function BrandAdminPage() {
                 </table>
               </div>
 
-              <div className="flex justify-end items-center gap-3 mt-3 text-sm">
-                <span>
-                  {t("brandadmin.page_info", { page: pageNumber, total: totalPages })}
-                </span>
-                <button
-                  className="btn btn-xs"
-                  disabled={pageNumber <= 1}
-                  onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
-                  type="button"
-                >
-                  ◀
-                </button>
-                <button
-                  className="btn btn-xs"
-                  disabled={pageNumber >= totalPages}
-                  onClick={() =>
-                    setPageNumber((p) => (p < totalPages ? p + 1 : p))
-                  }
-                  type="button"
-                >
-                  ▶
-                </button>
+              <div className="mt-4 flex justify-between items-center text-sm">
+                {renderPageButtons()}
+                <div className="text-base-content/70">
+                  {t("brandadmin.page_info", {
+                    page: pageNumber,
+                    total: totalPages,
+                  })}
+                </div>
               </div>
             </>
           )}
@@ -382,7 +461,6 @@ export default function BrandAdminPage() {
 
       <Footer />
 
-      {/* MODALE */}
       <AddBrandModal
         isOpen={activeModal === "add"}
         onClose={closeModal}

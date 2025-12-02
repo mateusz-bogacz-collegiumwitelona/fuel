@@ -14,4 +14,5 @@ export default [
   route("admin_admin", "routes/admin-admin.tsx"),
   route("user_admin", "routes/user-admin.tsx"),
   route("brand_admin", "routes/brand-admin.tsx"),
+  route("proposals_admin", "routes/proposals-admin.tsx"),
 ] satisfies RouteConfig;

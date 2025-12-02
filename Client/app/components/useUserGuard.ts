@@ -1,4 +1,3 @@
-// app/components/useUserGuard.ts
 import * as React from "react";
 import { API_BASE } from "./api";
 

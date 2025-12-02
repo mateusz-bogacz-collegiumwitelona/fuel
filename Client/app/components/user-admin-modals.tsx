@@ -54,7 +54,6 @@ function BaseModal({ isOpen, title, children, onClose }: BaseModalProps) {
   );
 }
 
-/* ---------------------- MODAL ZMIANY ROLI ---------------------- */
 
 type ChangeRoleModalProps = {
   isOpen: boolean;
@@ -135,7 +134,6 @@ export function ChangeRoleModal({
   );
 }
 
-/* ---------------------- MODAL BANA (LOCK-OUT) ---------------------- */
 
 type BanUserModalProps = {
   isOpen: boolean;
@@ -251,7 +249,6 @@ export function BanUserModal({
   );
 }
 
-/* ---------------------- MODAL SZCZEGÓŁÓW BANA ---------------------- */
 
 type ReviewBanModalProps = {
   isOpen: boolean;
@@ -324,7 +321,6 @@ export function ReviewBanModal({
   );
 }
 
-/* ---------------------- MODAL ODBLOKOWANIA ---------------------- */
 
 type UnlockUserModalProps = {
   isOpen: boolean;

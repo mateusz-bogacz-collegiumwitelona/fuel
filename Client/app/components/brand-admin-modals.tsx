@@ -43,8 +43,6 @@ function BaseModal({ isOpen, title, children, onClose }: BaseModalProps) {
   );
 }
 
-/* ---------------------- MODAL DODAWANIA MARKI ---------------------- */
-
 type AddBrandModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -99,7 +97,6 @@ export function AddBrandModal({
   );
 }
 
-/* ---------------------- MODAL EDYCJI MARKI ---------------------- */
 
 type EditBrandModalProps = {
   isOpen: boolean;
@@ -165,7 +162,6 @@ export function EditBrandModal({
   );
 }
 
-/* ---------------------- MODAL USUWANIA MARKI ---------------------- */
 
 type DeleteBrandModalProps = {
   isOpen: boolean;

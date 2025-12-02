@@ -18,8 +18,7 @@ import type {
 
 import { useAdminGuard } from "../components/useAdminGuard";
 import { useTranslation } from "react-i18next";
-
-const API_BASE = "http://localhost:5111";
+import { API_BASE } from "../components/api";
 
 type UserListResponseData = {
   items: AdminUser[];
@@ -70,7 +69,6 @@ export default function UserAdminPage() {
         sortDirection,
       );
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, pageNumber, pageSize, search, sortBy, sortDirection]);
 
   async function loadUsersFromApi(
@@ -186,7 +184,9 @@ export default function UserAdminPage() {
       }
     } catch (e: any) {
       console.error(e);
-      setBanInfoError(e?.message ?? t("useradmin.error_fetch_baninfo_fallback"));
+      setBanInfoError(
+        e?.message ?? t("useradmin.error_fetch_baninfo_fallback"),
+      );
       setBanInfo(null);
     } finally {
       setBanInfoLoading(false);
@@ -235,7 +235,11 @@ export default function UserAdminPage() {
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : t("useradmin.error_change_role_fallback"));
+      alert(
+        e instanceof Error
+          ? e.message
+          : t("useradmin.error_change_role_fallback"),
+      );
     }
   };
 
@@ -259,7 +263,9 @@ export default function UserAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(t("useradmin.error_ban", { status: res.status, text }));
+        throw new Error(
+          t("useradmin.error_ban", { status: res.status, text }),
+        );
       }
 
       await loadUsersFromApi(
@@ -272,7 +278,9 @@ export default function UserAdminPage() {
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : t("useradmin.error_ban_fallback"));
+      alert(
+        e instanceof Error ? e.message : t("useradmin.error_ban_fallback"),
+      );
     }
   };
 
@@ -293,7 +301,9 @@ export default function UserAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(t("useradmin.error_unlock", { status: res.status, text }));
+        throw new Error(
+          t("useradmin.error_unlock", { status: res.status, text }),
+        );
       }
 
       await loadUsersFromApi(
@@ -306,9 +316,81 @@ export default function UserAdminPage() {
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : t("useradmin.error_unlock_fallback"));
+      alert(
+        e instanceof Error ? e.message : t("useradmin.error_unlock_fallback"),
+      );
     }
   };
+
+
+  const goToPage = (p: number) => {
+    if (p < 1 || p > totalPages || p === pageNumber) return;
+    setPageNumber(p);
+  };
+
+  function renderPageButtons() {
+    const pages: number[] = [];
+    const windowSize = 5;
+    let start = Math.max(1, pageNumber - Math.floor(windowSize / 2));
+    let end = start + windowSize - 1;
+
+    if (end > totalPages) {
+      end = totalPages;
+      start = Math.max(1, end - windowSize + 1);
+    }
+
+    for (let i = start; i <= end; i++) pages.push(i);
+
+    return (
+      <div className="flex items-center gap-2">
+        <button
+          className="btn btn-sm"
+          onClick={() => goToPage(1)}
+          disabled={pageNumber === 1}
+          type="button"
+        >
+          «1
+        </button>
+
+        <button
+          className="btn btn-sm"
+          onClick={() => goToPage(pageNumber - 1)}
+          disabled={pageNumber === 1}
+          type="button"
+        >
+          ←
+        </button>
+
+        {pages.map((p) => (
+          <button
+            key={p}
+            className={`btn btn-sm ${p === pageNumber ? "btn-active" : ""}`}
+            onClick={() => goToPage(p)}
+            type="button"
+          >
+            {p}
+          </button>
+        ))}
+
+        <button
+          className="btn btn-sm"
+          onClick={() => goToPage(pageNumber + 1)}
+          disabled={pageNumber === totalPages}
+          type="button"
+        >
+          →
+        </button>
+        <button
+          className="btn btn-sm"
+          onClick={() => goToPage(totalPages)}
+          disabled={pageNumber === totalPages}
+          type="button"
+        >
+          {totalPages} »
+        </button>
+      </div>
+    );
+  }
 
   if (state === "checking") {
     return (
@@ -331,7 +413,9 @@ export default function UserAdminPage() {
           <div>
             <h1 className="text-3xl font-bold">{t("useradmin.title")}</h1>
             <p className="text-sm text-base-content/70">
-              {email ? t("useradmin.logged_in_as", { email }) : t("useradmin.checking_session")}
+              {email
+                ? t("useradmin.logged_in_as", { email })
+                : t("useradmin.checking_session")}
             </p>
           </div>
           <a href="/admin-dashboard" className="btn btn-outline btn-sm">
@@ -339,12 +423,14 @@ export default function UserAdminPage() {
           </a>
         </div>
 
-        {/* FILTRY / SZUKAJKA */}
+
         <div className="bg-base-300 rounded-xl p-4 shadow-md mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col gap-2 md:flex-row md:items-end">
             <div className="form-control">
               <label className="label">
-                <span className="label-text">{t("useradmin.search_label")}</span>
+                <span className="label-text">
+                  {t("useradmin.search_label")}
+                </span>
               </label>
               <input
                 className="input input-bordered input-sm w-full md:w-64"
@@ -369,17 +455,25 @@ export default function UserAdminPage() {
                   setPageNumber(1);
                 }}
               >
-                <option value="username">{t("useradmin.sort_username")}</option>
+                <option value="username">
+                  {t("useradmin.sort_username")}
+                </option>
                 <option value="email">{t("useradmin.sort_email")}</option>
                 <option value="roles">{t("useradmin.sort_roles")}</option>
-                <option value="isBanned">{t("useradmin.sort_isBanned")}</option>
-                <option value="createdAt">{t("useradmin.sort_createdAt")}</option>
+                <option value="isBanned">
+                  {t("useradmin.sort_isBanned")}
+                </option>
+                <option value="createdAt">
+                  {t("useradmin.sort_createdAt")}
+                </option>
               </select>
             </div>
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">{t("useradmin.sort_dir_label")}</span>
+                <span className="label-text">
+                  {t("useradmin.sort_dir_label")}
+                </span>
               </label>
               <select
                 className="select select-bordered select-sm"
@@ -395,7 +489,7 @@ export default function UserAdminPage() {
           </div>
         </div>
 
-        {/* TABELA UŻYTKOWNIKÓW */}
+
         <div className="bg-base-300 rounded-xl p-4 shadow-md">
           {loading ? (
             <div className="text-sm">{t("useradmin.loading")}</div>
@@ -415,7 +509,9 @@ export default function UserAdminPage() {
                       <th>{t("useradmin.table_roles")}</th>
                       <th>{t("useradmin.table_created")}</th>
                       <th>{t("useradmin.table_status")}</th>
-                      <th className="text-right">{t("useradmin.table_actions")}</th>
+                      <th className="text-right">
+                        {t("useradmin.table_actions")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -485,28 +581,14 @@ export default function UserAdminPage() {
                 </table>
               </div>
 
-              <div className="flex justify-end items-center gap-3 mt-3 text-sm">
-                <span>
-                  {t("useradmin.page_info", { page: pageNumber, total: totalPages })}
-                </span>
-                <button
-                  className="btn btn-xs"
-                  disabled={pageNumber <= 1}
-                  onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
-                  type="button"
-                >
-                  ◀
-                </button>
-                <button
-                  className="btn btn-xs"
-                  disabled={pageNumber >= totalPages}
-                  onClick={() =>
-                    setPageNumber((p) => (p < totalPages ? p + 1 : p))
-                  }
-                  type="button"
-                >
-                  ▶
-                </button>
+              <div className="mt-4 flex justify-between items-center text-sm">
+                {renderPageButtons()}
+                <div className="text-base-content/70">
+                  {t("useradmin.page_info", {
+                    page: pageNumber,
+                    total: totalPages,
+                  })}
+                </div>
               </div>
             </>
           )}
@@ -515,7 +597,6 @@ export default function UserAdminPage() {
 
       <Footer />
 
-      {/* MODALE */}
       <ChangeRoleModal
         isOpen={activeModal === "role"}
         onClose={closeModal}

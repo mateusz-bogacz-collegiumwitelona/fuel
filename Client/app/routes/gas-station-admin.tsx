@@ -15,8 +15,7 @@ import type {
 
 import { useAdminGuard } from "../components/useAdminGuard";
 import { useTranslation } from "react-i18next";
-
-const API_BASE = "http://localhost:5111";
+import { API_BASE } from "../components/api";
 
 type StationListResponseData = {
   items: AdminStation[];
@@ -50,7 +49,6 @@ export default function GasStationAdminPage() {
     (async () => {
       await loadStationsFromApi(pageNumber, pageSize, search);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, pageNumber, pageSize, search, t]);
 
   async function loadStationsFromApi(
@@ -131,7 +129,6 @@ export default function GasStationAdminPage() {
     setSelectedStation(null);
   };
 
-  /* ------------------ DODAWANIE / EDYCJA / USUWANIE ------------------ */
 
   const handleAddConfirm = async (values: StationFormValues) => {
     try {
@@ -168,7 +165,9 @@ export default function GasStationAdminPage() {
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : t("stationadmin.error_add_fallback"));
+      alert(
+        e instanceof Error ? e.message : t("stationadmin.error_add_fallback"),
+      );
     }
   };
 
@@ -194,7 +193,7 @@ export default function GasStationAdminPage() {
       if (typeof values.longitude === "number")
         body.newLongitude = values.longitude;
       if (values.fuelTypes && values.fuelTypes.length > 0) {
-        body.fuelTypes = values.fuelTypes.map((f) => ({
+        body.fuelType = values.fuelTypes.map((f) => ({
           code: f.code,
           price: f.price,
         }));
@@ -220,7 +219,11 @@ export default function GasStationAdminPage() {
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : t("stationadmin.error_edit_fallback"));
+      alert(
+        e instanceof Error
+          ? e.message
+          : t("stationadmin.error_edit_fallback"),
+      );
     }
   };
 
@@ -245,7 +248,10 @@ export default function GasStationAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        const msg = t("stationadmin.error_delete", { status: res.status, text });
+        const msg = t("stationadmin.error_delete", {
+          status: res.status,
+          text,
+        });
         throw new Error(msg);
       }
 
@@ -253,11 +259,84 @@ export default function GasStationAdminPage() {
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : t("stationadmin.error_delete_fallback"));
+      alert(
+        e instanceof Error
+          ? e.message
+          : t("stationadmin.error_delete_fallback"),
+      );
     }
   };
 
-  /* ------------------ RENDER ------------------ */
+
+  const goToPage = (p: number) => {
+    if (p < 1 || p > totalPages || p === pageNumber) return;
+    setPageNumber(p);
+  };
+
+  function renderPageButtons() {
+    const pages: number[] = [];
+    const windowSize = 5;
+    let start = Math.max(1, pageNumber - Math.floor(windowSize / 2));
+    let end = start + windowSize - 1;
+
+    if (end > totalPages) {
+      end = totalPages;
+      start = Math.max(1, end - windowSize + 1);
+    }
+
+    for (let i = start; i <= end; i++) pages.push(i);
+
+    return (
+      <div className="flex items-center gap-2">
+        <button
+          className="btn btn-sm"
+          onClick={() => goToPage(1)}
+          disabled={pageNumber === 1}
+          type="button"
+        >
+          «1
+        </button>
+
+        <button
+          className="btn btn-sm"
+          onClick={() => goToPage(pageNumber - 1)}
+          disabled={pageNumber === 1}
+          type="button"
+        >
+          ←
+        </button>
+
+        {pages.map((p) => (
+          <button
+            key={p}
+            className={`btn btn-sm ${p === pageNumber ? "btn-active" : ""}`}
+            onClick={() => goToPage(p)}
+            type="button"
+          >
+            {p}
+          </button>
+        ))}
+
+        <button
+          className="btn btn-sm"
+          onClick={() => goToPage(pageNumber + 1)}
+          disabled={pageNumber === totalPages}
+          type="button"
+        >
+          →
+        </button>
+        <button
+          className="btn btn-sm"
+          onClick={() => goToPage(totalPages)}
+          disabled={pageNumber === totalPages}
+          type="button"
+        >
+          {totalPages} »
+        </button>
+      </div>
+    );
+  }
+
 
   if (state === "checking") {
     return (
@@ -280,7 +359,9 @@ export default function GasStationAdminPage() {
           <div>
             <h1 className="text-3xl font-bold">{t("stationadmin.title")}</h1>
             <p className="text-sm text-base-content/70">
-              {email ? t("stationadmin.logged_in_as", { email }) : t("stationadmin.checking_session")}
+              {email
+                ? t("stationadmin.logged_in_as", { email })
+                : t("stationadmin.checking_session")}
             </p>
           </div>
           <div className="flex gap-2">
@@ -297,11 +378,12 @@ export default function GasStationAdminPage() {
           </div>
         </div>
 
-        {/* FILTR SZUKANIA */}
         <div className="bg-base-300 rounded-xl p-4 shadow-md mb-4">
           <div className="form-control w-full max-w-xs">
             <label className="label">
-              <span className="label-text">{t("stationadmin.search_label")}</span>
+              <span className="label-text">
+                {t("stationadmin.search_label")}
+              </span>
             </label>
             <input
               type="text"
@@ -316,7 +398,6 @@ export default function GasStationAdminPage() {
           </div>
         </div>
 
-        {/* TABELA */}
         <div className="bg-base-300 rounded-xl p-4 shadow-md">
           {loading ? (
             <div className="text-sm">{t("stationadmin.loading")}</div>
@@ -337,7 +418,9 @@ export default function GasStationAdminPage() {
                       <th>{t("stationadmin.table_postal")}</th>
                       <th>{t("stationadmin.table_created")}</th>
                       <th>{t("stationadmin.table_updated")}</th>
-                      <th className="text-right">{t("stationadmin.table_actions")}</th>
+                      <th className="text-right">
+                        {t("stationadmin.table_actions")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -386,28 +469,14 @@ export default function GasStationAdminPage() {
                 </table>
               </div>
 
-              <div className="flex justify-end items-center gap-3 mt-3 text-sm">
-                <span>
-                  {t("stationadmin.page_info", { page: pageNumber, total: totalPages })}
-                </span>
-                <button
-                  className="btn btn-xs"
-                  disabled={pageNumber <= 1}
-                  onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
-                  type="button"
-                >
-                  ◀
-                </button>
-                <button
-                  className="btn btn-xs"
-                  disabled={pageNumber >= totalPages}
-                  onClick={() =>
-                    setPageNumber((p) => (p < totalPages ? p + 1 : p))
-                  }
-                  type="button"
-                >
-                  ▶
-                </button>
+              <div className="mt-4 flex justify-between items-center text-sm">
+                {renderPageButtons()}
+                <div className="text-base-content/70">
+                  {t("stationadmin.page_info", {
+                    page: pageNumber,
+                    total: totalPages,
+                  })}
+                </div>
               </div>
             </>
           )}
