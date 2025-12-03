@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Minio;
 using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using Services.BackgroundServices;
@@ -217,35 +216,7 @@ var options = new ConfigurationOptions
 var redis = ConnectionMultiplexer.Connect(options);
 builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
 
-////minio configuration
-//builder.Services.Configure<MinIOSettings>(
-//    builder.Configuration.GetSection("MinIO")
-//    );
-
-////register minio client
-//builder.Services.AddSingleton<IMinioClient>(sp =>
-//{
-//    var settings = sp.GetRequiredService<IOptions<MinIOSettings>>().Value;
-//    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-//    var logger = loggerFactory.CreateLogger("MinIOConfig");
-
-//    logger.LogWarning("=== CONFIGURING MINIO CLIENT ===");
-//    logger.LogWarning("Endpoint: {Endpoint}", settings.Endpoint);
-//    logger.LogWarning("PublicUrl: {PublicUrl}", settings.PublicUrl);
-//    logger.LogWarning("AccessKey: {AccessKey}", settings.AccessKey);
-//    logger.LogWarning("BucketName: {BucketName}", settings.BucketName);
-//    logger.LogWarning("UseSSL: {UseSSL}", settings.UseSSL);
-
-//    var client = new MinioClient()
-//        .WithEndpoint(settings.Endpoint)
-//        .WithCredentials(settings.AccessKey, settings.SecretKey)
-//        .WithSSL(settings.UseSSL) 
-//        .Build();
-
-//    return client;
-//});
-
-//register blob client'
+//register blob client
 builder.Services.AddHostedService<BlobInitializer>();
 builder.Services.Configure<BlobConfig>(builder.Configuration.GetSection("Blob"));
 builder.Services.AddSingleton(sp =>
@@ -283,9 +254,6 @@ builder.Services.AddScoped<EmailBodys>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenFactory, TokenFactory>();
 builder.Services.AddScoped<CacheService>();
-
-//register s3 and blob (one of then deleting)
-//builder.Services.AddScoped<IStorage, S3ApiHelper>();
 builder.Services.AddScoped<IStorage, BlobApiHelper>();
 
 //register background services
