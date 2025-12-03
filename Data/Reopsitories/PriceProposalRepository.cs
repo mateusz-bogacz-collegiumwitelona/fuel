@@ -16,18 +16,18 @@ namespace Data.Repositories
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PriceProposalRepository> _logger;
-        private readonly IS3ApiHelper _s3ApiHelper;
+        private readonly IStorage _storage;
         private readonly IConfiguration _config;
 
         public PriceProposalRepository(
             ApplicationDbContext context,
             ILogger<PriceProposalRepository> logger,
-            IS3ApiHelper s3ApiHelper,
+            IStorage s3ApiHelper,
             IConfiguration config)
         {
             _context = context;
             _logger = logger;
-            _s3ApiHelper = s3ApiHelper;
+            _storage = s3ApiHelper;
             _config = config;
         }
 
@@ -78,7 +78,7 @@ namespace Data.Repositories
 
                 await using var photoStream = photo.OpenReadStream();
 
-                photoUrl = await _s3ApiHelper.UploadFileAsync(
+                photoUrl = await _storage.UploadFileAsync(
                     photoStream,
                     fileName,
                     contentType,
@@ -116,7 +116,7 @@ namespace Data.Repositories
                 if (!string.IsNullOrEmpty(photoUrl))
                 {
                     string bucketName = _config["MinIO:BucketName"] ?? "fuel-prices";  
-                    var deleted = await _s3ApiHelper.DeleteFileAsync(photoUrl, bucketName);
+                    var deleted = await _storage.DeleteFileAsync(photoUrl, bucketName);
 
                     if (deleted)
                     {
@@ -167,7 +167,7 @@ namespace Data.Repositories
             string bucketName = _config["MinIO:BucketName"] ?? "fuel-prices";
             string path = proposal.PhotoUrl;
 
-            string photoUrl = _s3ApiHelper.GetPublicUrl(path, bucketName);
+            string photoUrl = _storage.GetPublicUrl(path, bucketName);
 
             return new GetPriceProposalResponse
             {
