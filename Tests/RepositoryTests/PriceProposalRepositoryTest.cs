@@ -4,7 +4,9 @@ using Data.Helpers;
 using Data.Interfaces;
 using Data.Models;
 using Data.Repositories;
+using DTO.Responses;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -12,6 +14,7 @@ using Minio;
 using Moq;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
+using System.IO;
 using System.Text;
 using Xunit.Abstractions;
 
@@ -223,6 +226,291 @@ namespace Tests.RepositoryTests
                 It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)),
                 Times.Once);
             _output.WriteLine("Success, GetPriceProposal returns null when given a bad token");
+        }
+
+        [Fact]
+        public async Task GetAllPriceProposalTest_SuccessIfPendingProposalsReturned()
+        {
+            //Arrange
+            var proposal1 = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = _user,
+                UserId = _user.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = 1.0m,
+                Token = "",
+                PhotoUrl = "",
+                CreatedAt = DateTime.UtcNow,
+                Status = PriceProposalStatus.Pending,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+            var proposal2 = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = _user,
+                UserId = _user.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = 2.0m,
+                Token = "",
+                PhotoUrl = "",
+                CreatedAt = DateTime.UtcNow,
+                Status = PriceProposalStatus.Rejected,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+            var proposal3 = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = _user,
+                UserId = _user.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = 3.0m,
+                Token = "",
+                PhotoUrl = "",
+                CreatedAt = DateTime.UtcNow,
+                Status = PriceProposalStatus.Pending,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+            var proposal4 = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = _user,
+                UserId = _user.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = 4.0m,
+                Token = "",
+                PhotoUrl = "",
+                CreatedAt = DateTime.UtcNow,
+                Status = PriceProposalStatus.Accepted,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+            _context.PriceProposals.AddRange(proposal1, proposal2, proposal3, proposal4);
+            await _context.SaveChangesAsync();
+
+            var request = new TableRequest
+            {
+                Search = null,
+                SortBy = null,
+                SortDirection = null
+            };
+            //Act
+            var result = await _repository.GetAllPriceProposal(request);
+
+            //
+            Assert.NotEmpty(result);
+            Assert.Equal(2, result.Count());
+            Assert.Equal(proposal1.ProposedPrice, result.First().ProposedPrice);
+            Assert.Equal(proposal3.ProposedPrice, result.Skip(1).First().ProposedPrice);
+            _output.WriteLine("Success, GetAllPriceProposal returns all pending proposals.");
+        }
+
+        [Fact]
+        public async Task GetAllPriceProposalTest_FilteringAndSearch_SuccessIfPropTwoThenPropOne()
+        {
+            //Arrange
+            var returnUser = new ApplicationUser { Id = Guid.NewGuid(), UserName = "testName" };
+            var ignoredUser = new ApplicationUser { Id = Guid.NewGuid(), UserName = "ignored" };
+
+            _context.Users.AddRange(returnUser, ignoredUser);
+            var proposal1 = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = returnUser,
+                UserId = returnUser.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = 1.0m,
+                Token = "1",
+                PhotoUrl = "",
+                CreatedAt = DateTime.UtcNow,
+                Status = PriceProposalStatus.Pending,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+            var proposal2 = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = returnUser,
+                UserId = returnUser.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = 2.0m,
+                Token = "2",
+                PhotoUrl = "",
+                CreatedAt = DateTime.UtcNow.AddHours(-1),
+                Status = PriceProposalStatus.Pending,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+            var proposal3 = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = ignoredUser,
+                UserId = ignoredUser.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = 2.0m,
+                Token = "3",
+                PhotoUrl = "",
+                CreatedAt = DateTime.UtcNow.AddHours(-1),
+                Status = PriceProposalStatus.Pending,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+            _context.PriceProposals.AddRange(proposal1, proposal2, proposal3);
+            await _context.SaveChangesAsync();
+
+            var request = new TableRequest
+            {
+                Search = "testName",
+                SortBy = "createdat",
+                SortDirection = "asc"
+            };
+
+            //Act
+            var result = await _repository.GetAllPriceProposal(request);
+
+            //Assert
+            Assert.NotEmpty(result);
+            Assert.Equal(2, result.Count());
+            Assert.Equal("2", result.First().Token);
+            Assert.Equal("1", result.Skip(1).First().Token);
+            _output.WriteLine("Success, GetAllPriceProposal sorts and searches correctly");
+        }
+
+        [Fact]
+        public async Task ChangePriceProposalStatusTest_SuccessIfAccepted()
+        {
+            //Arrange
+            var admin = new ApplicationUser { Id = Guid.NewGuid(), UserName = "admin" };
+            _context.Users.Add(admin);
+            var proposal = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = _user,
+                UserId = _user.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = 1.0m,
+                Token = "1",
+                PhotoUrl = "",
+                CreatedAt = DateTime.UtcNow,
+                Status = PriceProposalStatus.Pending,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+
+            _context.PriceProposals.Add(proposal);
+            await _context.SaveChangesAsync();
+
+            //Act
+            var result = await _repository.ChangePriceProposalStatus(true, proposal, admin);
+
+            //Assert
+            Assert.Equal(PriceProposalStatus.Accepted, _context.PriceProposals.First().Status);
+            _output.WriteLine("Success, ChangePriceProposalStatus changes status to accepted.");
+        }
+
+        [Fact]
+        public async Task ChangePriceProposalStatusTest_SuccessIfRejected()
+        {
+            //Arrange
+            var admin = new ApplicationUser { Id = Guid.NewGuid(), UserName = "admin" };
+            _context.Users.Add(admin);
+            var proposal = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = _user,
+                UserId = _user.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = 1.0m,
+                Token = "1",
+                PhotoUrl = "",
+                CreatedAt = DateTime.UtcNow,
+                Status = PriceProposalStatus.Pending,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+
+            _context.PriceProposals.Add(proposal);
+            await _context.SaveChangesAsync();
+
+            //Act
+            var result = await _repository.ChangePriceProposalStatus(false, proposal, admin);
+
+            //Assert
+            Assert.Equal(PriceProposalStatus.Rejected, _context.PriceProposals.First().Status);
+            _output.WriteLine("Success, ChangePriceProposalStatus changes status to rejected.");
+        }
+
+        [Fact]
+        public async Task FindPriceProposalTest_SuccessIfProposalFound()
+        {
+            //Arrange
+            var proposal = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = _user,
+                UserId = _user.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = 1.0m,
+                Token = "123",
+                PhotoUrl = "",
+                CreatedAt = DateTime.UtcNow,
+                Status = PriceProposalStatus.Pending,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+
+            _context.PriceProposals.Add(proposal);
+            await _context.SaveChangesAsync();
+
+            //Act
+            var result = await _repository.FindPriceProposal("123");
+
+            //Assert
+            Assert.Equal(proposal.Id, result.Id);
+        }
+
+        [Fact]
+        public async Task FindPriceProposalTest_BadData_SuccessIfProposalNotFound()
+        {
+            //Arrange
+            var proposal = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = _user,
+                UserId = _user.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = 1.0m,
+                Token = "123",
+                PhotoUrl = "",
+                CreatedAt = DateTime.UtcNow,
+                Status = PriceProposalStatus.Pending,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+
+            _context.PriceProposals.Add(proposal);
+            await _context.SaveChangesAsync();
+
+            //Act
+            var result = await _repository.FindPriceProposal("321");
+
+            //Assert
+            Assert.Null(result);
+            _output.WriteLine("Success, FindPriceProposal returns null when token is bad");
         }
     }
 }
