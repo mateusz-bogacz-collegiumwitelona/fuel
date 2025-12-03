@@ -4,6 +4,8 @@ import Footer from "../Components/footer";
 
 const API_BASE = "http://localhost:5111";
 
+import { useTranslation } from "react-i18next";
+
 function normalizeRole(raw: unknown): string | null {
   if (!raw) return null;
 
@@ -70,15 +72,16 @@ async function fetchMe(): Promise<any | null> {
   }
 }
 
-
 export default function Login() {
+  const { t } = useTranslation();
+
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [message, setMessage] = React.useState("");
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setMessage("Logowanie...");
+    setMessage(t("login.logging_in"));
 
     try {
       const response = await fetch(`${API_BASE}/api/login`, {
@@ -102,7 +105,7 @@ export default function Login() {
         const serverMsg =
           (data && (data.message || data.error)) ??
           (data && Array.isArray(data.errors) && data.errors.join(", ")) ??
-          "Błędny email lub hasło";
+          t("login.invalid_credentials");
         setMessage(serverMsg);
         return;
       }
@@ -119,7 +122,7 @@ export default function Login() {
       // 1. rolę spróbuj wyciągnąć bezpośrednio z odpowiedzi logowania
       const roleFromBody = extractRoleLoose(data);
       if (roleFromBody) {
-        setMessage("Zalogowano pomyślnie!");
+        setMessage(t("login.success"));
         redirectByRole(roleFromBody);
         return;
       }
@@ -138,17 +141,17 @@ export default function Login() {
           }
         }
 
-        setMessage("Zalogowano pomyślnie!");
+        setMessage(t("login.success"));
         redirectByRole(meRole);
         return;
       }
 
       // 3. ostateczny fallback – brak roli, traktuj jako zwykłego usera
-      setMessage("Zalogowano pomyślnie!");
+      setMessage(t("login.success"));
       redirectByRole(null);
     } catch (error) {
       console.error(error);
-      setMessage("Błąd połączenia z serwerem");
+      setMessage(t("login.connection_error"));
     }
   };
 
@@ -161,6 +164,7 @@ export default function Login() {
         redirectByRole(meRole);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -172,11 +176,11 @@ export default function Login() {
           onSubmit={handleLogin}
           className="bg-base-300 p-8 rounded-2xl shadow-lg flex flex-col gap-4 w-full max-w-sm"
         >
-          <h2 className="text-2xl font-bold text-center mb-2">Logowanie</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">{t("login.title")}</h2>
 
           <input
             type="email"
-            placeholder="Email"
+            placeholder={t("login.email_placeholder")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -185,7 +189,7 @@ export default function Login() {
 
           <input
             type="password"
-            placeholder="Hasło"
+            placeholder={t("login.password_placeholder")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -193,7 +197,7 @@ export default function Login() {
           />
 
           <button type="submit" className="btn btn-info">
-            Zaloguj
+            {t("login.submit")}
           </button>
 
           {message && (

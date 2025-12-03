@@ -65,7 +65,8 @@
     "street": "Ulica",
     "action": "Akcje",
     "map": "Mapa",
-    "page": "Strona"
+    "page": "Strona",
+    "nostation2": "Brak stacji spełniających kryteria wyszukiwania"
   },
 
   "stations": {
@@ -95,7 +96,8 @@
       "brands": "Marki",
       "users": "Użytkownicy",
       "stations": "Stacje",
-      "logout": "Wyloguj"
+      "logout": "Wyloguj",
+      "proposaladmin": "Zaproponowane zmiany"
     }
   },
 
@@ -137,11 +139,8 @@
   },
 
   "proposal": {
-  "proposaladd": "Zgłoś propozycję stacji lub zmian na niej",
+  "proposaladd": "Zgłoś zmianę stacji",
   "back": "← Powrót do dashboardu",
-  "choose_mode": "Wybierz czy chcesz <strong>dodać nową stację</strong> czy <strong>zgłosić zmianę</strong> dla istniejącej.",
-  "add_station": "Dodaj stację",
-  "edit_existing": "Zmień istniejącą",
   "select_station_title": "Wybierz stację z listy (możesz filtrować po marce)",
   "filter_brand_placeholder": "Filtruj po marce (np. Orlen)",
   "refresh_list": "Odśwież listę",
@@ -383,5 +382,179 @@
   "save_settings": "Zapisz ustawienia",
   "cancel": "Anuluj",
   "changing_text": "Zmienianie..."
-}
+},
+
+"proposaladmin": {
+  "title": "Panel administracyjny – propozycje cen",
+  "logged_in_as": "Zalogowano jako: {{email}}",
+  "checking_session": "Sprawdzanie sesji administratora...",
+  "back_to_admin": "← Powrót do panelu administratora",
+  "search_label": "Szukaj (użytkownik, marka, adres, paliwo, cena)",
+  "search_placeholder": "np. Orlen, ON, 6.35",
+  "sort_label": "Sortowanie",
+  "sort_option_createdat": "Data zgłoszenia",
+  "sort_option_username": "Nazwa użytkownika",
+  "sort_option_brandname": "Marka stacji",
+  "sort_option_city": "Miasto",
+  "sort_option_fuelname": "Rodzaj paliwa",
+  "sort_option_fuelcode": "Kod paliwa",
+  "sort_option_proposedprice": "Zaproponowana cena",
+  "sort_dir_label": "Kierunek sortowania",
+  "sort_dir_desc": "Najnowsze najpierw",
+  "sort_dir_asc": "Najstarsze najpierw",
+  "total_items_label": "Łącznie pozycji (paliw):",
+  "loading": "Ładowanie propozycji...",
+  "error_fetch": "Błąd pobierania propozycji cen ({{status}}): {{text}}",
+  "error_fetch_fallback": "Nie udało się pobrać listy propozycji cen.",
+  "error_unexpected_response": "Nieoczekiwany format odpowiedzi propozycji cen.",
+  "error_change_status": "Nie udało się zmienić statusu propozycji ({{status}}).",
+  "modal_error_update": "Nie udało się zaktualizować statusu propozycji.",
+  "modal_error_accept_all": "Nie udało się zaakceptować wszystkich propozycji.",
+  "modal_error_reject_all": "Nie udało się odrzucić wszystkich propozycji.",
+  "no_items": "Brak oczekujących propozycji cen na tej stronie.",
+  "th_hash": "#",
+  "th_user": "Użytkownik",
+  "th_station": "Stacja",
+  "th_address": "Adres",
+  "th_count": "Liczba paliw",
+  "th_fuels": "Paliwa",
+  "th_date": "Data",
+  "th_actions": "Akcje",
+  "btn_review": "Przejrzyj",
+  "page_info": "Strona {{page}} / {{total}}"
+},
+
+"login": {
+  "title": "Logowanie",
+  "email_placeholder": "Email",
+  "password_placeholder": "Hasło",
+  "submit": "Zaloguj",
+  "logging_in": "Logowanie...",
+  "invalid_credentials": "Błędny email lub hasło",
+  "success": "Zalogowano pomyślnie!",
+  "connection_error": "Błąd połączenia z serwerem"
+},
+
+"brand-admin": {
+  "add_title": "Dodaj nową markę",
+  "add_label_name": "Nazwa marki (np. Orlen)",
+  "cancel": "Anuluj",
+  "save": "Zapisz",
+  "edit_title": "Edytuj markę",
+  "current_name_label": "Aktualna nazwa:",
+  "edit_new_name_label": "Nowa nazwa marki",
+  "save_changes": "Zapisz zmiany",
+  "delete_title": "Usuń markę",
+  "delete_confirm": "Czy na pewno chcesz usunąć markę {{name}}?",
+  "delete_warning": "Operacja jest nieodwracalna. Zostaną usunięte wszystkie stacje i dane powiązane z tą marką (zgodnie z regułami cascade delete).",
+  "delete_confirm_button": "Usuń"
+},
+
+"proposal-admin": {
+  "review_title": "Przegląd propozycji cen",
+  "user_label": "Użytkownik",
+  "station_label": "Stacja",
+  "submitted_label": "Zgłoszono",
+  "loading_details": "Ładowanie szczegółów zgłoszenia...",
+  "close": "Zamknij",
+
+  "table": {
+    "th_hash": "#",
+    "th_fuel": "Paliwo",
+    "th_code": "Kod",
+    "th_price": "Proponowana cena [PLN]",
+    "th_status": "Status",
+    "th_actions": "Akcje"
+  },
+
+  "status": {
+    "pending": "Oczekuje",
+    "accepted": "Zaakceptowana",
+    "rejected": "Odrzucona"
+  },
+
+  "btn": {
+    "accept": "akceptuj",
+    "reject": "odrzuć",
+    "accept_all": "Akceptuj wszystkie",
+    "reject_all": "Odrzuć wszystkie"
+  },
+
+  "processing": "Przetwarzanie…",
+
+  "photo_title": "Zdjęcie potwierdzające",
+  "photo_loading": "Ładowanie zdjęcia…",
+  "photo_alt": "Zdjęcie potwierdzające"
+},
+
+"user-admin": {
+  "change_role_title": "Zmień rolę użytkownika",
+  "user_label": "Użytkownik",
+  "change_role_new_label": "Nowa rola",
+  "role_user": "User",
+  "role_admin": "Admin",
+
+  "ban_title": "Zbanuj użytkownika",
+  "ban_confirm_user": "Zablokujesz dostęp dla: {{user}}",
+  "ban_reason_label": "Powód bana",
+  "ban_permanent_label": "Ban permanentny",
+  "ban_days_label": "Liczba dni bana",
+  "ban_note": "Użytkownik nie będzie mógł się logować przez czas trwania bana.",
+  "ban_submit": "Zbanuj",
+
+  "review_ban_title": "Szczegóły bana",
+  "review_ban_loading": "Ładowanie informacji o banie...",
+  "review_ban_no_ban": "Brak aktywnego bana dla tego użytkownika.",
+  "review_ban_reason_label": "Powód",
+  "review_ban_banned_at_label": "Zbanowany",
+  "review_ban_banned_until_label": "Ban ważny do",
+  "review_ban_permanent": "permanentny",
+  "review_ban_by_label": "Nałożył",
+
+  "unlock_title": "Odblokuj użytkownika",
+  "unlock_confirm": "Czy na pewno chcesz zdjąć bana z użytkownika {{user}}?",
+  "unlock_confirm_button": "Odblokuj"
+},
+
+  "station-admin": {
+    "add_title": "Dodaj stację paliw",
+    "brand_label": "Marka / nazwa stacji",
+    "city_label": "Miasto",
+    "street_label": "Ulica",
+    "house_label": "Numer budynku",
+    "postal_label": "Kod pocztowy",
+    "lat_label": "lat",
+    "lng_label": "lng",
+    "geocode_button": "Pobierz współrzędne z adresu",
+    "geocode_loading": "Pobieranie współrzędnych...",
+    "geocode_missing_address": "Podaj co najmniej miasto, ulicę i numer budynku.",
+    "geocode_failed": "Nie udało się pobrać współrzędnych dla tego adresu.",
+    "geocode_not_found": "Nie znaleziono współrzędnych dla podanego adresu.",
+    "geocode_error": "Błąd geokodowania",
+    "no_content": "brak treści",
+
+    "fuel_section_title": "Ceny paliw",
+    "fuel_code_label": "Kod (np. PB95)",
+    "fuel_price_label": "Cena",
+    "fuel_add_button": "+ Dodaj paliwo",
+    "remove_button": "usuń",
+
+    "edit_title": "Edytuj stację paliw",
+    "edit_editing_label": "Edytujesz stację:",
+    "details_error": "Nie udało się pobrać danych stacji",
+    "details_error_fallback": "Nie udało się pobrać danych stacji do edycji.",
+
+    "save_changes": "Zapisz zmiany",
+
+    "delete_title": "Usuń stację paliw",
+    "delete_confirm": "Czy na pewno chcesz usunąć stację {{station}}?",
+    "delete_irreversible": "Tej operacji nie można cofnąć.",
+    "delete_button": "Usuń"
+  },
+  
+  "common": {
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "close": "Zamknij"
+  }
 }

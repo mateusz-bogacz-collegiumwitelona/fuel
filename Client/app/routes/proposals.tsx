@@ -20,7 +20,6 @@ function parseJwt(token: string | null) {
   }
 }
 
-type ProposalType = "add" | "edit";
 type FuelRow = { fuelCode: string; price: string };
 type StationProfile = {
   brandName?: string;
@@ -40,7 +39,6 @@ export default function ProposalPage() {
   const navigate = useNavigate();
 
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
-  const [type, setType] = React.useState<ProposalType>("add");
 
   const [brandName, setBrandName] = React.useState("");
   const [street, setStreet] = React.useState("");
@@ -63,7 +61,9 @@ export default function ProposalPage() {
 
   // address autocomplete
   const [address, setAddress] = React.useState<string>("");
-  const [addressSuggestions, setAddressSuggestions] = React.useState<Array<{ display_name: string; lat: string; lon: string }>>([]);
+  const [addressSuggestions, setAddressSuggestions] = React.useState<
+    Array<{ display_name: string; lat: string; lon: string }>
+  >([]);
   const [addressLoading, setAddressLoading] = React.useState<boolean>(false);
   const geocodeTimeoutRef = React.useRef<number | null>(null);
 
@@ -78,6 +78,7 @@ export default function ProposalPage() {
     const email = decoded?.email || decoded?.sub || null;
     if (email) setUserEmail(email);
     loadStationsForDropdown();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadStationsForDropdown(brandFilter?: string) {
@@ -112,11 +113,13 @@ export default function ProposalPage() {
 
       if (!res.ok) {
         const txt = await res.text();
-        throw new Error(`${t("proposal.error_loading_stations")}: ${res.status} - ${txt || t("proposal.no_content")}`);
+        throw new Error(
+          `${t("proposal.error_loading_stations")}: ${res.status} - ${txt || t("proposal.no_content")}`
+        );
       }
 
       const data = await res.json();
-      const items = Array.isArray(data.items) ? data.items : (Array.isArray(data.data) ? data.data : []);
+      const items = Array.isArray(data.items) ? data.items : Array.isArray(data.data) ? data.data : [];
       setStationsDropdown(items);
     } catch (e: any) {
       console.error(e);
@@ -167,7 +170,11 @@ export default function ProposalPage() {
     }
     setAddressLoading(true);
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=0&limit=5`);
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          query
+        )}&addressdetails=0&limit=5`
+      );
       if (!res.ok) return;
       const json = await res.json();
       setAddressSuggestions(Array.isArray(json) ? json : []);
@@ -211,16 +218,15 @@ export default function ProposalPage() {
     setLatitude(st.latitude ?? "");
     setLongitude(st.longitude ?? "");
     if (Array.isArray(st.fuelPrice)) {
-      setFuelRows(st.fuelPrice.map(f => ({ fuelCode: f.fuelCode, price: String(f.price) })));
+      setFuelRows(st.fuelPrice.map((f) => ({ fuelCode: f.fuelCode, price: String(f.price) })));
     }
   }
 
   function validateForm() {
-    if (type === "edit") {
-      if (selectedStationIndex === null) {
-        setError(t("proposal.error_select_station"));
-        return false;
-      }
+    // page only supports proposing changes for existing stations
+    if (selectedStationIndex === null) {
+      setError(t("proposal.error_select_station"));
+      return false;
     }
 
     if (!brandName || !street || !city || !houseNumber) {
@@ -275,13 +281,11 @@ export default function ProposalPage() {
       const token = localStorage.getItem("token");
 
       // build array of active rows with index so we can map results clearly
-      const activeRows = fuelRows
-        .map((r, i) => ({ ...r, index: i }))
-        .filter((r) => r.fuelCode);
+      const activeRows = fuelRows.map((r, i) => ({ ...r, index: i })).filter((r) => r.fuelCode);
 
-      // prepare target identification (if edit and station selected)
+      // prepare target identification (station selected)
       let targetStation: any = null;
-      if (type === "edit" && selectedStationIndex !== null) {
+      if (selectedStationIndex !== null) {
         targetStation = stationsDropdown[selectedStationIndex];
       }
 
@@ -294,19 +298,20 @@ export default function ProposalPage() {
 
         fd.append("FuelTypeCode", row.fuelCode);
 
-        // Normalize price: zamień przecinek na kropkę i rzuć Number
-        const normalized = String(row.price).replace(',', '.');
+        // Normalize price
+        const normalized = String(row.price).replace(",", ".");
         const priceNum = Number(normalized);
         fd.append("ProposedPrice", String(priceNum));
 
         // attach same photo for all rows
         if (globalFile) fd.append("Photo", globalFile, globalFile.name);
 
-        // target identification dla edit (jeśli wybrano)
+        // target identification for edit
         if (targetStation) {
           if (targetStation.brandName) fd.append("TargetBrandName", String(targetStation.brandName));
           if (targetStation.street) fd.append("TargetStreet", String(targetStation.street));
-          if (targetStation.houseNumber !== undefined) fd.append("TargetHouseNumber", String(targetStation.houseNumber));
+          if (targetStation.houseNumber !== undefined)
+            fd.append("TargetHouseNumber", String(targetStation.houseNumber));
           if (targetStation.city) fd.append("TargetCity", String(targetStation.city));
           const possibleIdKeys = ["id", "stationId", "station_id", "StationId", "Id"];
           for (const k of possibleIdKeys) {
@@ -336,7 +341,9 @@ export default function ProposalPage() {
         }).then(async (res) => {
           const text = await res.text();
           let parsed: any = null;
-          try { parsed = JSON.parse(text); } catch {}
+          try {
+            parsed = JSON.parse(text);
+          } catch {}
           if (!res.ok) {
             if (parsed && parsed.errors && Array.isArray(parsed.errors) && parsed.errors.length > 0) {
               const joined = parsed.errors.join("; ");
@@ -381,7 +388,9 @@ export default function ProposalPage() {
         }
         setGlobalFile(null);
       } else {
-        const finalMsg = `${successes.length > 0 ? t("proposal.successes") + ":\n- " + successes.join("\n- ") + "\n\n" : ""}${t("proposal.errors")}:\n- ${failures.join("\n- ")}`;
+        const finalMsg =
+          `${successes.length > 0 ? t("proposal.successes") + ":\n- " + successes.join("\n- ") + "\n\n" : ""}` +
+          `${t("proposal.errors")}:\n- ${failures.join("\n- ")}`;
         setError(finalMsg);
       }
     } catch (e: any) {
@@ -392,7 +401,6 @@ export default function ProposalPage() {
     }
   }
 
-
   return (
     <div className="min-h-screen bg-base-200 text-base-content">
       <Header />
@@ -400,109 +408,160 @@ export default function ProposalPage() {
       <main className="mx-auto max-w-4xl px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl md:text-3xl font-bold">{t("proposal.proposaladd")}</h1>
-          <button className="btn btn-outline btn-sm" onClick={() => navigate(-1)}>{t("proposal.back")}</button>
+          <button className="btn btn-outline btn-sm" onClick={() => navigate(-1)}>
+            {t("proposal.back")}
+          </button>
         </div>
 
+        {/* station selector — page only supports proposing changes */}
         <section className="bg-base-300 rounded-xl p-6 shadow-md mb-6">
-          <p className="text-sm text-base-content/70">{t("proposal.choose_mode")}</p>
+          <h2 className="font-semibold mb-3">{t("proposal.select_station_title")}</h2>
 
-          <div className="mt-4 flex gap-3">
-            <label className={`btn ${type === "add" ? "btn-primary" : "btn-outline"}`}>
-              <input type="radio" name="ptype" checked={type === "add"} onChange={() => { setType("add"); setSelectedStationIndex(null); setFetchedStation(null); }} className="hidden" />
-              {t("proposal.add_station")}
-            </label>
-            <label className={`btn ${type === "edit" ? "btn-primary" : "btn-outline"}`}>
-              <input type="radio" name="ptype" checked={type === "edit"} onChange={() => setType("edit")} className="hidden" />
-              {t("proposal.edit_existing")}
-            </label>
+          <div className="flex gap-2 mb-3">
+            <input
+              className="input input-bordered"
+              placeholder={t("proposal.filter_brand_placeholder")}
+              onChange={(e) => {
+                loadStationsForDropdown(e.target.value);
+              }}
+            />
+            <button className="btn" onClick={() => loadStationsForDropdown()}>
+              {t("proposal.refresh_list")}
+            </button>
           </div>
-        </section>
 
-        {type === "edit" && (
-          <section className="bg-base-300 rounded-xl p-6 shadow-md mb-6">
-            <h2 className="font-semibold mb-3">{t("proposal.select_station_title")}</h2>
-
-            <div className="flex gap-2 mb-3">
-              <input className="input input-bordered" placeholder={t("proposal.filter_brand_placeholder")} onChange={(e) => { loadStationsForDropdown(e.target.value); }} />
-              <button className="btn" onClick={() => loadStationsForDropdown()}>{t("proposal.refresh_list")}</button>
-            </div>
-
-            <div className="mb-3">
-              {fetchingStations ? (
-                <div>{t("proposal.loading_stations")}</div>
-              ) : (
-                <select
-                  className="select select-bordered w-full"
-                  value={selectedStationIndex !== null ? String(selectedStationIndex) : ""}
-                  onChange={(e) => onSelectExistingStation(e.target.value)}
-                >
-                  <option value="">-- {t("proposal.choose_station_option")} --</option>
-                  {stationsDropdown.map((s, idx) => (
-                    <option key={`${s.brandName}-${s.city}-${s.street}-${s.houseNumber}-${idx}`} value={String(idx)}>
-                      {s.brandName} — {s.city}, {s.street} {s.houseNumber}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            {fetchedStation && (
-              <div className="mt-4 bg-base-100 p-3 rounded-md">
-                <h3 className="font-semibold">{t("proposal.station_data_title")}</h3>
-                <p className="text-sm">{fetchedStation.brandName} — {fetchedStation.city}, {fetchedStation.street} {fetchedStation.houseNumber}</p>
-                <p className="text-sm text-base-content/70">{t("proposal.postalcode_label")} {fetchedStation.postalCode ?? '-'}</p>
-
-                <div className="mt-3">
-                  <h4 className="font-medium">{t("proposal.prices_last")}</h4>
-                  {fetchedStation.fuelPrice && fetchedStation.fuelPrice.length > 0 ? (
-                    <table className="table w-full mt-2">
-                      <thead><tr><th>{t("proposal.code")}</th><th>{t("proposal.price")}</th><th>{t("proposal.valid_from")}</th></tr></thead>
-                      <tbody>
-                        {fetchedStation.fuelPrice.map((fp, i) => (
-                          <tr key={i}><td>{fp.fuelCode}</td><td>{Number(fp.price).toFixed(2)}</td><td>{fp.validFrom ? new Date(fp.validFrom).toLocaleString() : '-'}</td></tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <p className="text-sm text-base-content/70">{t("proposal.no_price_data")}</p>
-                  )}
-                </div>
-              </div>
+          <div className="mb-3">
+            {fetchingStations ? (
+              <div>{t("proposal.loading_stations")}</div>
+            ) : (
+              <select
+                className="select select-bordered w-full"
+                value={selectedStationIndex !== null ? String(selectedStationIndex) : ""}
+                onChange={(e) => onSelectExistingStation(e.target.value)}
+              >
+                <option value="">-- {t("proposal.choose_station_option")} --</option>
+                {stationsDropdown.map((s, idx) => (
+                  <option key={`${s.brandName}-${s.city}-${s.street}-${s.houseNumber}-${idx}`} value={String(idx)}>
+                    {s.brandName} — {s.city}, {s.street} {s.houseNumber}
+                  </option>
+                ))}
+              </select>
             )}
-          </section>
-        )}
+          </div>
+
+          {fetchedStation && (
+            <div className="mt-4 bg-base-100 p-3 rounded-md">
+              <h3 className="font-semibold">{t("proposal.station_data_title")}</h3>
+              <p className="text-sm">
+                {fetchedStation.brandName} — {fetchedStation.city}, {fetchedStation.street} {fetchedStation.houseNumber}
+              </p>
+              <p className="text-sm text-base-content/70">
+                {t("proposal.postalcode_label")} {fetchedStation.postalCode ?? "-"}
+              </p>
+
+              <div className="mt-3">
+                <h4 className="font-medium">{t("proposal.prices_last")}</h4>
+                {fetchedStation.fuelPrice && fetchedStation.fuelPrice.length > 0 ? (
+                  <table className="table w-full mt-2">
+                    <thead>
+                      <tr>
+                        <th>{t("proposal.code")}</th>
+                        <th>{t("proposal.price")}</th>
+                        <th>{t("proposal.valid_from")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fetchedStation.fuelPrice.map((fp, i) => (
+                        <tr key={i}>
+                          <td>{fp.fuelCode}</td>
+                          <td>{Number(fp.price).toFixed(2)}</td>
+                          <td>{fp.validFrom ? new Date(fp.validFrom).toLocaleString() : "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="text-sm text-base-content/70">{t("proposal.no_price_data")}</p>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
 
         <form onSubmit={handleSubmit} className="bg-base-300 rounded-xl p-6 shadow-md mb-6">
           <h2 className="font-semibold mb-3">{t("proposal.form_title")}</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input className="input input-bordered" placeholder={t("proposal.brand_placeholder")} value={brandName} onChange={(e) => setBrandName(e.target.value)} />
-            <input className="input input-bordered" placeholder={t("proposal.city_placeholder")} value={city} onChange={(e) => setCity(e.target.value)} />
-            <input className="input input-bordered" placeholder={t("proposal.street_placeholder")} value={street} onChange={(e) => setStreet(e.target.value)} />
-            <input className="input input-bordered" placeholder={t("proposal.house_placeholder")} value={String(houseNumber)} onChange={(e) => setHouseNumber(e.target.value)} />
-            <input className="input input-bordered" placeholder={t("proposal.postalcode_placeholder")} value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
+            <input
+              className="input input-bordered"
+              placeholder={t("proposal.brand_placeholder")}
+              value={brandName}
+              onChange={(e) => setBrandName(e.target.value)}
+            />
+            <input
+              className="input input-bordered"
+              placeholder={t("proposal.city_placeholder")}
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+            />
+            <input
+              className="input input-bordered"
+              placeholder={t("proposal.street_placeholder")}
+              value={street}
+              onChange={(e) => setStreet(e.target.value)}
+            />
+            <input
+              className="input input-bordered"
+              placeholder={t("proposal.house_placeholder")}
+              value={String(houseNumber)}
+              onChange={(e) => setHouseNumber(e.target.value)}
+            />
+            <input
+              className="input input-bordered"
+              placeholder={t("proposal.postalcode_placeholder")}
+              value={postalCode}
+              onChange={(e) => setPostalCode(e.target.value)}
+            />
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-2">{t("proposal.address_label")}</label>
               <div className="relative">
-                <input type="text" placeholder={t("proposal.address_placeholder")} value={address} onChange={(e) => handleAddressChange(e.target.value)} className="input input-bordered w-full" />
+                <input
+                  type="text"
+                  placeholder={t("proposal.address_placeholder")}
+                  value={address}
+                  onChange={(e) => handleAddressChange(e.target.value)}
+                  className="input input-bordered w-full"
+                />
                 {addressLoading && <span className="loading loading-spinner loading-sm absolute right-2 top-2"></span>}
                 {addressSuggestions.length > 0 && (
                   <ul className="absolute z-50 bg-base-100 w-full mt-1 rounded-md shadow-lg max-h-52 overflow-auto">
                     {addressSuggestions.map((s, i) => (
-                      <li key={i} className="p-2 hover:bg-base-200 cursor-pointer" onClick={() => selectAddress(s)}>{s.display_name}</li>
+                      <li key={i} className="p-2 hover:bg-base-200 cursor-pointer" onClick={() => selectAddress(s)}>
+                        {s.display_name}
+                      </li>
                     ))}
                   </ul>
                 )}
               </div>
               <div className="mt-2 grid grid-cols-2 gap-3">
-                <input className="input input-bordered" placeholder={t("proposal.latitude_placeholder")} value={String(latitude)} onChange={(e) => setLatitude(e.target.value)} />
-                <input className="input input-bordered" placeholder={t("proposal.longitude_placeholder")} value={String(longitude)} onChange={(e) => setLongitude(e.target.value)} />
+                <input
+                  className="input input-bordered"
+                  placeholder={t("proposal.latitude_placeholder")}
+                  value={String(latitude)}
+                  onChange={(e) => setLatitude(e.target.value)}
+                />
+                <input
+                  className="input input-bordered"
+                  placeholder={t("proposal.longitude_placeholder")}
+                  value={String(longitude)}
+                  onChange={(e) => setLongitude(e.target.value)}
+                />
               </div>
             </div>
           </div>
 
-          {/* NEW: single photo for all prices */}
+          {/* single photo for all prices */}
           <div className="mt-4">
             <label className="block text-sm mb-1">{t("proposal.photo_label")}</label>
             <div className="text-sm text-base-content/70 mb-1">{t("proposal.photo_help")}</div>
@@ -526,20 +585,35 @@ export default function ProposalPage() {
             <div className="space-y-2">
               {fuelRows.map((r, idx) => (
                 <div key={idx} className="flex gap-2 items-center">
-                  <select className="select select-bordered w-1/2" value={r.fuelCode} onChange={(e) => updateFuelRow(idx, { fuelCode: e.target.value })}>
+                  <select
+                    className="select select-bordered w-1/2"
+                    value={r.fuelCode}
+                    onChange={(e) => updateFuelRow(idx, { fuelCode: e.target.value })}
+                  >
                     <option value="">{t("proposal.select_fuel_placeholder")}</option>
                     {AVAILABLE_FUEL_TYPES.map((ft) => (
-                      <option key={ft} value={ft}>{ft}</option>
+                      <option key={ft} value={ft}>
+                        {ft}
+                      </option>
                     ))}
                   </select>
 
-                  <input className="input input-bordered w-1/2" placeholder={t("proposal.price_placeholder")} value={r.price} onChange={(e) => updateFuelRow(idx, { price: e.target.value })} />
-                  <button type="button" className="btn btn-sm btn-outline" onClick={() => removeFuelRow(idx)}>{t("proposal.remove_button")}</button>
+                  <input
+                    className="input input-bordered w-1/2"
+                    placeholder={t("proposal.price_placeholder")}
+                    value={r.price}
+                    onChange={(e) => updateFuelRow(idx, { price: e.target.value })}
+                  />
+                  <button type="button" className="btn btn-sm btn-outline" onClick={() => removeFuelRow(idx)}>
+                    {t("proposal.remove_button")}
+                  </button>
                 </div>
               ))}
             </div>
             <div className="mt-2">
-              <button type="button" className="btn btn-sm" onClick={addFuelRow}>{t("proposal.add_fuel_button")}</button>
+              <button type="button" className="btn btn-sm" onClick={addFuelRow}>
+                {t("proposal.add_fuel_button")}
+              </button>
             </div>
           </div>
 
@@ -547,15 +621,32 @@ export default function ProposalPage() {
           {successMsg && <div className="mt-4 alert alert-success">{successMsg}</div>}
 
           <div className="mt-6 flex gap-2">
-            <button className="btn btn-primary" type="submit" disabled={submitting}>{submitting ? t("proposal.sending_text") : t("proposal.submit_button")}</button>
-            <button type="button" className="btn btn-outline" onClick={() => {
-              setBrandName(""); setStreet(""); setHouseNumber(""); setCity(""); setPostalCode(""); setLatitude(""); setLongitude(""); setFuelRows([{ fuelCode: 'PB95', price: '' }]);
-              if (globalPreview) { URL.revokeObjectURL(globalPreview); setGlobalPreview(null); }
-              setGlobalFile(null);
-            }}>{t("proposal.clear_button")}</button>
+            <button className="btn btn-primary" type="submit" disabled={submitting}>
+              {submitting ? t("proposal.sending_text") : t("proposal.submit_button")}
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => {
+                setBrandName("");
+                setStreet("");
+                setHouseNumber("");
+                setCity("");
+                setPostalCode("");
+                setLatitude("");
+                setLongitude("");
+                setFuelRows([{ fuelCode: "PB95", price: "" }]);
+                if (globalPreview) {
+                  URL.revokeObjectURL(globalPreview);
+                  setGlobalPreview(null);
+                }
+                setGlobalFile(null);
+              }}
+            >
+              {t("proposal.clear_button")}
+            </button>
           </div>
         </form>
-
       </main>
       <Footer />
     </div>

@@ -151,6 +151,7 @@ export default function Header() {
                   <li><a href="/brand_admin">{t("header.links.brands")}</a></li>
                   <li><a href="/user_admin">{t("header.links.users")}</a></li>
                   <li><a href="/gas_station_admin">{t("header.links.stations")}</a></li>
+                  <li><a href="/proposal-admin">{t("header.links.proposaladmin")}</a></li>
                 </>
               )}
 

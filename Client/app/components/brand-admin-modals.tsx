@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 
 export type AdminBrand = {
   name: string;
@@ -33,6 +34,7 @@ function BaseModal({ isOpen, title, children, onClose }: BaseModalProps) {
             className="btn btn-sm btn-ghost"
             onClick={onClose}
             type="button"
+            aria-label="Close"
           >
             ✕
           </button>
@@ -54,6 +56,7 @@ export function AddBrandModal({
   onClose,
   onConfirm,
 }: AddBrandModalProps) {
+  const { t } = useTranslation();
   const [name, setName] = React.useState("");
 
   React.useEffect(() => {
@@ -66,11 +69,11 @@ export function AddBrandModal({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Dodaj nową markę">
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("brand-admin.add_title")}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="form-control">
           <label className="label">
-            <span className="label-text">Nazwa marki (np. Orlen)</span>
+            <span className="label-text">{t("brand-admin.add_label_name")}</span>
           </label>
           <input
             className="input input-bordered input-sm"
@@ -86,17 +89,16 @@ export function AddBrandModal({
             className="btn btn-ghost btn-sm"
             onClick={onClose}
           >
-            Anuluj
+            {t("brand-admin.cancel")}
           </button>
           <button type="submit" className="btn btn-primary btn-sm">
-            Zapisz
+            {t("brand-admin.save")}
           </button>
         </div>
       </form>
     </BaseModal>
   );
 }
-
 
 type EditBrandModalProps = {
   isOpen: boolean;
@@ -111,6 +113,7 @@ export function EditBrandModal({
   brand,
   onConfirm,
 }: EditBrandModalProps) {
+  const { t } = useTranslation();
   const [newName, setNewName] = React.useState("");
 
   React.useEffect(() => {
@@ -127,15 +130,16 @@ export function EditBrandModal({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Edytuj markę">
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("brand-admin.edit_title")}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm">
-          Aktualna nazwa: <span className="font-semibold">{brand.name}</span>
+          <span className="text-sm">{t("brand-admin.current_name_label")}</span>{" "}
+          <span className="font-semibold">{brand.name}</span>
         </p>
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text">Nowa nazwa marki</span>
+            <span className="label-text">{t("brand-admin.edit_new_name_label")}</span>
           </label>
           <input
             className="input input-bordered input-sm"
@@ -151,17 +155,16 @@ export function EditBrandModal({
             className="btn btn-ghost btn-sm"
             onClick={onClose}
           >
-            Anuluj
+            {t("brand-admin.cancel")}
           </button>
           <button type="submit" className="btn btn-primary btn-sm">
-            Zapisz zmiany
+            {t("brand-admin.save_changes")}
           </button>
         </div>
       </form>
     </BaseModal>
   );
 }
-
 
 type DeleteBrandModalProps = {
   isOpen: boolean;
@@ -176,18 +179,17 @@ export function DeleteBrandModal({
   brand,
   onConfirm,
 }: DeleteBrandModalProps) {
+  const { t } = useTranslation();
   if (!brand) return null;
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Usuń markę">
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("brand-admin.delete_title")}>
       <p className="mb-4">
-        Czy na pewno chcesz usunąć markę{" "}
-        <span className="font-semibold">{brand.name}</span>?
+        {t("brand-admin.delete_confirm", { name: brand.name })}
       </p>
 
       <p className="text-xs text-error mb-4">
-        Operacja jest nieodwracalna. Zostaną usunięte wszystkie stacje i dane
-        powiązane z tą marką (zgodnie z regułami cascade delete).
+        {t("brand-admin.delete_warning")}
       </p>
 
       <div className="flex justify-end gap-2">
@@ -196,14 +198,14 @@ export function DeleteBrandModal({
           type="button"
           onClick={onClose}
         >
-          Anuluj
+          {t("brand-admin.cancel")}
         </button>
         <button
           className="btn btn-error btn-sm"
           type="button"
           onClick={onConfirm}
         >
-          Usuń
+          {t("brand-admin.delete_confirm_button")}
         </button>
       </div>
     </BaseModal>
