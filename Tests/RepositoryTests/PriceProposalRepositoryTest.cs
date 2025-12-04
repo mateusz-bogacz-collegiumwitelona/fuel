@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Minio;
 using Moq;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
@@ -25,11 +24,9 @@ namespace Tests.RepositoryTests
         private readonly ApplicationDbContext _context;
         private readonly PriceProposalRepository _repository;
         private readonly Mock<ILogger<PriceProposalRepository>> _loggerMock;
-        private readonly Mock<IS3ApiHelper> _s3ApiHelperMock;
         private readonly Mock<IConfiguration> _configMock;
         private readonly ITestOutputHelper _output;
-        private readonly Mock<IMinioClient> _minioMock;
-        private readonly Mock<ILogger<S3ApiHelper>> _helperLogMock;
+        private readonly Mock<IStorage> _storage;
 
         private readonly string _bucket = "proposal";
         private readonly Brand _brand = new() { Id= Guid.NewGuid(), Name = "Brand"};
@@ -41,6 +38,7 @@ namespace Tests.RepositoryTests
         public PriceProposalRepositoryTest(ITestOutputHelper output)
         {
             _output = output;
+            _storage = new Mock<IStorage>();
             var geometryFactory = NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -49,9 +47,6 @@ namespace Tests.RepositoryTests
             _context = new ApplicationDbContext(options);
             _loggerMock = new Mock<ILogger<PriceProposalRepository>>();
             _configMock = new Mock<IConfiguration>();
-            _minioMock = new Mock<IMinioClient>();
-            _helperLogMock = new Mock<ILogger<S3ApiHelper>>();
-            _s3ApiHelperMock = new Mock<IS3ApiHelper>(MockBehavior.Strict);
 
             _address = new StationAddress
             {
@@ -71,7 +66,7 @@ namespace Tests.RepositoryTests
                 AddressId = _address.Id
             };
 
-            _repository = new PriceProposalRepository(_context, _loggerMock.Object, _s3ApiHelperMock.Object, _configMock.Object);
+            _repository = new PriceProposalRepository(_context, _loggerMock.Object, _storage.Object, _configMock.Object);
 
             _context.Users.Add(_user);
             _context.StationAddress.Add(_address);
@@ -93,15 +88,15 @@ namespace Tests.RepositoryTests
             fileMock.Setup(f => f.OpenReadStream()).Returns(stream);
             return fileMock;
         }
-
+        
         [Fact]
         public async Task AddNewPriceProposalAsyncTest_SuccessIfFileUploaded()
         {
             //Arrange
             var extension = ".png";
             var file = MockFile(extension);
-            var url = "http://minio/test.jpg";
-            _s3ApiHelperMock.Setup(x => x.UploadFileAsync(
+            var url = "http://blob/test.jpg";
+            _storage.Setup(x => x.UploadFileAsync(
             It.IsAny<Stream>(),
             It.IsAny<string>(),
             It.IsAny<string>(),
@@ -113,7 +108,7 @@ namespace Tests.RepositoryTests
 
             //Assert
             Assert.True(result);
-            _s3ApiHelperMock.Verify(x => x.UploadFileAsync(
+            _storage.Verify(x => x.UploadFileAsync(
             It.IsAny<Stream>(),
             It.IsAny<string>(),
             It.IsAny<string>(),
@@ -131,8 +126,8 @@ namespace Tests.RepositoryTests
             //Arrange
             var extension = ".mp4";
             var file = MockFile(extension);
-            var url = "http://minio/test.jpg";
-            _s3ApiHelperMock.Setup(x => x.UploadFileAsync(
+            var url = "http://blob/test.jpg";
+            _storage.Setup(x => x.UploadFileAsync(
             It.IsAny<Stream>(),
             It.IsAny<string>(),
             It.IsAny<string>(),
@@ -144,7 +139,7 @@ namespace Tests.RepositoryTests
 
             //Assert
             Assert.Empty(_context.PriceProposals.ToList());
-            _s3ApiHelperMock.Verify(x => x.UploadFileAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never());
+            _storage.Verify(x => x.UploadFileAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never());
             _output.WriteLine("Success, AddNewPriceProposalAsyncTest doesnt add a proposal when it gets an unsuported extension");
         }
 
@@ -160,7 +155,7 @@ namespace Tests.RepositoryTests
 
             //Assert
             Assert.Empty(_context.PriceProposals.ToList());
-            _s3ApiHelperMock.Verify(x => x.UploadFileAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never());
+            _storage.Verify(x => x.UploadFileAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never());
             _output.WriteLine("Success, AddNewPriceProposalAsync doesn't add a proposal if UploadFileAsync returns a bad url");
         }
 
@@ -170,7 +165,7 @@ namespace Tests.RepositoryTests
             //Arrange
             var photoToken = "token";
             var path = "valid/path.jpg";
-            var url = "https://minio.com/valid/path123.jpg";
+            var url = "https://blob.com/valid/path123.jpg";
             var price = 5.0m;
             var createdAt = DateTime.UtcNow;
 
@@ -192,7 +187,7 @@ namespace Tests.RepositoryTests
             _context.PriceProposals.Add(proposal);
             await _context.SaveChangesAsync();
 
-            _s3ApiHelperMock.Setup(x => x.GetPublicUrl(path, _bucket)).Returns(url).Verifiable();
+            _storage.Setup(x => x.GetPublicUrl(path, _bucket)).Returns(url).Verifiable();
 
             //Act
             var result = await _repository.GetPriceProposal(photoToken);
@@ -216,7 +211,7 @@ namespace Tests.RepositoryTests
             var result = await _repository.GetPriceProposal(null);
 
             //Assert
-            _s3ApiHelperMock.Verify(x => x.GetPublicUrl(It.IsAny<string>(), It.IsAny<string>()), Times.Never());
+            _storage.Verify(x => x.GetPublicUrl(It.IsAny<string>(), It.IsAny<string>()), Times.Never());
             Assert.Null(result);
             _loggerMock.Verify(x => x.Log(
                 LogLevel.Warning,
@@ -513,4 +508,5 @@ namespace Tests.RepositoryTests
             _output.WriteLine("Success, FindPriceProposal returns null when token is bad");
         }
     }
+
 }
