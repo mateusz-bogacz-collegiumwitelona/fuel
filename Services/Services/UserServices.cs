@@ -4,8 +4,6 @@ using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;

@@ -1,6 +1,4 @@
-﻿using DTO.Requests;
-using FluentEmail.Core;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using System.Text.Json;
 
@@ -49,6 +47,11 @@ namespace Services.Helpers
 
             public const string PriceProposalPrefix = "priceproposals:";
             public const string PriceProposalByStation = "priceproposals:station";
+
+            public const string FuelPricePrefix = "fuelprice:";
+            public const string FuelPriceByStation = "fuelprices:station";
+            public const string FuelPriceByFuelType = "fuelprices:fueltype";
+            public const string FuelPriceComparison = "fuelprices:comparison";
         }
 
         public async Task<T?> GetOrSetAsync<T>(
@@ -126,7 +129,7 @@ namespace Services.Helpers
                 _logger.LogError(ex, "Error removing cache keys by pattern: {Pattern}", pattern);
             }
         }
-  
+
         public async Task InvalidateBrandCacheAsync()
         {
             await RemoveAsync(CacheKeys.AllBrands);
@@ -192,6 +195,24 @@ namespace Services.Helpers
             {
                 await RemoveByPatternAsync($"{CacheKeys.PriceProposalPrefix}*");
                 _logger.LogInformation("Invalidated all price proposal cache");
+            }
+        }
+
+        public async Task InvalidateFuelPriceCacheAsync(string? brandName = null, string? city = null)
+        {
+            if (!string.IsNullOrEmpty(brandName) && !string.IsNullOrEmpty(city))
+            {
+                var key = GenerateCacheKey($"{CacheKeys.FuelPriceByStation}:{brandName}:{city}");
+                await RemoveByPatternAsync($"{key}*");
+                _logger.LogInformation("Invalidated fuel price cache for station: {Brand} in {City}", brandName, city);
+            }
+            else
+            {
+                await RemoveByPatternAsync($"{CacheKeys.FuelPricePrefix}*");
+                await RemoveByPatternAsync($"{CacheKeys.FuelPriceByStation}*");
+                await RemoveByPatternAsync($"{CacheKeys.FuelPriceByFuelType}*");
+                await RemoveByPatternAsync($"{CacheKeys.FuelPriceComparison}*");
+                _logger.LogInformation("Invalidated all fuel price cache");
             }
         }
 

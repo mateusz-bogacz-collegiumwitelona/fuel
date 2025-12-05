@@ -75,15 +75,15 @@ namespace Data.Reopsitories
             };
 
             await _context.FuelTypes.AddAsync(fuelType);
-            
+
             var result = await _context.SaveChangesAsync();
-            
+
             return result > 0;
         }
 
-        public async Task<bool> EditFuelTypeAsync(FuelType fuelType, string? name, string? code )
+        public async Task<bool> EditFuelTypeAsync(FuelType fuelType, string? name, string? code)
         {
-            if(!string.IsNullOrEmpty(name))
+            if (!string.IsNullOrEmpty(name))
             {
                 fuelType.Name = name;
                 fuelType.UpdatedAt = DateTime.UtcNow;
@@ -107,5 +107,70 @@ namespace Data.Reopsitories
             var result = await _context.SaveChangesAsync();
             return result > 0;
         }
+
+        public async Task<bool> AssignFuelTypeToStationAsync(Guid fuelTypeId, Guid stationId, decimal price)
+        {
+            var station = await _context.Stations.FindAsync(stationId);
+
+            var fuelType = await _context.FuelTypes.FindAsync(fuelTypeId);
+
+            var existingFuelPrice = await _context.FuelPrices
+                .FirstOrDefaultAsync(fp => fp.StationId == stationId && fp.FuelTypeId == fuelTypeId);
+
+            if (existingFuelPrice != null)
+            {
+                _logger.LogInformation("FuelType with ID {FuelTypeId} is already assigned to Station with ID {StationId}.", fuelTypeId, stationId);
+                return false;
+            }
+
+            var fuelPrice = new FuelPrice
+            {
+                StationId = stationId,
+                FuelTypeId = fuelTypeId,
+                Price = price,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _context.FuelPrices.AddAsync(fuelPrice);
+            var result = await _context.SaveChangesAsync();
+            return result > 0;
+        }
+
+        public async Task<List<GetFuelPriceAndCodeResponse>> GetFuelPriceForStationAsync(FindStationRequest request)
+            => await _context.FuelPrices.Include(fp => fp.FuelType)
+                    .Where(fp =>
+                        fp.Station.Brand.Name == request.BrandName &&
+                        fp.Station.Address.Street == request.Street &&
+                        fp.Station.Address.HouseNumber == request.HouseNumber &&
+                        fp.Station.Address.City == request.City
+                    )
+                    .Select(fp => new GetFuelPriceAndCodeResponse
+                    {
+                        FuelCode = fp.FuelType.Code,
+                        Price = fp.Price,
+                        ValidFrom = fp.ValidFrom
+                    }
+                    ).ToListAsync();
+
+        public async Task<bool> ChangeFuelPriceAsync(Guid stationId, Guid fuelTypeId, decimal price)
+        {
+            var fuelPrice = await _context.FuelPrices.FirstOrDefaultAsync(fp => fp.StationId == stationId && fp.FuelTypeId == fuelTypeId);
+            
+            if (fuelPrice == null)
+            {
+                _logger.LogWarning("Fuel price not found for Station ID {StationId} and FuelType ID {FuelTypeId}.", stationId, fuelTypeId);
+                return false;
+            }
+            
+            fuelPrice.Price = price;
+            fuelPrice.UpdatedAt = DateTime.UtcNow;
+            fuelPrice.ValidFrom = DateTime.UtcNow;
+            
+            var result = await _context.SaveChangesAsync();
+            
+            return result > 0;
+        }
+
     }
 }
