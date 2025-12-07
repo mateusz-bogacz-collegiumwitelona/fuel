@@ -1,13 +1,11 @@
 ﻿using Azure.Storage.Blobs;
 using Data.Context;
 using Data.Interfaces;
-using Microsoft.AspNetCore.Authentication.Facebook;
+using Data.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
-using Moq;
+using Microsoft.Extensions.DependencyInjection.Extensions;using Moq;
 using StackExchange.Redis;
 using System.Security.Claims;
 
@@ -18,40 +16,43 @@ public class CustomAppFact : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+
         builder.ConfigureServices(services =>
         {
-            var identityAppDescriptor = services.SingleOrDefault(d => d.ServiceType.Name == "IConfigureOptions`1" && d.ImplementationType?.Name.Contains("IdentityCookieOptionsSetup") == true);
+            var identityAppDescriptor = services.SingleOrDefault(d =>
+                d.ServiceType.Name == "IConfigureOptions`1" &&
+                d.ImplementationType?.Name.Contains("IdentityCookieOptionsSetup") == true);
             if (identityAppDescriptor != null)
                 services.Remove(identityAppDescriptor);
+
             services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             });
-            var dbDescriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
 
+            var dbDescriptor = services.SingleOrDefault(d =>
+                d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
             if (dbDescriptor != null)
                 services.Remove(dbDescriptor);
+
             services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseInMemoryDatabase("TestDb");
             });
+
             var hostedServices = services.Where(s => s.ServiceType.Name.Contains("HostedService")).ToList();
             foreach (var hs in hostedServices)
                 services.Remove(hs);
 
-            var descriptor = services
-               .SingleOrDefault(s => s.ServiceType == typeof(IConfigureOptions<FacebookOptions>));
-
-            if (descriptor != null)
-                services.Remove(descriptor);
             var redisMock = new Mock<IConnectionMultiplexer>();
             services.RemoveAll<IConnectionMultiplexer>();
             services.AddSingleton(redisMock.Object);
+
             services.RemoveAll<BlobServiceClient>();
             var blobMock = new Mock<BlobServiceClient>();
             services.AddSingleton(blobMock.Object);
+
             services.RemoveAll<IStorage>();
             var storageMock = new Mock<IStorage>();
             services.AddSingleton(storageMock.Object);
@@ -67,9 +68,9 @@ public class CustomAppFact : WebApplicationFactory<Program>
                         {
                             var identity = new ClaimsIdentity(new[]
                             {
-                                    new Claim(ClaimTypes.Name, "TestAdmin"),
-                                    new Claim(ClaimTypes.Role, "Admin")
-                                }, "Test");
+                                new Claim(ClaimTypes.Name, "TestAdmin"),
+                                new Claim(ClaimTypes.Role, "Admin")
+                            }, "Test");
                             context.Principal = new ClaimsPrincipal(identity);
                             context.Success();
                         }
@@ -77,14 +78,23 @@ public class CustomAppFact : WebApplicationFactory<Program>
                     }
                 };
             });
-            services.AddScoped<ApplicationDbContext>(sp =>
-            {
-                var options = sp.GetRequiredService<DbContextOptions<ApplicationDbContext>>();
-                var ctx = new ApplicationDbContext(options);
-                ctx.Database.EnsureCreated();
 
-                return ctx;
-            });
+            var sp = services.BuildServiceProvider();
+            using (var scope = sp.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                db.Database.EnsureCreated();
+
+                if (!db.Brand.Any())
+                {
+                    db.Brand.AddRange(new[]
+                    {
+                        new Brand { Name = "Orlen", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                        new Brand { Name = "Shell", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+                    });
+                    db.SaveChanges();
+                }
+            }
         });
     }
 }
