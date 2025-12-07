@@ -85,6 +85,15 @@ namespace Services.Services
                         );
                 }
 
+                if(!user.EmailConfirmed)
+                {
+                    _logger.LogWarning("Login attempt failed. Email not confirmed for user {Email}.", request.Email);
+                    return Result<LoginResponse>.Bad(
+                        "Please confirm your email address before logging in. Check your inbox for the confirmation link.",
+                        StatusCodes.Status403Forbidden
+                    );
+                }
+
                 var result = await _signInManager.PasswordSignInAsync(
                     user,
                     request.Password,
