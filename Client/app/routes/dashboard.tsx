@@ -1,350 +1,333 @@
 import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
-
-const API_BASE = "http://localhost:5111";
-
-function parseJwt(token: string | null) {
-    if (!token) return null;
-    try {
-        const payload = token.split(".")[1];
-        const decoded = atob(payload);
-        return JSON.parse(decodeURIComponent(escape(decoded)));
-    } catch (e) {
-        return null;
-    }
-}
+import { API_BASE } from "../components/api";
+import { useUserGuard } from "../components/useUserGuard";
 
 type RequestItem = {
-    id: string;
-    createdAt: string;
-    title: string;
-    status: "pending" | "accepted" | "rejected" | string;
+  id: string;
+  createdAt: string;
+  title: string;
+  status: "pending" | "accepted" | "rejected" | string;
 };
 
 type Station = {
-    id?: string;
-    name: string;
-    street: string;
-    houseNumber: number;
-    postalcode: string;
-    latitude?: number;
-    longitude?: number;
-    city?: string;
-    imageUrl?: string;
-    address?: string;
-    distanceMeters?: number;
-    fuelPrices?: Record<string, number | string>;
+  id?: string;
+  name: string;
+  street: string;
+  houseNumber: number;
+  postalcode: string;
+  latitude?: number;
+  longitude?: number;
+  city?: string;
+  imageUrl?: string;
+  address?: string;
+  distanceMeters?: number;
+  fuelPrices?: Record<string, number | string>;
 };
 
 export default function Dashboard() {
-    const [email, setEmail] = React.useState<string | null>(null);
+  const { state, email } = useUserGuard();
 
-    const [requests, setRequests] = React.useState<RequestItem[] | null>(null);
-    const [requestsLoading, setRequestsLoading] = React.useState(true);
+  const [requests, setRequests] = React.useState<RequestItem[] | null>(null);
+  const [requestsLoading, setRequestsLoading] = React.useState(true);
 
-    const [stations, setStations] = React.useState<Station[] | null>(null);
-    const [stationsLoading, setStationsLoading] = React.useState(true);
-    const [stationsError, setStationsError] = React.useState<string | null>(null);
+  const [stations, setStations] = React.useState<Station[] | null>(null);
+  const [stationsLoading, setStationsLoading] = React.useState(true);
+  const [stationsError, setStationsError] = React.useState<string | null>(null);
 
-    const [stats, setStats] = React.useState<any>(null);
-    const [statsLoading, setStatsLoading] = React.useState(true);
-    const [statsError, setStatsError] = React.useState<string | null>(null);
+  const [stats, setStats] = React.useState<any>(null);
+  const [statsLoading, setStatsLoading] = React.useState(true);
+  const [statsError, setStatsError] = React.useState<string | null>(null);
 
-    React.useEffect(() => {
-        (async () => {
-            const token = localStorage.getItem("token");
-            const expiration = localStorage.getItem("token_expiration");
+  // po potwierdzeniu, że user jest zalogowany, dopiero ładujemy dane
+  React.useEffect(() => {
+    if (state !== "allowed") return;
 
-            if (token && expiration && new Date(expiration) > new Date()) {
-                const decoded = parseJwt(token);
-                const userEmail = (decoded && (decoded.email || decoded.sub)) || null;
-                setEmail(userEmail ?? "Zalogowany użytkownik");
+    (async () => {
+      await Promise.all([
+        fetchRequests(),
+        fetchProposalStats(),
+        fetchNearestStations(),
+      ]);
+    })();
+  }, [state]);
 
-                await Promise.all([
-                    fetchRequests(token),
-                    fetchProposalStats(token),
-                    fetchNearestStations(token)
-                ]);
-                return;
-            }
+  async function fetchRequests() {
+    setRequestsLoading(true);
+    try {
+      const headers: Record<string, string> = { Accept: "application/json" };
 
-            try {
-                const refreshRes = await fetch(`${API_BASE}/api/refresh`, {
-                    method: "POST",
-                    headers: { Accept: "application/json" },
-                    credentials: "include",
-                });
-
-                console.log("/api/refresh status:", refreshRes.status);
-                console.log("refreshRes.body", await refreshRes.text());
-
-                if (refreshRes.ok) {
-                    setEmail("Zalogowany użytkownik");
-
-                    await Promise.all([
-                        fetchRequests(null),
-                        fetchProposalStats(null),
-                        fetchNearestStations(null)
-                    ]);
-                    return;
-                } else {
-                    console.warn("/api/refresh zwrócił error, redirect to /login");
-                    if (typeof window !== "undefined") window.location.href = "/login";
-                }
-            } catch (err) {
-                console.error("Błąd podczas sprawdzania /api/refresh:", err);
-                if (typeof window !== "undefined") window.location.href = "/login";
-            }
-        })();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    async function fetchRequests(token: string | null) {
-        setRequestsLoading(true);
-        try {
-            const headers: Record<string, string> = { Accept: "application/json" };
-            if (token) headers["Authorization"] = `Bearer ${token}`;
-
-            const res = await fetch(`${API_BASE}/api/user/requests`, {
-                headers,
-                credentials: "include",
-            });
-            if (!res.ok) throw new Error("fetch-error");
-            const data = await res.json();
-            setRequests(data);
-        } catch (err) {
-            console.warn("Nie udało się pobrać zgłoszeń — używam danych przykładowych.", err);
-            setRequests([
-                {
-                    id: "1",
-                    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-                    title: "Propozycja: korekta ceny na stacji X",
-                    status: "pending",
-                },
-                {
-                    id: "2",
-                    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
-                    title: "Propozycja: dodanie nowej stacji Y",
-                    status: "accepted",
-                },
-            ]);
-        } finally {
-            setRequestsLoading(false);
-        }
+      const res = await fetch(`${API_BASE}/api/user/requests`, {
+        headers,
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("fetch-error");
+      const data = await res.json();
+      setRequests(data);
+    } catch (err) {
+      console.warn(
+        "Nie udało się pobrać zgłoszeń — używam danych przykładowych.",
+        err,
+      );
+      setRequests([
+        {
+          id: "1",
+          createdAt: new Date(
+            Date.now() - 1000 * 60 * 60 * 24 * 2,
+          ).toISOString(),
+          title: "Propozycja: korekta ceny na stacji X",
+          status: "pending",
+        },
+        {
+          id: "2",
+          createdAt: new Date(
+            Date.now() - 1000 * 60 * 60 * 24 * 10,
+          ).toISOString(),
+          title: "Propozycja: dodanie nowej stacji Y",
+          status: "accepted",
+        },
+      ]);
+    } finally {
+      setRequestsLoading(false);
     }
+  }
 
-    async function fetchNearestStations(token: string | null) {
-        setStationsLoading(true);
-        setStationsError(null);
+  async function fetchNearestStations() {
+    setStationsLoading(true);
+    setStationsError(null);
 
-        const tryFetchWithCoords = async (lat: number, lon: number) => {
-            try {
-                const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
-                if (token) headers["Authorization"] = `Bearer ${token}`;
-
-                let res = await fetch(`${API_BASE}/api/station/map/nearest`, {
-                    method: "POST",
-                    headers,
-                    body: JSON.stringify({ latitude: lat, longitude: lon }),
-                    credentials: "include",
-                });
-
-                if (!res.ok) {
-                    res = await fetch(
-                        `${API_BASE}/api/station/map/nearest?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`,
-                        {
-                            headers,
-                            credentials: "include",
-                        }
-                    );
-                }
-
-                if (!res.ok) throw new Error(`stations-fetch-failed (${res.status})`);
-                const data = await res.json();
-
-                if (Array.isArray(data)) {
-                    setStations(data);
-                } else if (data?.stations && Array.isArray(data.stations)) {
-                    setStations(data.stations);
-                } else {
-                    console.warn("Nieoczekiwany format danych stacji:", data);
-                    setStations([]);
-                }
-            } catch (err) {
-                console.error("Błąd pobierania stacji z coords:", err);
-                throw err;
-            }
+    const tryFetchWithCoords = async (lat: number, lon: number) => {
+      try {
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          Accept: "application/json",
         };
 
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                async (pos) => {
-                    const lat = pos.coords.latitude;
-                    const lon = pos.coords.longitude;
-                    try {
-                        await tryFetchWithCoords(lat, lon);
-                    } catch (err) {
-                        setStationsError("Nie udało się pobrać najbliższych stacji z backendu.");
-                        setStations(null);
-                    } finally {
-                        setStationsLoading(false);
-                    }
-                },
-                async (err) => {
-                    console.warn("Geolocation zablokowana/nieudana:", err);
-                    try {
-                        const headers: Record<string, string> = { Accept: "application/json" };
-                        if (token) headers["Authorization"] = `Bearer ${token}`;
+        let res = await fetch(`${API_BASE}/api/station/map/nearest`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ latitude: lat, longitude: lon }),
+          credentials: "include",
+        });
 
-                        const res = await fetch(`${API_BASE}/api/station/map/nearest`, {
-                            headers,
-                            credentials: "include",
-                        });
-                        if (!res.ok) throw new Error("no-coords-fetch-failed");
-                        const data = await res.json();
-                        if (Array.isArray(data)) setStations(data);
-                        else if (data?.stations && Array.isArray(data.stations)) setStations(data.stations);
-                        else setStations([]);
-                    } catch (err2) {
-                        console.error("Fallback bez geolokacji nie powiódł się:", err2);
-                        setStationsError("Brak dostępu do lokalizacji i nie udało się pobrać stacji.");
-                        setStations(null);
-                    } finally {
-                        setStationsLoading(false);
-                    }
-                },
-                { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 }
-            );
+        if (!res.ok) {
+          res = await fetch(
+            `${API_BASE}/api/station/map/nearest?lat=${encodeURIComponent(
+              lat,
+            )}&lon=${encodeURIComponent(lon)}`,
+            {
+              headers,
+              credentials: "include",
+            },
+          );
+        }
+
+        if (!res.ok)
+          throw new Error(`stations-fetch-failed (${res.status})`);
+        const data = await res.json();
+
+        if (Array.isArray(data)) {
+          setStations(data);
+        } else if (data?.stations && Array.isArray(data.stations)) {
+          setStations(data.stations);
         } else {
-            try {
-                const headers: Record<string, string> = { Accept: "application/json" };
-                if (token) headers["Authorization"] = `Bearer ${token}`;
-
-                const res = await fetch(`${API_BASE}/api/station/map/nearest`, {
-                    headers,
-                    credentials: "include",
-                });
-                if (!res.ok) throw new Error("no-geolocation");
-                const data = await res.json();
-                if (Array.isArray(data)) setStations(data);
-                else if (data?.stations && Array.isArray(data.stations)) setStations(data.stations);
-                else setStations([]);
-            } catch (err) {
-                console.error("Brak geolokacji i pobranie stacji nie powiodło się:", err);
-                setStationsError("Twoja przeglądarka nie wspiera lokalizacji i nie udało się pobrać stacji.");
-                setStations(null);
-            } finally {
-                setStationsLoading(false);
-            }
+          console.warn("Nieoczekiwany format danych stacji:", data);
+          setStations([]);
         }
+      } catch (err) {
+        console.error("Błąd pobierania stacji z coords:", err);
+        throw err;
+      }
+    };
+
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          try {
+            await tryFetchWithCoords(lat, lon);
+          } catch (err) {
+            setStationsError(
+              "Nie udało się pobrać najbliższych stacji z backendu.",
+            );
+            setStations(null);
+          } finally {
+            setStationsLoading(false);
+          }
+        },
+        async (err) => {
+          console.warn("Geolocation zablokowana/nieudana:", err);
+          try {
+            const headers: Record<string, string> = {
+              Accept: "application/json",
+            };
+
+            const res = await fetch(`${API_BASE}/api/station/map/nearest`, {
+              headers,
+              credentials: "include",
+            });
+            if (!res.ok) throw new Error("no-coords-fetch-failed");
+            const data = await res.json();
+            if (Array.isArray(data)) setStations(data);
+            else if (data?.stations && Array.isArray(data.stations))
+              setStations(data.stations);
+            else setStations([]);
+          } catch (err2) {
+            console.error(
+              "Fallback bez geolokacji nie powiódł się:",
+              err2,
+            );
+            setStationsError(
+              "Brak dostępu do lokalizacji i nie udało się pobrać stacji.",
+            );
+            setStations(null);
+          } finally {
+            setStationsLoading(false);
+          }
+        },
+        { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
+      );
+    } else {
+      try {
+        const headers: Record<string, string> = {
+          Accept: "application/json",
+        };
+
+        const res = await fetch(`${API_BASE}/api/station/map/nearest`, {
+          headers,
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("no-geolocation");
+        const data = await res.json();
+        if (Array.isArray(data)) setStations(data);
+        else if (data?.stations && Array.isArray(data.stations))
+          setStations(data.stations);
+        else setStations([]);
+      } catch (err) {
+        console.error(
+          "Brak geolokacji i pobranie stacji nie powiodło się:",
+          err,
+        );
+        setStationsError(
+          "Twoja przeglądarka nie wspiera lokalizacji i nie udało się pobrać stacji.",
+        );
+        setStations(null);
+      } finally {
+        setStationsLoading(false);
+      }
     }
+  }
 
-    async function fetchProposalStats(token: string | null) {
-        setStatsLoading(true);
-        setStatsError(null);
+  async function fetchProposalStats() {
+    setStatsLoading(true);
+    setStatsError(null);
 
-        // include the exact endpoint from Swagger plus older guesses for compatibility
-        const tryEndpoints = [
-            "/api/proposals/statistics",
-            "/api/proposal-statistic",
-            "/api/proposal-statistics",
-            "/api/proposals/statistic"
-        ];
+    const tryEndpoints = [
+      "/api/proposals/statistics",
+      "/api/proposal-statistic",
+      "/api/proposal-statistics",
+      "/api/proposals/statistic",
+    ];
 
-        for (const ep of tryEndpoints) {
-            try {
-                const headers: Record<string, string> = { Accept: "application/json" };
-                if (token) headers["Authorization"] = `Bearer ${token}`;
+    for (const ep of tryEndpoints) {
+      try {
+        const headers: Record<string, string> = {
+          Accept: "application/json",
+        };
 
-                const res = await fetch(`${API_BASE}${ep}`, {
-                    headers,
-                    credentials: "include",
-                });
+        const res = await fetch(`${API_BASE}${ep}`, {
+          headers,
+          credentials: "include",
+        });
 
-                if (!res.ok) {
-                    if (res.status === 404) continue;
-                    throw new Error(`stats-fetch-error ${res.status}`);
-                }
-
-                const data = await res.json();
-
-                // 1) backend returns object with the Swagger shape:
-                //    { totalProposals, approvedProposals, rejectedProposals, acceptedRate, ... }
-                if (data && typeof data === "object" && !Array.isArray(data)) {
-                    const normalized = {
-                        total:
-                            data.total ??
-                            data.totalProposals ??
-                            data.total_proposals ??
-                            data.count ??
-                            data.itemsCount ??
-                            0,
-                        accepted:
-                            data.approved ??
-                            data.approvedProposals ??
-                            data.approved_proposals ??
-                            data.accepted ??
-                            data.acceptedProposals ??
-                            0,
-                        rejected:
-                            data.rejected ??
-                            data.rejectedProposals ??
-                            data.rejected_proposals ??
-                            data.denied ??
-                            0,
-                        acceptedRate:
-                            data.acceptedRate ??
-                            data.acceptanceRate ??
-                            data.accepted_rate ??
-                            data.approvedRate ??
-                            data.acceptedRate ??
-                            null,
-                    };
-                    setStats(normalized);
-                    setStatsLoading(false);
-                    return;
-                }
-
-                // 2) fallback: if backend returns an array of proposals, compute counts
-                if (Array.isArray(data)) {
-                    const total = data.length;
-                    const accepted = data.filter((x: any) => x.status === "accepted").length;
-                    const rejected = data.filter((x: any) => x.status === "rejected").length;
-                    const acceptedRate = total > 0 ? Math.round((accepted / total) * 100) : null;
-                    setStats({ total, accepted, rejected, acceptedRate });
-                    setStatsLoading(false);
-                    return;
-                }
-
-                console.warn("Nieoczekiwany format statystyk:", data);
-                setStats(null);
-                setStatsLoading(false);
-                return;
-            } catch (err) {
-                console.warn(`Błąd pobierania statystyk z ${ep}:`, err);
-            }
+        if (!res.ok) {
+          if (res.status === 404) continue;
+          throw new Error(`stats-fetch-error ${res.status}`);
         }
 
-        setStatsError("Nie udało się pobrać statystyk z serwera.");
+        const data = await res.json();
+
+        if (data && typeof data === "object" && !Array.isArray(data)) {
+          const normalized = {
+            total:
+              data.total ??
+              data.totalProposals ??
+              data.total_proposals ??
+              data.count ??
+              data.itemsCount ??
+              0,
+            accepted:
+              data.approved ??
+              data.approvedProposals ??
+              data.approved_proposals ??
+              data.accepted ??
+              data.acceptedProposals ??
+              0,
+            rejected:
+              data.rejected ??
+              data.rejectedProposals ??
+              data.rejected_proposals ??
+              data.denied ??
+              0,
+            acceptedRate:
+              data.acceptedRate ??
+              data.acceptanceRate ??
+              data.accepted_rate ??
+              data.approvedRate ??
+              data.acceptedRate ??
+              null,
+          };
+          setStats(normalized);
+          setStatsLoading(false);
+          return;
+        }
+
+        if (Array.isArray(data)) {
+          const total = data.length;
+          const accepted = data.filter(
+            (x: any) => x.status === "accepted",
+          ).length;
+          const rejected = data.filter(
+            (x: any) => x.status === "rejected",
+          ).length;
+          const acceptedRate =
+            total > 0 ? Math.round((accepted / total) * 100) : null;
+          setStats({ total, accepted, rejected, acceptedRate });
+          setStatsLoading(false);
+          return;
+        }
+
+        console.warn("Nieoczekiwany format statystyk:", data);
+        setStats(null);
         setStatsLoading(false);
+        return;
+      } catch (err) {
+        console.warn(`Błąd pobierania statystyk z ${ep}:`, err);
+      }
     }
 
-    const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("token_expiration");
-        if (typeof window !== "undefined") window.location.href = "/login";
-    };
+    setStatsError("Nie udało się pobrać statystyk z serwera.");
+    setStatsLoading(false);
+  }
 
-    const formatDate = (iso?: string) => (iso ? new Date(iso).toLocaleString() : "-");
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("token_expiration");
+    if (typeof window !== "undefined") window.location.href = "/login";
+  };
 
-    const formatDistance = (m?: string | number) => {
-        if (m == null) return "-";
-        const mm = Number(m);
-        if (Number.isNaN(mm)) return "-";
-        if (mm >= 1000) return `${(mm / 1000).toFixed(2)} km`;
-        return `${Math.round(mm)} m`;
-    };
+  const formatDate = (iso?: string) =>
+    iso ? new Date(iso).toLocaleString() : "-";
+
+  const formatDistance = (m?: string | number) => {
+    if (m == null) return "-";
+    const mm = Number(m);
+    if (Number.isNaN(mm)) return "-";
+    if (mm >= 1000) return `${(mm / 1000).toFixed(2)} km`;
+    return `${Math.round(mm)} m`;
+  };
 
     return (
         <div className="min-h-screen bg-base-200 text-base-content">
