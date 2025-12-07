@@ -179,6 +179,7 @@ builder.Services.AddAuthentication(options =>
         }
     };
 })
+/*
 .AddFacebook("Facebook", options =>
 {
     options.AppId = Environment.GetEnvironmentVariable("FACEBOOK_APP_ID");
@@ -187,7 +188,7 @@ builder.Services.AddAuthentication(options =>
     options.Fields.Add("email");
     options.SaveTokens = true;
     options.CallbackPath = "/api/auth/facebook/callback";
-});
+})*/;
 
 // Add DbContext with PostgreSQL
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -325,12 +326,15 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-var cliArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
-if (cliArgs.Length > 0)
+if (!builder.Environment.IsEnvironment("Testing"))
 {
-    var commandRunner = new CommandRunner(app.Services);
-    await commandRunner.RunAsync(cliArgs);
-    Environment.Exit(0);
+    var cliArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
+    if (cliArgs.Length > 0)
+    {
+        var commandRunner = new CommandRunner(app.Services);
+        await commandRunner.RunAsync(cliArgs);
+        Environment.Exit(0);
+    }
 }
 
 // Configure the HTTP request pipeline.
@@ -352,7 +356,8 @@ using (var scope = app.Services.CreateScope())
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
 
-        await dbContext.Database.MigrateAsync();
+        if (!builder.Environment.IsEnvironment("Testing"))
+        { await dbContext.Database.MigrateAsync(); }
 
         var seeder = new SeedData(roleManager, userManager, dbContext);
         await seeder.InicializeAsync();
@@ -378,3 +383,5 @@ app.UseHttpsRedirection();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }
