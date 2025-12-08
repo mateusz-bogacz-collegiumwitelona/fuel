@@ -1,7 +1,11 @@
 ﻿using Data.Context;
 using Data.Models;
 using DTO.Responses;
+using Microsoft.EntityFrameworkCore;
 using Services.Helpers;
+using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
@@ -20,24 +24,6 @@ namespace Tests.ControllerTest
                 new AuthenticationHeaderValue("Bearer", "test-admin-token");
         }
 
-        private void SeedData()
-        {
-            using var scope = _factory.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-            if (!db.Brand.Any())
-            {
-                db.Brand.Add(new Brand
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "Orlen",
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                });
-                db.SaveChanges();
-            }
-        }
-
         [Fact]
         public async Task GetBrandListTest_200OK()
         {
@@ -54,7 +40,7 @@ namespace Tests.ControllerTest
             var result = JsonSerializer.Deserialize<PagedResult<GetBrandDataResponse>>(content, options);
 
             //Assert
-            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.NotNull(content);
             Assert.Equal("Orlen", result.Items[0].Name);
         }
@@ -70,7 +56,7 @@ namespace Tests.ControllerTest
             var response = await _client.GetAsync(url);
 
             //Assert
-            Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
 
         [Fact]
@@ -91,7 +77,7 @@ namespace Tests.ControllerTest
             var brand = db.Brand.FirstOrDefault(b => b.Name == newName);
 
             //Assert
-            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.NotNull(brand);
             Assert.Contains(db.Brand, b => b.Name == newName);
             Assert.DoesNotContain(db.Brand, b => b.Name == oldName);
@@ -110,9 +96,10 @@ namespace Tests.ControllerTest
             var response = await _client.PatchAsync(url, null);
 
             //Assert
-            Assert.Equal(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
 
+        [Fact]
         public async Task EditBrandAsyncTest_404()
         {
             //Arrange
@@ -124,7 +111,120 @@ namespace Tests.ControllerTest
             var response = await _client.PatchAsync(url, null);
 
             //Assert
-            Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task EditBrandAsyncTest_400()
+        {
+            //Arrange
+            var oldName = " ";
+            var newName = "NewName";
+            var url = $"/api/admin/brand/edit/{oldName}?newName={newName}";
+
+            //Act
+            var response = await _client.PatchAsync(url, null);
+
+            //Assert
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task AddBrandAsyncTest_201()
+        {
+            //Arrange
+            var newBrand = new MultipartFormDataContent
+            {
+                {new StringContent("NewBrand"), "name" }
+            };
+            var url = $"/api/admin/brand/add";
+
+            //Act
+            var response = await _client.PostAsync(url, newBrand);
+            var json = await response.Content.ReadAsStringAsync();
+
+            //Assert
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            Assert.Contains("success", json);
+            Assert.Contains("true", json);
+            Assert.Contains("Brand NewBrand", json);
+        }
+
+        [Fact]
+        public async Task AddBrandAsyncTest_400()
+        {
+            //Arrange
+            var newBrand = new MultipartFormDataContent
+            {
+                {new StringContent(""), "name" }
+            };
+            var url = $"/api/admin/brand/add";
+
+            //Act
+            var response = await _client.PostAsync(url, newBrand);
+            var json = await response.Content.ReadAsStringAsync();
+
+            //Assert
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task AddBrandAsyncTest_409()
+        {
+            //Arrange
+            var newBrand = new MultipartFormDataContent
+            {
+                {new StringContent("Orlen"), "name" }
+            };
+            var url = $"/api/admin/brand/add";
+
+            //Act
+            var response = await _client.PostAsync(url, newBrand);
+
+            //Assert
+            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task DeleteBrandAsyncTest_200OK()
+        {
+            //Arrange
+            var brandName = "Shell";
+            var url = $"/api/admin/brand/{brandName}";
+
+            //Act
+            var response = await _client.DeleteAsync(url);
+
+            //Assert
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task DeleteBrandAsyncTest_404()
+        {
+            //Arrange
+            var brandName = "BadTest";
+            var url = $"/api/admin/brand/{brandName}";
+
+            //Act
+            var response = await _client.DeleteAsync(url);
+
+            //Assert
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task DeleteBrandAsyncTest_400()
+        {
+            //Arrange
+            var brandName = "%20";
+            var url = $"/api/admin/brand/{brandName}";
+
+            //Act
+            var response = await _client.DeleteAsync(url);
+
+            //Assert
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
     }
 }

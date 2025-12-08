@@ -2,6 +2,8 @@
 using Data.Context;
 using Data.Interfaces;
 using Data.Models;
+using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +21,19 @@ public class CustomAppFact : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
+            var fbDescriptors = services
+                .Where(d =>
+                    (d.ServiceType != null && d.ServiceType.FullName?.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0) ||
+                    (d.ImplementationType != null && d.ImplementationType.FullName?.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0) ||
+                    (d.ImplementationInstance != null && d.ImplementationInstance.GetType().FullName?.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0) ||
+                    (d.ImplementationFactory != null && d.ImplementationFactory?.Method.DeclaringType?.FullName.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0)
+                )
+                .ToList();
+
+            foreach (var d in fbDescriptors)
+                services.Remove(d);
+            services.RemoveAll<IConfigureOptions<FacebookOptions>>();
+            services.RemoveAll<IPostConfigureOptions<FacebookOptions>>();
             var identityAppDescriptor = services.SingleOrDefault(d =>
                 d.ServiceType.Name == "IConfigureOptions`1" &&
                 d.ImplementationType?.Name.Contains("IdentityCookieOptionsSetup") == true);

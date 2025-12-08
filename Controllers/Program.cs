@@ -179,7 +179,6 @@ builder.Services.AddAuthentication(options =>
         }
     };
 })
-/*
 .AddFacebook("Facebook", options =>
 {
     options.AppId = Environment.GetEnvironmentVariable("FACEBOOK_APP_ID");
@@ -188,7 +187,7 @@ builder.Services.AddAuthentication(options =>
     options.Fields.Add("email");
     options.SaveTokens = true;
     options.CallbackPath = "/api/auth/facebook/callback";
-})*/;
+});
 
 // Add DbContext with PostgreSQL
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
