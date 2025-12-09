@@ -1,14 +1,11 @@
-﻿using Data.Enums;
-using Data.Interfaces;
-using Data.Reopsitories;
+﻿using Data.Interfaces;
 using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
+
 
 namespace Services.Services
 {
@@ -123,7 +120,6 @@ namespace Services.Services
             }
         }
 
-        //pomyśleć jak zroibć cache
         public async Task<Result<PagedResult<GetStationListResponse>>> GetStationListAsync(GetStationListRequest request)
         {
             try
@@ -301,6 +297,8 @@ namespace Services.Services
                         );
                 }
 
+                await _cache.InvalidateStationCacheAsync();
+
                 return Result<GetStationListResponse>.Good(
                     "Stations retrieved successfully",
                     StatusCodes.Status200OK,
@@ -362,7 +360,10 @@ namespace Services.Services
                 }
 
                 await _cache.InvalidateBrandCacheAsync();
-                await _cache.InvalidateStationCacheAsync();
+
+
+                if (!string.IsNullOrWhiteSpace(request.NewBrandName)) await _cache.InvalidateBrandCacheAsync();
+
                 await _cache.InvalidateFuelTypeCacheAsync();
 
                 return Result<bool>.Good(
@@ -385,7 +386,15 @@ namespace Services.Services
         {
             try
             {
-                var result = await _stationRepository.GetStationInfoForEdit(request);
+                var cacheKey = _cache.GenerateCacheKey(
+                    $"{CacheService.CacheKeys.StationPrefix}edit:{request.BrandName}:{request.City}:{request.Street}:{request.HouseNumber}"
+                );
+
+                var result = await _cache.GetOrSetAsync(
+                    cacheKey,
+                    async () => await _stationRepository.GetStationInfoForEdit(request),
+                    CacheService.CacheExpiry.Short
+                );
 
                 if (result == null)
                 {
@@ -542,6 +551,5 @@ namespace Services.Services
                             CacheService.CacheExpiry.Short
                         );
         }
-        
     }
 }

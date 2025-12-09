@@ -1,3 +1,4 @@
+using Azure.Storage.Blobs;
 using Data.Config;
 using Data.Context;
 using Data.Helpers;
@@ -15,7 +16,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Minio;
 using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using Services.BackgroundServices;
@@ -61,7 +61,7 @@ builder.Services.AddCors(op =>
 {
     op.AddPolicy("AllowClient", p =>
     {
-        p.WithOrigins("http://localhost:8524")
+        p.WithOrigins("http://localhost:4000")
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials();
@@ -216,39 +216,20 @@ var options = new ConfigurationOptions
 var redis = ConnectionMultiplexer.Connect(options);
 builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
 
-//minio configuration
-builder.Services.Configure<MinIOSettings>(
-    builder.Configuration.GetSection("MinIO")
-    );
-
-//register minio client
-builder.Services.AddSingleton<IMinioClient>(sp =>
+//register blob client
+builder.Services.AddHostedService<BlobInitializer>();
+builder.Services.Configure<BlobConfig>(builder.Configuration.GetSection("Blob"));
+builder.Services.AddSingleton(sp =>
 {
-    var settings = sp.GetRequiredService<IOptions<MinIOSettings>>().Value;
-    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-    var logger = loggerFactory.CreateLogger("MinIOConfig");
-
-    logger.LogWarning("=== CONFIGURING MINIO CLIENT ===");
-    logger.LogWarning("Endpoint: {Endpoint}", settings.Endpoint);
-    logger.LogWarning("PublicUrl: {PublicUrl}", settings.PublicUrl);
-    logger.LogWarning("AccessKey: {AccessKey}", settings.AccessKey);
-    logger.LogWarning("BucketName: {BucketName}", settings.BucketName);
-    logger.LogWarning("UseSSL: {UseSSL}", settings.UseSSL);
-
-    var client = new MinioClient()
-        .WithEndpoint(settings.Endpoint)
-        .WithCredentials(settings.AccessKey, settings.SecretKey)
-        .WithSSL(settings.UseSSL) 
-        .Build();
-
-    return client;
+    var blobSettings = sp.GetRequiredService<IOptions<BlobConfig>>().Value;
+    return new BlobServiceClient(blobSettings.ConnectionString);
 });
+
 
 //register repo 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IStationRepository, StationRepository>();
 builder.Services.AddScoped<IProposalStatisticRepository, ProposalStatisticRepository>();
-builder.Services.AddScoped<ITestRepository, TestRepository>();
 builder.Services.AddScoped<IPriceProposalRepository, PriceProposalRepository>();
 builder.Services.AddScoped<IFuelTypeRepository, FuelTypeRepository>();
 builder.Services.AddScoped<IBrandRepository, BrandRepository>();
@@ -261,7 +242,6 @@ builder.Services.AddScoped<ILoginRegisterServices, LoginRegisterServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
 builder.Services.AddScoped<IStationServices, StationServices>();
 builder.Services.AddScoped<IProposalStatisticServices, ProposalStatisticServices>();
-builder.Services.AddScoped<ITestServices, TestServices>();
 builder.Services.AddScoped<IPriceProposalServices, PriceProposalServices>();
 builder.Services.AddScoped<IFuelTypeServices, FuelTypeServices>();
 builder.Services.AddScoped<IBrandServices, BrandServices>();
@@ -271,10 +251,10 @@ builder.Services.AddScoped<IReportService, ReportService>();
 //register helpers
 builder.Services.AddScoped<EmailSender>();
 builder.Services.AddScoped<EmailBodys>();
-builder.Services.AddScoped<IS3ApiHelper, S3ApiHelper>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenFactory, TokenFactory>();
 builder.Services.AddScoped<CacheService>();
+builder.Services.AddScoped<IStorage, BlobApiHelper>();
 
 //register background services
 builder.Services.AddHostedService<BanExpirationService>();
