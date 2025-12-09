@@ -95,7 +95,7 @@ namespace Services.Helpers
                 string encodedEmail = Uri.EscapeDataString(email);
                 string confirmLink = $"{_frontendUrl}/confirm-email?email={encodedEmail}&token={encodedToken}";
 
-                var emailBody = _emailBody.GenerateRegisterConfirmEmailBody(userName, confirmLink, token);
+                var emailBody = _emailBody.GenerateRegisterConfirmEmailBody(userName, confirmLink);
                 string subject = "Fuel App - Confirm Your Email Address";
 
                 return await SendEmailAsync(email, subject, emailBody);
@@ -118,9 +118,9 @@ namespace Services.Helpers
             {
                 string encodedToken = Uri.EscapeDataString(token);
                 string encodedEmail = Uri.EscapeDataString(email);
-                string confirmLink = $"{_frontendUrl}/confirm-email?email={encodedEmail}&token={encodedToken}";
+                string confirmLink = $"{_frontendUrl}/reset-password?email={encodedEmail}&token={encodedToken}";
 
-                var emailBody = _emailBody.GenerateResetPasswordBody(userName, confirmLink, token);
+                var emailBody = _emailBody.GenerateResetPasswordBody(userName, confirmLink);
                 string subject = "Fuel App - Confirm Reset Passowrd";
 
                 return await SendEmailAsync(email, subject, emailBody);
