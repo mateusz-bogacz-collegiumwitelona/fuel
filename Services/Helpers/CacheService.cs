@@ -47,11 +47,11 @@ namespace Services.Helpers
 
             public const string PriceProposalPrefix = "priceproposals:";
             public const string PriceProposalByStation = "priceproposals:station";
+
             public const string FuelPricePrefix = "fuelprice:";
             public const string FuelPriceByStation = "fuelprices:station";
             public const string FuelPriceByFuelType = "fuelprices:fueltype";
             public const string FuelPriceComparison = "fuelprices:comparison";
-
         }
 
         public async Task<T?> GetOrSetAsync<T>(
@@ -198,7 +198,6 @@ namespace Services.Helpers
             }
         }
 
-
         public async Task InvalidateFuelPriceCacheAsync(string? brandName = null, string? city = null)
         {
             if (!string.IsNullOrEmpty(brandName) && !string.IsNullOrEmpty(city))
@@ -216,6 +215,7 @@ namespace Services.Helpers
                 _logger.LogInformation("Invalidated all fuel price cache");
             }
         }
+
         public string GeneratePagedKey(string baseKey, int pageNumber, int pageSize, string? search = null, string? sortBy = null, string? sortDirection = null)
         {
             var parts = new List<string> { baseKey, pageNumber.ToString(), pageSize.ToString() };

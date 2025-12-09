@@ -16,9 +16,7 @@ namespace Data.Repositories
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<PriceProposalRepository> _logger;
-
         private readonly IStorage _storage;
-
         private readonly IConfiguration _config;
 
         public PriceProposalRepository(

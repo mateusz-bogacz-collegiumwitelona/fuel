@@ -160,4 +160,3 @@ services:
       - blob_data:/data
     networks:
       - dev
-

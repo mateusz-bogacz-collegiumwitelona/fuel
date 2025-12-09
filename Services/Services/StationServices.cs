@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using Services.Helpers;
 using Services.Interfaces;
 
-
 namespace Services.Services
 {
     public class StationServices : IStationServices
