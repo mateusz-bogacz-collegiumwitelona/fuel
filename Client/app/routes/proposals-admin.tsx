@@ -4,6 +4,7 @@ import Footer from "../components/footer";
 
 import { useAdminGuard } from "../components/useAdminGuard";
 import { API_BASE } from "../components/api";
+import { useTranslation } from "react-i18next";
 
 import {
   ReviewProposalModal,
@@ -36,6 +37,7 @@ type ProposalListResponseData = {
 };
 
 export default function ProposalAdminPage() {
+  const { t } = useTranslation();
   const { state, email } = useAdminGuard();
 
   const [groups, setGroups] = React.useState<ProposalGroup[]>([]);
@@ -51,7 +53,6 @@ export default function ProposalAdminPage() {
   const [sortBy, setSortBy] = React.useState("createdat");
   const [sortDirection, setSortDirection] =
     React.useState<"asc" | "desc">("desc");
-
 
   const [activeGroup, setActiveGroup] = React.useState<ProposalGroup | null>(
     null,
@@ -109,7 +110,7 @@ export default function ProposalAdminPage() {
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         throw new Error(
-          `Błąd pobierania propozycji cen (${res.status}): ${text}`,
+          t("proposaladmin.error_fetch", { status: res.status, text }),
         );
       }
 
@@ -119,7 +120,7 @@ export default function ProposalAdminPage() {
         : json.data;
 
       if (!data || !Array.isArray(data.items)) {
-        throw new Error("Nieoczekiwany format odpowiedzi propozycji cen");
+        throw new Error(t("proposaladmin.error_unexpected_response"));
       }
 
       const grouped = groupProposals(data.items);
@@ -130,7 +131,7 @@ export default function ProposalAdminPage() {
       setTotalCount(data.totalCount);
     } catch (e: any) {
       console.error(e);
-      setError(e?.message ?? "Nie udało się pobrać listy propozycji cen");
+      setError(e?.message ?? t("proposaladmin.error_fetch_fallback"));
       setGroups([]);
     } finally {
       setLoading(false);
@@ -190,42 +191,42 @@ export default function ProposalAdminPage() {
     setModalLoading(false);
   };
 
-async function fetchPhotosForGroup(group: ProposalGroup) {
-  setPhotosLoading(true);
-  try {
-    const first = group.items[0];
-    if (!first) return;
+  async function fetchPhotosForGroup(group: ProposalGroup) {
+    setPhotosLoading(true);
+    try {
+      const first = group.items[0];
+      if (!first) return;
 
-    const res = await fetch(
-      `${API_BASE}/api/admin/proposal?token=${encodeURIComponent(first.token)}`,
-      {
-        method: "GET",
-        headers: { Accept: "application/json" },
-        credentials: "include",
-      },
-    );
+      const res = await fetch(
+        `${API_BASE}/api/admin/proposal?token=${encodeURIComponent(first.token)}`,
+        {
+          method: "GET",
+          headers: { Accept: "application/json" },
+          credentials: "include",
+        },
+      );
 
-    if (!res.ok) throw new Error(`photo-fetch-failed ${res.status}`);
-    const data = await res.json();
-    const photoUrl = data.photoUrl ?? null;
+      if (!res.ok) throw new Error(`photo-fetch-failed ${res.status}`);
+      const data = await res.json();
+      const photoUrl = data.photoUrl ?? null;
 
-    setActiveGroup((prev) =>
-      prev && prev.id === group.id
-        ? {
-            ...prev,
-            items: prev.items.map((it) => ({
-              ...it,
-              photoUrl,
-            })),
-          }
-        : prev,
-    );
-  } catch (err) {
-    console.warn("Nie udało się pobrać zdjęcia dla grupy", group.id, err);
-  } finally {
-    setPhotosLoading(false);
+      setActiveGroup((prev) =>
+        prev && prev.id === group.id
+          ? {
+              ...prev,
+              items: prev.items.map((it) => ({
+                ...it,
+                photoUrl,
+              })),
+            }
+          : prev,
+      );
+    } catch (err) {
+      console.warn("Nie udało się pobrać zdjęcia dla grupy", group.id, err);
+    } finally {
+      setPhotosLoading(false);
+    }
   }
-}
 
   async function changeStatusForToken(
     token: string,
@@ -255,7 +256,7 @@ async function fetchPhotosForGroup(group: ProposalGroup) {
     if (!res.ok || (json && json.success === false)) {
       const msg =
         (json && (json.message || json.error)) ||
-        `Nie udało się zmienić statusu propozycji (${res.status})`;
+        t("proposaladmin.error_change_status", { status: res.status });
       throw new Error(msg);
     }
   }
@@ -292,7 +293,7 @@ async function fetchPhotosForGroup(group: ProposalGroup) {
     } catch (e: any) {
       console.error(e);
       setModalError(
-        e?.message ?? "Nie udało się zaktualizować statusu propozycji.",
+        e?.message ?? t("proposaladmin.modal_error_update"),
       );
     } finally {
       setModalLoading(false);
@@ -321,7 +322,7 @@ async function fetchPhotosForGroup(group: ProposalGroup) {
     } catch (e: any) {
       console.error(e);
       setModalError(
-        e?.message ?? "Nie udało się zaktualizować statusu propozycji.",
+        e?.message ?? t("proposaladmin.modal_error_update"),
       );
     } finally {
       setModalLoading(false);
@@ -341,7 +342,7 @@ async function fetchPhotosForGroup(group: ProposalGroup) {
     } catch (e: any) {
       console.error(e);
       setModalError(
-        e?.message ?? "Nie udało się zaakceptować wszystkich propozycji.",
+        e?.message ?? t("proposaladmin.modal_error_accept_all"),
       );
     } finally {
       setModalLoading(false);
@@ -361,7 +362,7 @@ async function fetchPhotosForGroup(group: ProposalGroup) {
     } catch (e: any) {
       console.error(e);
       setModalError(
-        e?.message ?? "Nie udało się odrzucić wszystkich propozycji.",
+        e?.message ?? t("proposaladmin.modal_error_reject_all"),
       );
     } finally {
       setModalLoading(false);
@@ -454,17 +455,15 @@ async function fetchPhotosForGroup(group: ProposalGroup) {
       <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-10">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-3xl font-bold">
-              Panel administracyjny – propozycje cen
-            </h1>
+            <h1 className="text-3xl font-bold">{t("proposaladmin.title")}</h1>
             <p className="text-sm text-base-content/70">
               {email
-                ? `Zalogowano jako: ${email}`
-                : "Sprawdzanie sesji administratora..."}
+                ? t("proposaladmin.logged_in_as", { email })
+                : t("proposaladmin.checking_session")}
             </p>
           </div>
           <a href="/admin-dashboard" className="btn btn-outline btn-sm">
-            ← Powrót do panelu administratora
+            {t("proposaladmin.back_to_admin")}
           </a>
         </div>
 
@@ -473,9 +472,7 @@ async function fetchPhotosForGroup(group: ProposalGroup) {
           <div className="flex flex-col gap-2 md:flex-row md:items-end">
             <div className="form-control">
               <label className="label">
-                <span className="label-text">
-                  Szukaj (użytkownik, marka, adres, paliwo, cena)
-                </span>
+                <span className="label-text">{t("proposaladmin.search_label")}</span>
               </label>
               <input
                 className="input input-bordered input-sm w-full md:w-72"
@@ -484,13 +481,13 @@ async function fetchPhotosForGroup(group: ProposalGroup) {
                   setSearch(e.target.value);
                   setPageNumber(1);
                 }}
-                placeholder="np. Orlen, ON, 6.35"
+                placeholder={t("proposaladmin.search_placeholder")}
               />
             </div>
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Sortowanie</span>
+                <span className="label-text">{t("proposaladmin.sort_label")}</span>
               </label>
               <select
                 className="select select-bordered select-sm"
@@ -500,19 +497,19 @@ async function fetchPhotosForGroup(group: ProposalGroup) {
                   setPageNumber(1);
                 }}
               >
-                <option value="createdat">Data zgłoszenia</option>
-                <option value="username">Nazwa użytkownika</option>
-                <option value="brandname">Marka stacji</option>
-                <option value="city">Miasto</option>
-                <option value="fuelname">Rodzaj paliwa</option>
-                <option value="fuelcode">Kod paliwa</option>
-                <option value="proposedprice">Zaproponowana cena</option>
+                <option value="createdat">{t("proposaladmin.sort_option_createdat")}</option>
+                <option value="username">{t("proposaladmin.sort_option_username")}</option>
+                <option value="brandname">{t("proposaladmin.sort_option_brandname")}</option>
+                <option value="city">{t("proposaladmin.sort_option_city")}</option>
+                <option value="fuelname">{t("proposaladmin.sort_option_fuelname")}</option>
+                <option value="fuelcode">{t("proposaladmin.sort_option_fuelcode")}</option>
+                <option value="proposedprice">{t("proposaladmin.sort_option_proposedprice")}</option>
               </select>
             </div>
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Kierunek sortowania</span>
+                <span className="label-text">{t("proposaladmin.sort_dir_label")}</span>
               </label>
               <select
                 className="select select-bordered select-sm"
@@ -521,42 +518,39 @@ async function fetchPhotosForGroup(group: ProposalGroup) {
                   setSortDirection(e.target.value as "asc" | "desc")
                 }
               >
-                <option value="desc">Najnowsze najpierw</option>
-                <option value="asc">Najstarsze najpierw</option>
+                <option value="desc">{t("proposaladmin.sort_dir_desc")}</option>
+                <option value="asc">{t("proposaladmin.sort_dir_asc")}</option>
               </select>
             </div>
           </div>
 
           <div className="text-sm text-base-content/70">
-            Łącznie pozycji (paliw):{" "}
-            <span className="font-semibold">{totalCount}</span>
+            {t("proposaladmin.total_items_label")} <span className="font-semibold">{totalCount}</span>
           </div>
         </div>
 
 
         <div className="bg-base-300 rounded-xl p-4 shadow-md">
           {loading ? (
-            <div className="text-sm">Ładowanie propozycji...</div>
+            <div className="text-sm">{t("proposaladmin.loading")}</div>
           ) : error ? (
             <div className="text-sm text-error">{error}</div>
           ) : groups.length === 0 ? (
-            <div className="text-sm">
-              Brak oczekujących propozycji cen na tej stronie.
-            </div>
+            <div className="text-sm">{t("proposaladmin.no_items")}</div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="table table-zebra table-sm w-full">
                   <thead>
                     <tr>
-                      <th>#</th>
-                      <th>Użytkownik</th>
-                      <th>Stacja</th>
-                      <th>Adres</th>
-                      <th>Liczba paliw</th>
-                      <th>Paliwa</th>
-                      <th>Data</th>
-                      <th className="text-right">Akcje</th>
+                      <th>{t("proposaladmin.th_hash")}</th>
+                      <th>{t("proposaladmin.th_user")}</th>
+                      <th>{t("proposaladmin.th_station")}</th>
+                      <th>{t("proposaladmin.th_address")}</th>
+                      <th>{t("proposaladmin.th_count")}</th>
+                      <th>{t("proposaladmin.th_fuels")}</th>
+                      <th>{t("proposaladmin.th_date")}</th>
+                      <th className="text-right">{t("proposaladmin.th_actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -582,7 +576,7 @@ async function fetchPhotosForGroup(group: ProposalGroup) {
                               type="button"
                               onClick={() => openReview(g)}
                             >
-                              przejrzyj
+                              {t("proposaladmin.btn_review")}
                             </button>
                           </div>
                         </td>
@@ -595,7 +589,7 @@ async function fetchPhotosForGroup(group: ProposalGroup) {
               <div className="mt-4 flex justify-between items-center text-sm">
                 {renderPageButtons()}
                 <div className="text-base-content/70">
-                  Strona {pageNumber} / {totalPages}
+                  {t("proposaladmin.page_info", { page: pageNumber, total: totalPages })}
                 </div>
               </div>
             </>

@@ -762,7 +762,7 @@ export default function ListPage() {
                         </>
                     ) : (
                         <div className="text-center py-8 text-gray-400">
-                            Brak stacji spełniających kryteria wyszukiwania
+                            {t("list.nostation2")}
                         </div>
                     )}
                 </section>

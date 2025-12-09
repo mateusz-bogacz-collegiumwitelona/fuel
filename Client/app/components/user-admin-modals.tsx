@@ -1,9 +1,10 @@
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 
 export type AdminUser = {
   userName: string;
   email: string;
-  roles: string; 
+  roles: string;
   createdAt: string;
   isBanned: boolean;
 };
@@ -44,6 +45,7 @@ function BaseModal({ isOpen, title, children, onClose }: BaseModalProps) {
             className="btn btn-sm btn-ghost"
             onClick={onClose}
             type="button"
+            aria-label={title}
           >
             ✕
           </button>
@@ -53,7 +55,6 @@ function BaseModal({ isOpen, title, children, onClose }: BaseModalProps) {
     </div>
   );
 }
-
 
 type ChangeRoleModalProps = {
   isOpen: boolean;
@@ -68,6 +69,7 @@ export function ChangeRoleModal({
   user,
   onConfirm,
 }: ChangeRoleModalProps) {
+  const { t } = useTranslation();
   const [form, setForm] = React.useState<ChangeRoleForm>({
     newRole: "User",
   });
@@ -92,10 +94,10 @@ export function ChangeRoleModal({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Zmień rolę użytkownika">
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("user-admin.change_role_title")}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm">
-          Użytkownik:{" "}
+          {t("user-admin.user_label")}:{" "}
           <span className="font-semibold">
             {user.userName} ({user.email})
           </span>
@@ -103,7 +105,7 @@ export function ChangeRoleModal({
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text">Nowa rola</span>
+            <span className="label-text">{t("user-admin.change_role_new_label")}</span>
           </label>
           <select
             className="select select-bordered select-sm"
@@ -112,8 +114,8 @@ export function ChangeRoleModal({
               setForm({ newRole: e.target.value as "User" | "Admin" })
             }
           >
-            <option value="User">User</option>
-            <option value="Admin">Admin</option>
+            <option value="User">{t("user-admin.role_user")}</option>
+            <option value="Admin">{t("user-admin.role_admin")}</option>
           </select>
         </div>
 
@@ -123,17 +125,16 @@ export function ChangeRoleModal({
             className="btn btn-ghost btn-sm"
             onClick={onClose}
           >
-            Anuluj
+            {t("common.cancel")}
           </button>
           <button type="submit" className="btn btn-primary btn-sm">
-            Zapisz
+            {t("common.save")}
           </button>
         </div>
       </form>
     </BaseModal>
   );
 }
-
 
 type BanUserModalProps = {
   isOpen: boolean;
@@ -148,6 +149,8 @@ export function BanUserModal({
   user,
   onConfirm,
 }: BanUserModalProps) {
+  const { t } = useTranslation();
+
   const [form, setForm] = React.useState<BanForm>({
     reason: "",
     days: 7,
@@ -172,18 +175,15 @@ export function BanUserModal({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Zbanuj użytkownika">
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("user-admin.ban_title")}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm">
-          Zablokujesz dostęp dla:{" "}
-          <span className="font-semibold">
-            {user.userName} ({user.email})
-          </span>
+          {t("user-admin.ban_confirm_user", { user: `${user.userName} (${user.email})` })}
         </p>
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text">Powód bana</span>
+            <span className="label-text">{t("user-admin.ban_reason_label")}</span>
           </label>
           <textarea
             className="textarea textarea-bordered textarea-sm"
@@ -203,14 +203,14 @@ export function BanUserModal({
               checked={permanent}
               onChange={(e) => setPermanent(e.target.checked)}
             />
-            <span className="label-text">Ban permanentny</span>
+            <span className="label-text">{t("user-admin.ban_permanent_label")}</span>
           </label>
         </div>
 
         {!permanent && (
           <div className="form-control">
             <label className="label">
-              <span className="label-text">Liczba dni bana</span>
+              <span className="label-text">{t("user-admin.ban_days_label")}</span>
             </label>
             <input
               type="number"
@@ -229,7 +229,7 @@ export function BanUserModal({
         )}
 
         <p className="text-xs text-warning">
-          Użytkownik nie będzie mógł się logować przez czas trwania bana.
+          {t("user-admin.ban_note")}
         </p>
 
         <div className="flex justify-end gap-2 pt-2">
@@ -238,17 +238,16 @@ export function BanUserModal({
             className="btn btn-ghost btn-sm"
             onClick={onClose}
           >
-            Anuluj
+            {t("common.cancel")}
           </button>
           <button type="submit" className="btn btn-error btn-sm">
-            Zbanuj
+            {t("user-admin.ban_submit")}
           </button>
         </div>
       </form>
     </BaseModal>
   );
 }
-
 
 type ReviewBanModalProps = {
   isOpen: boolean;
@@ -267,42 +266,44 @@ export function ReviewBanModal({
   loading,
   error,
 }: ReviewBanModalProps) {
+  const { t } = useTranslation();
+
   if (!user) return null;
 
+  const formatDate = (iso?: string) => (iso ? new Date(iso).toLocaleString() : "-");
+  const isPermanent = (until?: string) =>
+    until === "9999-12-31T23:59:59.9999999Z" || until === "9999-12-31T23:59:59Z";
+
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Szczegóły bana">
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("user-admin.review_ban_title")}>
       <div className="space-y-3 text-sm">
         <p>
-          Użytkownik:{" "}
+          {t("user-admin.user_label")}:{" "}
           <span className="font-semibold">
             {user.userName} ({user.email})
           </span>
         </p>
 
         {loading ? (
-          <p>Ładowanie informacji o banie...</p>
+          <p>{t("user-admin.review_ban_loading")}</p>
         ) : error ? (
           <p className="text-error">{error}</p>
         ) : !banInfo ? (
-          <p>Brak aktywnego bana dla tego użytkownika.</p>
+          <p>{t("user-admin.review_ban_no_ban")}</p>
         ) : (
           <>
             <p>
-              <span className="font-semibold">Powód:</span> {banInfo.reason}
+              <span className="font-semibold">{t("user-admin.review_ban_reason_label")}: </span> {banInfo.reason}
             </p>
             <p>
-              <span className="font-semibold">Zbanowany:</span>{" "}
-              {new Date(banInfo.bannedAt).toLocaleString()}
+              <span className="font-semibold">{t("user-admin.review_ban_banned_at_label")}: </span> {formatDate(banInfo.bannedAt)}
             </p>
             <p>
-              <span className="font-semibold">Ban ważny do:</span>{" "}
-              {banInfo.bannedUntil === "9999-12-31T23:59:59.9999999Z"
-                ? "permanentny"
-                : new Date(banInfo.bannedUntil).toLocaleString()}
+              <span className="font-semibold">{t("user-admin.review_ban_banned_until_label")}: </span>{" "}
+              {isPermanent(banInfo.bannedUntil) ? t("user-admin.review_ban_permanent") : formatDate(banInfo.bannedUntil)}
             </p>
             <p>
-              <span className="font-semibold">Nałożył:</span>{" "}
-              {banInfo.bannedBy}
+              <span className="font-semibold">{t("user-admin.review_ban_by_label")}: </span> {banInfo.bannedBy}
             </p>
           </>
         )}
@@ -313,14 +314,13 @@ export function ReviewBanModal({
             type="button"
             onClick={onClose}
           >
-            Zamknij
+            {t("common.close")}
           </button>
         </div>
       </div>
     </BaseModal>
   );
 }
-
 
 type UnlockUserModalProps = {
   isOpen: boolean;
@@ -335,16 +335,14 @@ export function UnlockUserModal({
   user,
   onConfirm,
 }: UnlockUserModalProps) {
+  const { t } = useTranslation();
+
   if (!user) return null;
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Odblokuj użytkownika">
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("user-admin.unlock_title")}>
       <p className="mb-4">
-        Czy na pewno chcesz zdjąć bana z użytkownika{" "}
-        <span className="font-semibold">
-          {user.userName} ({user.email})
-        </span>
-        ?
+        {t("user-admin.unlock_confirm", { user: `${user.userName} (${user.email})` })}
       </p>
 
       <div className="flex justify-end gap-2">
@@ -353,14 +351,14 @@ export function UnlockUserModal({
           type="button"
           onClick={onClose}
         >
-          Anuluj
+          {t("common.cancel")}
         </button>
         <button
           className="btn btn-primary btn-sm"
           type="button"
           onClick={onConfirm}
         >
-          Odblokuj
+          {t("user-admin.unlock_confirm_button")}
         </button>
       </div>
     </BaseModal>

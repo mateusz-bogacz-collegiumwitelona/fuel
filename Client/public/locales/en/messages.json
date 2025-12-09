@@ -10,7 +10,6 @@
     "city": "city = ",
     "postalcode": "postal code = ",
     "distance": "Distance",
-    "dostance": "Distance",
     "showonmap": "Show on map",
     "stationdetails": "Station details",
     "nostations": "No stations available",
@@ -66,7 +65,8 @@
     "street": "Street",
     "action": "Action",
     "map": "Map",
-    "page": "Page"
+    "page": "Page",
+    "nostation2": "No stations match your search criteria"
   },
 
   "stations": {
@@ -96,7 +96,8 @@
       "brands": "Brands",
       "users": "Users",
       "stations": "Stations",
-      "logout": "Logout"
+      "logout": "Logout",
+      "proposaladmin": "Proposed changes"
     }
   },
 
@@ -138,11 +139,8 @@
   },
 
   "proposal": {
-  "proposaladd": "Submit a station proposal or change",
+  "proposaladd": "Propose a change to a station",
   "back": "← Back to dashboard",
-  "choose_mode": "Choose whether you want to <strong>add a new station</strong> or <strong>propose a change</strong> for an existing one.",
-  "add_station": "Add station",
-  "edit_existing": "Edit existing",
   "select_station_title": "Select a station from the list (you can filter by brand)",
   "filter_brand_placeholder": "Filter by brand (e.g. Orlen)",
   "refresh_list": "Refresh list",
@@ -384,5 +382,179 @@
   "save_settings": "Save settings",
   "cancel": "Cancel",
   "changing_text": "Applying..."
-}
+},
+
+"proposaladmin": {
+  "title": "Admin panel – price proposals",
+  "logged_in_as": "Logged in as: {{email}}",
+  "checking_session": "Checking admin session...",
+  "back_to_admin": "← Back to admin dashboard",
+  "search_label": "Search (user, brand, address, fuel, price)",
+  "search_placeholder": "e.g. Orlen, diesel, 6.35",
+  "sort_label": "Sort by",
+  "sort_option_createdat": "Submission date",
+  "sort_option_username": "Username",
+  "sort_option_brandname": "Brand",
+  "sort_option_city": "City",
+  "sort_option_fuelname": "Fuel name",
+  "sort_option_fuelcode": "Fuel code",
+  "sort_option_proposedprice": "Proposed price",
+  "sort_dir_label": "Sort direction",
+  "sort_dir_desc": "Newest first",
+  "sort_dir_asc": "Oldest first",
+  "total_items_label": "Total items (fuels):",
+  "loading": "Loading proposals...",
+  "error_fetch": "Error fetching price proposals ({{status}}): {{text}}",
+  "error_fetch_fallback": "Failed to fetch price proposals list.",
+  "error_unexpected_response": "Unexpected response format for proposals.",
+  "error_change_status": "Failed to change proposal status ({{status}}).",
+  "modal_error_update": "Failed to update proposal status.",
+  "modal_error_accept_all": "Failed to accept all proposals.",
+  "modal_error_reject_all": "Failed to reject all proposals.",
+  "no_items": "No pending price proposals on this page.",
+  "th_hash": "#",
+  "th_user": "User",
+  "th_station": "Station",
+  "th_address": "Address",
+  "th_count": "Fuel count",
+  "th_fuels": "Fuels",
+  "th_date": "Date",
+  "th_actions": "Actions",
+  "btn_review": "Review",
+  "page_info": "Page {{page}} / {{total}}"
+},
+
+"login": {
+  "title": "Login",
+  "email_placeholder": "Email",
+  "password_placeholder": "Password",
+  "submit": "Sign in",
+  "logging_in": "Signing in...",
+  "invalid_credentials": "Invalid email or password",
+  "success": "Successfully signed in!",
+  "connection_error": "Connection error"
+},
+
+"brand-admin": {
+  "add_title": "Add new brand",
+  "add_label_name": "Brand name (e.g. Orlen)",
+  "cancel": "Cancel",
+  "save": "Save",
+  "edit_title": "Edit brand",
+  "current_name_label": "Current name:",
+  "edit_new_name_label": "New brand name",
+  "save_changes": "Save changes",
+  "delete_title": "Delete brand",
+  "delete_confirm": "Are you sure you want to delete the brand {{name}}?",
+  "delete_warning": "This operation is irreversible. All stations and data related to this brand will be removed (according to cascade delete rules).",
+  "delete_confirm_button": "Delete"
+},
+
+"proposal-admin": {
+  "review_title": "Price proposals review",
+  "user_label": "User",
+  "station_label": "Station",
+  "submitted_label": "Submitted",
+  "loading_details": "Loading proposal details...",
+  "close": "Close",
+
+  "table": {
+    "th_hash": "#",
+    "th_fuel": "Fuel",
+    "th_code": "Code",
+    "th_price": "Proposed price [PLN]",
+    "th_status": "Status",
+    "th_actions": "Actions"
+  },
+
+  "status": {
+    "pending": "Pending",
+    "accepted": "Accepted",
+    "rejected": "Rejected"
+  },
+
+  "btn": {
+    "accept": "accept",
+    "reject": "reject",
+    "accept_all": "Accept all",
+    "reject_all": "Reject all"
+  },
+
+  "processing": "Processing…",
+
+  "photo_title": "Proof photo",
+  "photo_loading": "Loading photo…",
+  "photo_alt": "Proof photo"
+},
+
+"user-admin": {
+  "change_role_title": "Change user role",
+  "user_label": "User",
+  "change_role_new_label": "New role",
+  "role_user": "User",
+  "role_admin": "Admin",
+
+  "ban_title": "Ban user",
+  "ban_confirm_user": "You will ban access for: {{user}}",
+  "ban_reason_label": "Ban reason",
+  "ban_permanent_label": "Permanent ban",
+  "ban_days_label": "Number of ban days",
+  "ban_note": "The user will not be able to log in for the duration of the ban.",
+  "ban_submit": "Ban",
+
+  "review_ban_title": "Ban details",
+  "review_ban_loading": "Loading ban information...",
+  "review_ban_no_ban": "No active ban for this user.",
+  "review_ban_reason_label": "Reason",
+  "review_ban_banned_at_label": "Banned at",
+  "review_ban_banned_until_label": "Banned until",
+  "review_ban_permanent": "permanent",
+  "review_ban_by_label": "Banned by",
+
+  "unlock_title": "Unlock user",
+  "unlock_confirm": "Are you sure you want to remove the ban from user {{user}}?",
+  "unlock_confirm_button": "Unlock"
+},
+
+  "station-admin": {
+    "add_title": "Add gas station",
+    "brand_label": "Brand / station name",
+    "city_label": "City",
+    "street_label": "Street",
+    "house_label": "House number",
+    "postal_label": "Postal code",
+    "lat_label": "lat",
+    "lng_label": "lng",
+    "geocode_button": "Fetch coordinates from address",
+    "geocode_loading": "Fetching coordinates...",
+    "geocode_missing_address": "Provide at least city, street and house number.",
+    "geocode_failed": "Failed to fetch coordinates for this address.",
+    "geocode_not_found": "No coordinates found for the provided address.",
+    "geocode_error": "Geocoding error",
+    "no_content": "no content",
+
+    "fuel_section_title": "Fuel prices",
+    "fuel_code_label": "Code (e.g. PB95)",
+    "fuel_price_label": "Price",
+    "fuel_add_button": "+ Add fuel",
+    "remove_button": "remove",
+
+    "edit_title": "Edit gas station",
+    "edit_editing_label": "You're editing station:",
+    "details_error": "Failed to fetch station data",
+    "details_error_fallback": "Failed to fetch station data for editing.",
+
+    "save_changes": "Save changes",
+
+    "delete_title": "Delete gas station",
+    "delete_confirm": "Are you sure you want to delete station {{station}}?",
+    "delete_irreversible": "This operation cannot be undone.",
+    "delete_button": "Delete"
+  },
+
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close"
+  }
 }

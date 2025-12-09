@@ -6,8 +6,6 @@ volumes:
   db-data: {}
   shared-volume: {}
   redis-data: {}
-  minio_data:
-    driver: local
   blob_data: {}
 
 services:
@@ -68,11 +66,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER} -h ${POSTGRES_HOST} -d ${POSTGRES_DB}",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -h ${POSTGRES_HOST} -d ${POSTGRES_DB}"]
       interval: 10s
       retries: 5
       start_period: 10s
@@ -90,7 +84,7 @@ services:
     container_name: mailpit-dev
     hostname: mailpit
     ports:
-      - ${MAILPIT_PORT:-63854}:8025
+      - "${MAILPIT_PORT:-63854}:8025"
       - "1025:1025"
     networks:
       - dev
@@ -106,7 +100,7 @@ services:
       retries: 5
       start_period: 5s
     ports:
-      - ${REDIS_PORT:-63852}:6379
+      - "${REDIS_PORT:-63852}:6379"
     volumes:
       - redis-data:/data
     networks:
@@ -148,6 +142,7 @@ services:
     tty: true
     networks:
       - dev
+
 
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite

@@ -1,6 +1,6 @@
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import { API_BASE } from "./api";
-
 
 export type AdminStation = {
   brandName: string;
@@ -36,7 +36,6 @@ const DEFAULT_FUEL_TYPES: FuelForm[] = [
   { code: "LPG", price: 3.56 },
 ];
 
-
 type BaseModalProps = {
   isOpen: boolean;
   title: string;
@@ -56,6 +55,7 @@ function BaseModal({ isOpen, title, children, onClose }: BaseModalProps) {
             className="btn btn-sm btn-ghost"
             onClick={onClose}
             type="button"
+            aria-label={title}
           >
             ✕
           </button>
@@ -65,7 +65,6 @@ function BaseModal({ isOpen, title, children, onClose }: BaseModalProps) {
     </div>
   );
 }
-
 
 type AddStationModalProps = {
   isOpen: boolean;
@@ -78,6 +77,7 @@ export function AddStationModal({
   onClose,
   onConfirm,
 }: AddStationModalProps) {
+  const { t } = useTranslation();
   const [form, setForm] = React.useState<StationFormValues>({
     brandName: "",
     street: "",
@@ -135,7 +135,7 @@ export function AddStationModal({
     const { city, street, houseNumber, postalCode } = form;
 
     if (!city.trim() || !street.trim() || !houseNumber.trim()) {
-      alert("Podaj co najmniej miasto, ulicę i numer budynku.");
+      alert(t("station-admin.geocode_missing_address"));
       return;
     }
 
@@ -162,14 +162,16 @@ export function AddStationModal({
       if (!res.ok) {
         const text = await res.text();
         throw new Error(
-          `Błąd geokodowania (${res.status}): ${text || "brak treści"}`,
+          `${t("station-admin.geocode_error")} (${res.status}): ${text || t(
+            "station-admin.no_content",
+          )}`,
         );
       }
 
       const data: Array<{ lat: string; lon: string }> = await res.json();
 
       if (!data.length) {
-        alert("Nie znaleziono współrzędnych dla podanego adresu.");
+        alert(t("station-admin.geocode_not_found"));
         return;
       }
 
@@ -182,7 +184,7 @@ export function AddStationModal({
       }));
     } catch (err) {
       console.error(err);
-      alert("Nie udało się pobrać współrzędnych dla tego adresu.");
+      alert(t("station-admin.geocode_failed"));
     } finally {
       setGeoLoading(false);
     }
@@ -202,12 +204,12 @@ export function AddStationModal({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Dodaj stację paliw">
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("station-admin.add_title")}>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="form-control">
             <label className="label">
-              <span className="label-text">Marka / nazwa stacji</span>
+              <span className="label-text">{t("station-admin.brand_label")}</span>
             </label>
             <input
               name="brandName"
@@ -220,7 +222,7 @@ export function AddStationModal({
 
           <div className="form-control">
             <label className="label">
-              <span className="label-text">Miasto</span>
+              <span className="label-text">{t("station-admin.city_label")}</span>
             </label>
             <input
               name="city"
@@ -233,7 +235,7 @@ export function AddStationModal({
 
           <div className="form-control">
             <label className="label">
-              <span className="label-text">Ulica</span>
+              <span className="label-text">{t("station-admin.street_label")}</span>
             </label>
             <input
               name="street"
@@ -246,7 +248,7 @@ export function AddStationModal({
 
           <div className="form-control">
             <label className="label">
-              <span className="label-text">Numer budynku</span>
+              <span className="label-text">{t("station-admin.house_label")}</span>
             </label>
             <input
               name="houseNumber"
@@ -259,7 +261,7 @@ export function AddStationModal({
 
           <div className="form-control">
             <label className="label">
-              <span className="label-text">Kod pocztowy</span>
+              <span className="label-text">{t("station-admin.postal_label")}</span>
             </label>
             <input
               name="postalCode"
@@ -273,7 +275,7 @@ export function AddStationModal({
             <div className="grid grid-cols-2 gap-3">
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">lat</span>
+                  <span className="label-text">{t("station-admin.lat_label")}</span>
                 </label>
                 <input
                   name="latitude"
@@ -288,7 +290,7 @@ export function AddStationModal({
 
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">lng</span>
+                  <span className="label-text">{t("station-admin.lng_label")}</span>
                 </label>
                 <input
                   name="longitude"
@@ -310,22 +312,21 @@ export function AddStationModal({
                 disabled={geoLoading}
               >
                 {geoLoading
-                  ? "Pobieranie współrzędnych..."
-                  : "Pobierz współrzędne z adresu"}
+                  ? t("station-admin.geocode_loading")
+                  : t("station-admin.geocode_button")}
               </button>
             </div>
           </div>
         </div>
 
-
         <div className="mt-2 border-t border-base-300 pt-3">
-          <h3 className="text-sm font-semibold mb-2">Ceny paliw</h3>
+          <h3 className="text-sm font-semibold mb-2">{t("station-admin.fuel_section_title")}</h3>
 
           {form.fuelTypes.map((fuel, index) => (
             <div key={index} className="grid grid-cols-12 gap-2 mb-2">
               <div className="form-control col-span-5">
                 <label className="label">
-                  <span className="label-text">Kod (np. PB95)</span>
+                  <span className="label-text">{t("station-admin.fuel_code_label")}</span>
                 </label>
                 <input
                   className="input input-bordered input-sm"
@@ -339,7 +340,7 @@ export function AddStationModal({
 
               <div className="form-control col-span-5">
                 <label className="label">
-                  <span className="label-text">Cena</span>
+                  <span className="label-text">{t("station-admin.fuel_price_label")}</span>
                 </label>
                 <input
                   type="number"
@@ -360,7 +361,7 @@ export function AddStationModal({
                     className="btn btn-xs btn-ghost text-error"
                     onClick={() => handleRemoveFuelRow(index)}
                   >
-                    usuń
+                    {t("station-admin.remove_button")}
                   </button>
                 )}
               </div>
@@ -372,7 +373,7 @@ export function AddStationModal({
             className="btn btn-xs mt-1"
             onClick={handleAddFuelRow}
           >
-            + Dodaj paliwo
+            {t("station-admin.fuel_add_button")}
           </button>
         </div>
 
@@ -382,17 +383,16 @@ export function AddStationModal({
             className="btn btn-ghost btn-sm"
             onClick={onClose}
           >
-            Anuluj
+            {t("common.cancel")}
           </button>
           <button type="submit" className="btn btn-primary btn-sm">
-            Zapisz
+            {t("common.save")}
           </button>
         </div>
       </form>
     </BaseModal>
   );
 }
-
 
 type EditStationModalProps = {
   isOpen: boolean;
@@ -407,6 +407,7 @@ export function EditStationModal({
   station,
   onConfirm,
 }: EditStationModalProps) {
+  const { t } = useTranslation();
   const [form, setForm] = React.useState<Partial<StationFormValues>>({});
   const [detailsLoading, setDetailsLoading] = React.useState(false);
   const [detailsError, setDetailsError] = React.useState<string | null>(null);
@@ -451,7 +452,7 @@ export function EditStationModal({
         if (!res.ok) {
           const text = await res.text();
           throw new Error(
-            `Nie udało się pobrać danych stacji (${res.status}): ${text}`,
+            `${t("station-admin.details_error")} (${res.status}): ${text}`,
           );
         }
 
@@ -510,7 +511,7 @@ export function EditStationModal({
         console.error(err);
         if (cancelled) return;
         setDetailsError(
-          err?.message ?? "Nie udało się pobrać danych stacji do edycji.",
+          err?.message ?? t("station-admin.details_error_fallback"),
         );
       } finally {
         if (!cancelled) setDetailsLoading(false);
@@ -520,7 +521,7 @@ export function EditStationModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, station]);
+  }, [isOpen, station, t]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -573,7 +574,7 @@ export function EditStationModal({
     const postalCode = form.postalCode ?? station?.postalCode ?? "";
 
     if (!city.trim() || !street.trim() || !houseNumber.trim()) {
-      alert("Podaj co najmniej miasto, ulicę i numer budynku.");
+      alert(t("station-admin.geocode_missing_address"));
       return;
     }
 
@@ -600,14 +601,16 @@ export function EditStationModal({
       if (!res.ok) {
         const text = await res.text();
         throw new Error(
-          `Błąd geokodowania (${res.status}): ${text || "brak treści"}`,
+          `${t("station-admin.geocode_error")} (${res.status}): ${text || t(
+            "station-admin.no_content",
+          )}`,
         );
       }
 
       const data: Array<{ lat: string; lon: string }> = await res.json();
 
       if (!data.length) {
-        alert("Nie znaleziono współrzędnych dla podanego adresu.");
+        alert(t("station-admin.geocode_not_found"));
         return;
       }
 
@@ -620,7 +623,7 @@ export function EditStationModal({
       }));
     } catch (err) {
       console.error(err);
-      alert("Nie udało się pobrać współrzędnych dla tego adresu.");
+      alert(t("station-admin.geocode_failed"));
     } finally {
       setGeoLoading(false);
     }
@@ -642,9 +645,9 @@ export function EditStationModal({
   if (!station) return null;
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Edytuj stację paliw">
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("station-admin.edit_title")}>
       <p className="text-xs mb-2">
-        Edytujesz stację:{" "}
+        {t("station-admin.edit_editing_label")}{" "}
         <span className="font-semibold">
           {station.brandName} – {station.city}, {station.street}{" "}
           {station.houseNumber}
@@ -663,10 +666,11 @@ export function EditStationModal({
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* fields (same as in Add) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Marka / nazwa stacji</span>
+                <span className="label-text">{t("station-admin.brand_label")}</span>
               </label>
               <input
                 name="brandName"
@@ -678,7 +682,7 @@ export function EditStationModal({
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Miasto</span>
+                <span className="label-text">{t("station-admin.city_label")}</span>
               </label>
               <input
                 name="city"
@@ -690,7 +694,7 @@ export function EditStationModal({
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Ulica</span>
+                <span className="label-text">{t("station-admin.street_label")}</span>
               </label>
               <input
                 name="street"
@@ -702,7 +706,7 @@ export function EditStationModal({
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Numer budynku</span>
+                <span className="label-text">{t("station-admin.house_label")}</span>
               </label>
               <input
                 name="houseNumber"
@@ -714,7 +718,7 @@ export function EditStationModal({
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Kod pocztowy</span>
+                <span className="label-text">{t("station-admin.postal_label")}</span>
               </label>
               <input
                 name="postalCode"
@@ -728,7 +732,7 @@ export function EditStationModal({
               <div className="grid grid-cols-2 gap-3">
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">lat</span>
+                    <span className="label-text">{t("station-admin.lat_label")}</span>
                   </label>
                   <input
                     name="latitude"
@@ -746,7 +750,7 @@ export function EditStationModal({
 
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">lng</span>
+                    <span className="label-text">{t("station-admin.lng_label")}</span>
                   </label>
                   <input
                     name="longitude"
@@ -771,22 +775,21 @@ export function EditStationModal({
                   disabled={geoLoading}
                 >
                   {geoLoading
-                    ? "Pobieranie współrzędnych..."
-                    : "Pobierz współrzędne z adresu"}
+                    ? t("station-admin.geocode_loading")
+                    : t("station-admin.geocode_button")}
                 </button>
               </div>
             </div>
           </div>
 
-
           <div className="mt-2 border-t border-base-300 pt-3">
-            <h3 className="text-sm font-semibold mb-2">Ceny paliw</h3>
+            <h3 className="text-sm font-semibold mb-2">{t("station-admin.fuel_section_title")}</h3>
 
             {(form.fuelTypes ?? []).map((fuel, index) => (
               <div key={index} className="grid grid-cols-12 gap-2 mb-2">
                 <div className="form-control col-span-5">
                   <label className="label">
-                    <span className="label-text">Kod (np. PB95)</span>
+                    <span className="label-text">{t("station-admin.fuel_code_label")}</span>
                   </label>
                   <input
                     className="input input-bordered input-sm"
@@ -799,7 +802,7 @@ export function EditStationModal({
 
                 <div className="form-control col-span-5">
                   <label className="label">
-                    <span className="label-text">Cena</span>
+                    <span className="label-text">{t("station-admin.fuel_price_label")}</span>
                   </label>
                   <input
                     type="number"
@@ -819,7 +822,7 @@ export function EditStationModal({
                       className="btn btn-xs btn-ghost text-error"
                       onClick={() => handleRemoveFuelRow(index)}
                     >
-                      usuń
+                      {t("station-admin.remove_button")}
                     </button>
                   )}
                 </div>
@@ -831,7 +834,7 @@ export function EditStationModal({
               className="btn btn-xs mt-1"
               onClick={handleAddFuelRow}
             >
-              + Dodaj paliwo
+              {t("station-admin.fuel_add_button")}
             </button>
           </div>
 
@@ -841,10 +844,10 @@ export function EditStationModal({
               className="btn btn-ghost btn-sm"
               onClick={onClose}
             >
-              Anuluj
+              {t("common.cancel")}
             </button>
             <button type="submit" className="btn btn-primary btn-sm">
-              Zapisz zmiany
+              {t("station-admin.save_changes")}
             </button>
           </div>
         </form>
@@ -866,21 +869,20 @@ export function DeleteStationModal({
   station,
   onConfirm,
 }: DeleteStationModalProps) {
+  const { t } = useTranslation();
+
   if (!station) return null;
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Usuń stację paliw">
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("station-admin.delete_title")}>
       <p className="mb-4">
-        Czy na pewno chcesz usunąć stację{" "}
-        <span className="font-semibold">
-          {station.brandName} – {station.city}, {station.street}{" "}
-          {station.houseNumber}
-        </span>
-        ?
+        {t("station-admin.delete_confirm", {
+          station: `${station.brandName} – ${station.city}, ${station.street} ${station.houseNumber}`,
+        })}
       </p>
 
       <p className="text-xs text-error mb-4">
-        Tej operacji nie można cofnąć.
+        {t("station-admin.delete_irreversible")}
       </p>
 
       <div className="flex justify-end gap-2">
@@ -889,14 +891,14 @@ export function DeleteStationModal({
           type="button"
           onClick={onClose}
         >
-          Anuluj
+          {t("common.cancel")}
         </button>
         <button
           className="btn btn-error btn-sm"
           type="button"
           onClick={onConfirm}
         >
-          Usuń
+          {t("station-admin.delete_button")}
         </button>
       </div>
     </BaseModal>
