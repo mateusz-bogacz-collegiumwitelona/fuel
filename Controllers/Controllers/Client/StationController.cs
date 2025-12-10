@@ -559,7 +559,7 @@ namespace Contlollers.Controllers.Client
         /// <remarks>
         /// Description  
         /// Allows authenticated users to submit a fuel price proposal for a specific gas station, including a verification photo.  
-        /// The photo is uploaded to MinIO storage and a unique proposal record is created in the database.  
+        /// The photo is uploaded to Azurite storage and a unique proposal record is created in the database.  
         /// The station is identified based on the provided data (brand name, street, house number, city).  
         ///
         /// Example request (multipart/form-data)  
