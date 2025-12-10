@@ -129,7 +129,8 @@ namespace Data.Reopsitories
                 FuelTypeId = fuelTypeId,
                 Price = price,
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                ValidFrom = DateTime.UtcNow
             };
 
             await _context.FuelPrices.AddAsync(fuelPrice);

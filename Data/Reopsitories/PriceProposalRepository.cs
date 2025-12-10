@@ -238,7 +238,6 @@ namespace Data.Repositories
                     CreatedAt = pp.CreatedAt,
                 });
 
-
         public async Task<bool> ChangePriceProposalStatus(
             bool isAccepted,
             PriceProposal priceProposal,

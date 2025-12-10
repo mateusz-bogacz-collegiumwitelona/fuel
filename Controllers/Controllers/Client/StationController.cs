@@ -165,7 +165,32 @@ namespace Contlollers.Controllers.Client
         ///  }
         ///}
         /// ```
-        ///
+        /// Example request body - Filter by date after update with page navigation
+        /// ```json
+        /// {
+        ///  "priceUpdatedAfter": "2025-11-10T00:00:00Z",
+        /// "sortingByDisance": null,
+        /// "sortingByPrice": null,
+        ///  "sortingDirection": null,
+        ///   "pagging": {
+        ///     "pageNumber": null,
+        ///     "pageSize": null
+        ///   }
+        /// }
+        /// ```
+        /// Example request body - Filter by date before update with page navigation
+        /// ```json
+        /// {
+        ///  "priceUpdatedBefore": "2025-11-10T00:00:00Z",
+        /// "sortingByDisance": null,
+        /// "sortingByPrice": null,
+        ///  "sortingDirection": null,
+        ///   "pagging": {
+        ///     "pageNumber": null,
+        ///     "pageSize": null
+        ///   }
+        /// }
+        /// ```
         /// Example request body - Filter by distance with page navigation
         /// ```json
         /// {
