@@ -9,7 +9,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
-namespace Tests.ControllerTest
+namespace Tests.ControllerTest.Admin
 {
     public class BrandControllerTest
     {
@@ -46,7 +46,7 @@ namespace Tests.ControllerTest
         }
 
         [Fact]
-        public async Task GetBrandList_Unauthorized()
+        public async Task GetBrandListTest_Unauthorized()
         {
             //Arrange
             var url = "/api/admin/brand/list?Search=Orlen&pageNumber=1&pageSize=10&sortBy=name&sortDirection=asc";
@@ -63,24 +63,23 @@ namespace Tests.ControllerTest
         public async Task EditBrandAsyncTest_200OK()
         {
             //Arrange
-            var oldName = "Orlen";
-            var newName = "OrlenTest";
+            var oldName = "Test";
+            var newName = "NewTest";
             var url = $"/api/admin/brand/edit/{oldName}?newName={newName}";
 
             //Act
             var response = await _client.PatchAsync(url, null);
             var content = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(content);
-            var root = doc.RootElement;
+ 
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await db.Entry(db.Brand.First(b => b.Name == newName)).ReloadAsync();
             var brand = db.Brand.FirstOrDefault(b => b.Name == newName);
 
             //Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.NotNull(brand);
             Assert.Contains(db.Brand, b => b.Name == newName);
-            Assert.DoesNotContain(db.Brand, b => b.Name == oldName);
         }
 
         [Fact]

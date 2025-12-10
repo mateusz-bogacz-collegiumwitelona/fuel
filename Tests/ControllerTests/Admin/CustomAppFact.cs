@@ -1,13 +1,17 @@
 ﻿using Azure.Storage.Blobs;
 using Data.Context;
+using Data.Enums;
 using Data.Interfaces;
 using Data.Models;
-using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection.Extensions;using Moq;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using Moq;
+using NetTopologySuite;
+using NetTopologySuite.Geometries;
 using StackExchange.Redis;
 using System.Security.Claims;
 
@@ -71,7 +75,7 @@ public class CustomAppFact : WebApplicationFactory<Program>
             services.RemoveAll<IStorage>();
             var storageMock = new Mock<IStorage>();
             services.AddSingleton(storageMock.Object);
-
+            var adminId = Guid.NewGuid();
             services.PostConfigureAll<JwtBearerOptions>(options =>
             {
                 options.Events = new JwtBearerEvents
@@ -83,8 +87,10 @@ public class CustomAppFact : WebApplicationFactory<Program>
                         {
                             var identity = new ClaimsIdentity(new[]
                             {
+                                new Claim(ClaimTypes.Email, "admin@test.com"),
+                                new Claim(ClaimTypes.NameIdentifier, adminId.ToString()),
                                 new Claim(ClaimTypes.Name, "TestAdmin"),
-                                new Claim(ClaimTypes.Role, "Admin")
+                                new Claim(ClaimTypes.Role, "Admin"),
                             }, "Test");
                             context.Principal = new ClaimsPrincipal(identity);
                             context.Success();
@@ -98,17 +104,55 @@ public class CustomAppFact : WebApplicationFactory<Program>
             using (var scope = sp.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                db.Database.EnsureDeleted();
                 db.Database.EnsureCreated();
+                var geometryFactory = NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
+                db.RemoveRange(db.Set<Brand>());
+                db.RemoveRange(db.Set<FuelType>());
+                db.RemoveRange(db.Set<Station>());
+                db.RemoveRange(db.Set<PriceProposal>());
+                var location = geometryFactory.CreatePoint(new Coordinate(10.0, 10.0));
+                var user1 = new ApplicationUser { UserName = "user", Id = Guid.NewGuid(), Email = "user@test.com" };
+                var admin = new ApplicationUser { UserName = "TestAdmin", Id = adminId, Email = "admin@test.com" };
+                var brand1 = new Brand { Name = "Orlen", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+                var brand2 = new Brand { Name = "Shell", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+                var brand3 = new Brand { Name = "Test", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+                var address1 = new StationAddress { City = "test", Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, HouseNumber = "1", PostalCode = "1", Street = "test", UpdatedAt = DateTime.UtcNow, Location = location };
+                var station1 = new Station { Id = Guid.NewGuid(), Brand = brand1, BrandId = brand1.Id, CreatedAt = DateTime.UtcNow, Address = address1, AddressId = address1.Id };
+                var ft1 = new FuelType { Name = "LPG gas", Code = "LPG", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
+                var ft2 = new FuelType { Name = "Diesel", Code = "ON", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
+                var ft3 = new FuelType { Name = "ZBenzyna 98", Code = "PB98", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
+                var ft4 = new FuelType { Name = "YBenzyna 98", Code = "Y", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
+                var ft5 = new FuelType { Name = "XDeleteBenzyna", Code = "X", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
+                var pp1 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt=DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token1", ProposedPrice = 5.0m, PhotoUrl= "url1", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Pending};
+                var pp2 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token2", ProposedPrice = 4.0m, PhotoUrl = "url2", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Pending };
+                var pp3 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token3", ProposedPrice = 4.0m, PhotoUrl = "url3", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Rejected, ReviewedAt = DateTime.UtcNow.AddDays(-1), ReviewedBy = admin.Id, Reviewer = admin};
 
                 if (!db.Brand.Any())
                 {
                     db.Brand.AddRange(new[]
-                    {
-                        new Brand { Name = "Orlen", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-                        new Brand { Name = "Shell", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+                    {brand1, brand2, brand3
                     });
                     db.SaveChanges();
                 }
+                if (!db.FuelTypes.Any())
+                {
+                    db.FuelTypes.AddRange(new[]
+                    {ft1, ft2, ft3, ft4, ft5
+                    });
+                    db.SaveChanges();
+                }
+                if (!db.PriceProposals.Any())
+                {
+                    db.PriceProposals.AddRange(pp1, pp2, pp3);
+                    db.SaveChanges();
+                }
+                if (!db.Users.Any())
+                {
+                    db.Users.AddRange(admin, user1);
+                    db.SaveChanges();
+                }
+
             }
         });
     }
