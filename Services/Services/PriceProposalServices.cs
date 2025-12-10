@@ -357,5 +357,37 @@ namespace Services.Services
                     new List<string> { ex.Message });
             }
         }
+
+        public async Task<Result<GetPriceProposalStaisticResponse>> GetPriceProposalStaisticAsync()
+        {
+            try
+            {
+                var response = await _priceProposalRepository.GetPriceProposalStaisticAsync();
+
+                if (response == null)
+                {
+                    _logger.LogError("Failed to review Price proposal statistic");
+                    return Result<GetPriceProposalStaisticResponse>.Bad(
+                        "Failed to review Price proposal statistic",
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { "Failed to review Price proposal statistic" }
+                        );
+                }
+
+                return Result<GetPriceProposalStaisticResponse>.Good(
+                    "Proposal Statistic review successfully",
+                    StatusCodes.Status200OK,
+                    response
+                    );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error review Price proposal statistic");
+                return Result<GetPriceProposalStaisticResponse>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message });
+            }
+        }
     }
 }
