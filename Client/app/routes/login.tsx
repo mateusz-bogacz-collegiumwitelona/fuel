@@ -32,7 +32,6 @@ function normalizeRole(raw: unknown): string | null {
 function extractRoleLoose(obj: any): string | null {
   if (!obj || typeof obj !== "object") return null;
 
-  // typowy przypadek dla /api/auth/me: roles: ["User"]
   if ("roles" in obj) {
     const maybe = normalizeRole(obj.roles);
     if (maybe) return maybe;
@@ -57,7 +56,6 @@ function redirectByRole(role: string | null) {
   else window.location.href = "/dashboard";
 }
 
-// pomocnik do pobrania danych zalogowanego usera z nowego endpointu
 async function fetchMe(): Promise<any | null> {
   try {
     const res = await fetch(`${API_BASE}/api/me`, {
@@ -110,16 +108,13 @@ export default function Login() {
         return;
       }
 
-      // zapamiętaj email (opcjonalne)
       if (data?.email) {
         try {
           localStorage.setItem("email", data.email);
         } catch {
-          // ignore
         }
       }
 
-      // 1. rolę spróbuj wyciągnąć bezpośrednio z odpowiedzi logowania
       const roleFromBody = extractRoleLoose(data);
       if (roleFromBody) {
         setMessage(t("login.success"));
@@ -127,7 +122,6 @@ export default function Login() {
         return;
       }
 
-      // 2. jeśli backend nie zwrócił roli w /api/login → użyj /api/auth/me
       const me = await fetchMe();
       if (me) {
         const meRole = extractRoleLoose(me);
@@ -137,7 +131,6 @@ export default function Login() {
           try {
             localStorage.setItem("email", String(meEmail));
           } catch {
-            // ignore
           }
         }
 
@@ -146,7 +139,6 @@ export default function Login() {
         return;
       }
 
-      // 3. ostateczny fallback – brak roli, traktuj jako zwykłego usera
       setMessage(t("login.success"));
       redirectByRole(null);
     } catch (error) {
@@ -155,7 +147,7 @@ export default function Login() {
     }
   };
 
-  // auto-redirect jeśli ktoś już jest zalogowany (na podstawie /api/auth/me)
+
   React.useEffect(() => {
     (async () => {
       const me = await fetchMe();
@@ -164,7 +156,7 @@ export default function Login() {
         redirectByRole(meRole);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
 
   return (
