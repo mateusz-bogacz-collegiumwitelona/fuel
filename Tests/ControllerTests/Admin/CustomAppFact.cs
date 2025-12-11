@@ -82,25 +82,43 @@ public class CustomAppFact : WebApplicationFactory<Program>
             services.RemoveAll<IStorage>();
             var storageMock = new Mock<IStorage>();
             services.AddSingleton(storageMock.Object);
+            
             var adminId = Guid.NewGuid();
+            var userId = Guid.NewGuid();
+            
             services.PostConfigureAll<JwtBearerOptions>(options =>
             {
                 options.Events = new JwtBearerEvents
                 {
                     OnMessageReceived = context =>
                     {
-                        if (context.Request.Headers.TryGetValue("Authorization", out var auth) &&
-                            auth.ToString().Contains("test-admin-token"))
+                        if (context.Request.Headers.TryGetValue("Authorization", out var auth))
                         {
-                            var identity = new ClaimsIdentity(new[]
+                            var authValue = auth.ToString();
+                            if (authValue.Contains("test-admin-token"))
                             {
-                                new Claim(ClaimTypes.Email, "admin@test.com"),
-                                new Claim(ClaimTypes.NameIdentifier, adminId.ToString()),
-                                new Claim(ClaimTypes.Name, "TestAdmin"),
-                                new Claim(ClaimTypes.Role, "Admin"),
-                            }, "Test");
-                            context.Principal = new ClaimsPrincipal(identity);
-                            context.Success();
+                                var identity = new ClaimsIdentity(new[]
+                                {
+                                    new Claim(ClaimTypes.Email, "admin@test.com"),
+                                    new Claim(ClaimTypes.NameIdentifier, adminId.ToString()),
+                                    new Claim(ClaimTypes.Name, "TestAdmin"),
+                                    new Claim(ClaimTypes.Role, "Admin"),
+                                }, "Test");
+                                context.Principal = new ClaimsPrincipal(identity);
+                                context.Success();
+                            }
+                            else if (authValue.Contains("test-user-token"))
+                            {
+                                var identity = new ClaimsIdentity(new[]
+                                {
+                                    new Claim(ClaimTypes.Email, "user@test.com"),
+                                    new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                                    new Claim(ClaimTypes.Name, "TestUser"),
+                                    new Claim(ClaimTypes.Role, "User"),
+                                }, "Test");
+                                context.Principal = new ClaimsPrincipal(identity);
+                                context.Success();
+                            }
                         }
                         return Task.CompletedTask;
                     }
@@ -122,8 +140,8 @@ public class CustomAppFact : WebApplicationFactory<Program>
                 db.RemoveRange(db.Set<ApplicationUser>());
                 
                 var location = geometryFactory.CreatePoint(new Coordinate(10.0, 10.0));
-                var user1 = new ApplicationUser { UserName = "user", Id = Guid.NewGuid(), Email = "user@test.com", NormalizedUserName = "USER", NormalizedEmail = "USER@TEST.COM" };
-                var admin = new ApplicationUser { UserName = "TestAdmin", Id = adminId, Email = "admin@test.com", NormalizedEmail = "ADMIN@TEST.COM", NormalizedUserName = "TESTADMIN" };
+                var user1 = new ApplicationUser { UserName = "TestUser", Id = userId, Email = "user@test.com", NormalizedUserName = "USER", NormalizedEmail = "USER@TEST.COM", SecurityStamp = Guid.NewGuid().ToString() };
+                var admin = new ApplicationUser { UserName = "TestAdmin", Id = adminId, Email = "admin@test.com", NormalizedEmail = "ADMIN@TEST.COM", NormalizedUserName = "TESTADMIN", SecurityStamp = Guid.NewGuid().ToString() };
                 var brand1 = new Brand { Name = "Orlen", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
                 var brand2 = new Brand { Name = "Shell", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
                 var brand3 = new Brand { Name = "Test", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
@@ -145,22 +163,38 @@ public class CustomAppFact : WebApplicationFactory<Program>
                     db.SaveChanges();
                 }
 
-                var role = new IdentityRole<Guid>
+                var adminRole = new IdentityRole<Guid>
                 {
                     Id = Guid.NewGuid(),
                     Name = "Admin",
                     NormalizedName = "ADMIN"
                 };
+                
+                var userRole = new IdentityRole<Guid>
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "User",
+                    NormalizedName = "USER"
+                };
 
-                db.Roles.Add(role);
+                db.Roles.Add(adminRole);
+                db.Roles.Add(userRole);
                 db.SaveChanges();
                 
-                var userRole = new IdentityUserRole<Guid>
+                var adminUserRole = new IdentityUserRole<Guid>
                 {
-                    RoleId = role.Id,
+                    RoleId = adminRole.Id,
                     UserId = admin.Id
                 };
-                db.UserRoles.Add(userRole);
+                
+                var normalUserRole = new IdentityUserRole<Guid>
+                {
+                    RoleId = userRole.Id,
+                    UserId = user1.Id
+                };
+                
+                db.UserRoles.Add(adminUserRole);
+                db.UserRoles.Add(normalUserRole);
                 db.SaveChanges();
                 
                 if (!db.Brand.Any())
