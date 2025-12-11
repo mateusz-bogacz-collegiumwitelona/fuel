@@ -10,18 +10,27 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Tests.ControllerTest.Admin
 {
-    public class FuelTypeControllerTest
+    [Collection("IntegrationTests")]
+    public class FuelTypeControllerTest : IAsyncLifetime
     {
-        private readonly HttpClient _client;
-        private readonly CustomAppFact _factory;
+        private HttpClient _client;
+        private CustomAppFact _factory;
 
-        public FuelTypeControllerTest()
+        public async Task InitializeAsync()
         {
             _factory = new CustomAppFact();
             _client = _factory.CreateClient();
             _client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", "test-admin-token");
+            await Task.CompletedTask;
         }
+
+        public async Task DisposeAsync()
+        {
+            _client?.Dispose();
+            await _factory.DisposeAsync();
+        }
+
 
         [Fact]
         public async Task GetFuelsTypeListTest_Unauthorized()

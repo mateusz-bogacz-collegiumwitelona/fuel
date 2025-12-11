@@ -11,18 +11,27 @@ using System.Text.Json;
 
 namespace Tests.ControllerTest.Admin
 {
-    public class BrandControllerTest
+    [Collection("IntegrationTests")]
+    public class BrandControllerTest : IAsyncLifetime
     {
-        private readonly HttpClient _client;
-        private readonly CustomAppFact _factory;
+        private HttpClient _client;
+        private CustomAppFact _factory;
 
-        public BrandControllerTest()
+        public async Task InitializeAsync()
         {
             _factory = new CustomAppFact();
             _client = _factory.CreateClient();
             _client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", "test-admin-token");
+            await Task.CompletedTask;
         }
+
+        public async Task DisposeAsync()
+        {
+            _client?.Dispose();
+            await _factory.DisposeAsync();
+        }
+
 
         [Fact]
         public async Task GetBrandListTest_200OK()

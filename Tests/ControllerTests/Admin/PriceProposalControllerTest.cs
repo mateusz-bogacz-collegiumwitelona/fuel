@@ -12,17 +12,25 @@ using System.Text.Json;
 
 namespace Tests.ControllerTest.Admin
 {
-    public class PriceProposalControllerTest
+    [Collection("IntegrationTests")]
+    public class PriceProposalControllerTest : IAsyncLifetime
     {
-        private readonly HttpClient _client;
-        private readonly CustomAppFact _factory;
+        private  HttpClient _client;
+        private  CustomAppFact _factory;
 
-        public PriceProposalControllerTest()
+        public async Task InitializeAsync()
         {
             _factory = new CustomAppFact();
             _client = _factory.CreateClient();
             _client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", "test-admin-token");
+            await Task.CompletedTask;
+        }
+
+        public async Task DisposeAsync()
+        {
+            _client?.Dispose();
+            await _factory.DisposeAsync();
         }
 
         [Fact]
@@ -106,7 +114,7 @@ namespace Tests.ControllerTest.Admin
         public async Task ChangePriceProposalStatus_200OK()
         {
             //Arrange
-            var token = "token2";
+            var token = "token1";
             var url = $"/api/admin/proposal/change-status?token={token}&amp;isAccepted=true";
 
             //Act
@@ -162,14 +170,15 @@ namespace Tests.ControllerTest.Admin
         [Fact]
         public async Task ChangePriceProposalStatus_404()
         {
-            //Arrange
-            var token = "tokenBad";
-            var url = $"/api/admin/proposal/change-status?token={token}&amp;isAccepted=true";
-            var content = new StringContent("{}", Encoding.UTF8, "application/json");
-            //Act
-            var response = await _client.PatchAsync(url, content);
+            // Arrange
 
-            //Assert
+            var token = "tokenBad";
+            var url = $"/api/admin/proposal/change-status?token={token}&isAccepted=true";
+
+            // Act
+            var response = await _client.PatchAsync(url, null);
+
+            // Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
     }
