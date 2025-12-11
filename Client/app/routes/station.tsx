@@ -5,6 +5,8 @@ import Footer from "../components/footer";
 import "leaflet/dist/leaflet.css";
 import { API_BASE } from "../components/api";
 import { useTranslation } from "react-i18next";
+// IMPORTUJEMY NOWY MODAL
+import { ProposalModal } from "../components/proposal-modal";
 
 type FuelPrice = {
   fuelCode: string;
@@ -37,6 +39,9 @@ export default function StationProfilePage() {
   const [station, setStation] = useState<StationProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Stan dla modala
+  const [isProposalOpen, setIsProposalOpen] = useState(false);
 
   const [MapComponents, setMapComponents] = useState<{
     MapContainer?: any;
@@ -159,7 +164,7 @@ export default function StationProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-base-200 text-base-content">
+    <div className="min-h-screen bg-base-200 text-base-content relative">
       <Header />
 
       <main className="mx-auto max-w-6xl px-4 py-5">
@@ -190,13 +195,26 @@ export default function StationProfilePage() {
         {!loading && !error && station && (
           <div className="space-y-6">
             <section className="bg-base-300 rounded-xl p-6 shadow-md">
-              <h2 className="text-2xl font-semibold mb-2">
-                {station.brandName}
-              </h2>
-              <p className="text-sm md:text-base">
-                {station.city}, {station.street} {station.houseNumber}
-              </p>
-              <div className="mt-3 flex gap-2">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h2 className="text-2xl font-semibold mb-2">
+                    {station.brandName}
+                  </h2>
+                  <p className="text-sm md:text-base">
+                    {station.city}, {station.street} {station.houseNumber}
+                  </p>
+                </div>
+                
+                {/* NOWY PRZYCISK - ZGŁOŚ ZMIANĘ */}
+                <button 
+                    className="btn btn-primary shadow-lg"
+                    onClick={() => setIsProposalOpen(true)}
+                >
+                    {t("proposal.form_title") || "Zgłoś aktualizację cen"}
+                </button>
+              </div>
+
+              <div className="mt-3 flex gap-2 flex-wrap">
                 <a
                   href={buildGoogleMapsUrl(station)}
                   target="_blank"
@@ -230,7 +248,7 @@ export default function StationProfilePage() {
                     >
                       <TileLayer
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution="&copy; OpenStreetMap contributors"
+                        attribution="© OpenStreetMap contributors"
                       />
                       <Marker
                         position={[station.latitude, station.longitude]}
@@ -292,6 +310,14 @@ export default function StationProfilePage() {
       </main>
 
       <Footer />
+
+      {/* RENDEROWANIE MODALA */}
+      <ProposalModal 
+        isOpen={isProposalOpen}
+        onClose={() => setIsProposalOpen(false)}
+        station={station}
+      />
+
     </div>
   );
 }

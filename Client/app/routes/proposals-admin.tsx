@@ -334,35 +334,45 @@ export default function ProposalAdminPage() {
     setModalLoading(true);
     setModalError(null);
     try {
-      for (const it of activeGroup.items) {
+      const pendingItems = activeGroup.items.filter(
+        (it) => it.status === "Pending" || it.status === "pending"
+      );
+
+      for (const it of pendingItems) {
         await changeStatusForToken(it.token, true);
       }
+      
       await reloadList();
       closeReview();
     } catch (e: any) {
       console.error(e);
       setModalError(
-        e?.message ?? t("proposaladmin.modal_error_accept_all"),
+        e?.message ?? "Nie udało się zaakceptować wszystkich propozycji.",
       );
     } finally {
       setModalLoading(false);
     }
   };
 
-  const handleRejectAll = async () => {
+const handleRejectAll = async () => {
     if (!activeGroup) return;
     setModalLoading(true);
     setModalError(null);
     try {
-      for (const it of activeGroup.items) {
+      const pendingItems = activeGroup.items.filter(
+        (it) => it.status === "Pending" || it.status === "pending"
+      );
+
+      for (const it of pendingItems) {
         await changeStatusForToken(it.token, false);
       }
+      
       await reloadList();
       closeReview();
     } catch (e: any) {
       console.error(e);
       setModalError(
-        e?.message ?? t("proposaladmin.modal_error_reject_all"),
+        e?.message ?? "Nie udało się odrzucić wszystkich propozycji.",
       );
     } finally {
       setModalLoading(false);
@@ -522,10 +532,6 @@ export default function ProposalAdminPage() {
                 <option value="asc">{t("proposaladmin.sort_dir_asc")}</option>
               </select>
             </div>
-          </div>
-
-          <div className="text-sm text-base-content/70">
-            {t("proposaladmin.total_items_label")} <span className="font-semibold">{totalCount}</span>
           </div>
         </div>
 
