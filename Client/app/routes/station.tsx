@@ -5,7 +5,6 @@ import Footer from "../components/footer";
 import "leaflet/dist/leaflet.css";
 import { API_BASE } from "../components/api";
 import { useTranslation } from "react-i18next";
-// IMPORTUJEMY NOWY MODAL
 import { ProposalModal } from "../components/proposal-modal";
 
 type FuelPrice = {
@@ -205,7 +204,6 @@ export default function StationProfilePage() {
                   </p>
                 </div>
                 
-                {/* NOWY PRZYCISK - ZGŁOŚ ZMIANĘ */}
                 <button 
                     className="btn btn-primary shadow-lg"
                     onClick={() => setIsProposalOpen(true)}
@@ -311,7 +309,6 @@ export default function StationProfilePage() {
 
       <Footer />
 
-      {/* RENDEROWANIE MODALA */}
       <ProposalModal 
         isOpen={isProposalOpen}
         onClose={() => setIsProposalOpen(false)}

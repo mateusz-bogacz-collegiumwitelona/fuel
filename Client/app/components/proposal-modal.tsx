@@ -44,17 +44,14 @@ const AVAILABLE_FUEL_TYPES = ["PB95", "PB98", "ON", "LPG", "E85"];
 export function ProposalModal({ isOpen, onClose, station }: ProposalModalProps) {
   const { t } = useTranslation();
 
-
   const [brandName, setBrandName] = React.useState("");
   const [street, setStreet] = React.useState("");
   const [houseNumber, setHouseNumber] = React.useState("");
   const [city, setCity] = React.useState("");
   
-
   const [fuelRows, setFuelRows] = React.useState<FuelRow[]>([{ fuelCode: "PB95", price: "" }]);
   const [globalFile, setGlobalFile] = React.useState<File | null>(null);
   const [globalPreview, setGlobalPreview] = React.useState<string | null>(null);
-
 
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -83,7 +80,6 @@ export function ProposalModal({ isOpen, onClose, station }: ProposalModalProps) 
     }
   }, [isOpen, station]);
 
-
   React.useEffect(() => {
     return () => {
       if (globalPreview) URL.revokeObjectURL(globalPreview);
@@ -108,19 +104,18 @@ export function ProposalModal({ isOpen, onClose, station }: ProposalModalProps) 
     else setGlobalPreview(null);
   }
 
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setSuccessMsg(null);
 
     if (!globalFile) {
-      setError(t("proposal.error_no_photo") || "Musisz dodać zdjęcie weryfikacyjne.");
+      setError(t("proposal.error_no_photo"));
       return;
     }
     const activeRows = fuelRows.filter(r => r.fuelCode && r.price);
     if (activeRows.length === 0) {
-      setError(t("proposal.error_no_price") || "Musisz dodać co najmniej jedną cenę.");
+      setError(t("proposal.error_no_price"));
       return;
     }
 
@@ -169,24 +164,24 @@ export function ProposalModal({ isOpen, onClose, station }: ProposalModalProps) 
       const failures = settled.filter(r => r.status === "rejected");
 
       if (failures.length === 0) {
-        setSuccessMsg(t("proposal.success_all_sent") || "Zgłoszenie wysłane pomyślnie!");
+        setSuccessMsg(t("proposal.success_all_sent"));
         setTimeout(() => {
             onClose(); 
         }, 1500);
       } else {
-        setError(`${t("proposal.errors")}: ${failures.length} błędów wysyłania.`);
+        setError(`${t("proposal.errors")}: ${failures.length} ${t("proposal.error_sending_fallback")}`);
       }
 
     } catch (err: any) {
         console.error(err);
-        setError(err.message || "Błąd wysyłania.");
+        setError(err.message || t("proposal.error_sending_fallback"));
     } finally {
         setSubmitting(false);
     }
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t("proposal.form_title") || "Zgłoś zmianę cen"}>
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("proposal.form_title")}>
       <form onSubmit={handleSubmit} className="space-y-6">
         
         <div className="bg-base-200 p-4 rounded-lg border border-base-300">
@@ -194,14 +189,11 @@ export function ProposalModal({ isOpen, onClose, station }: ProposalModalProps) 
             <p className="text-base-content/80 text-sm">
                 {city}, ul. {street} {houseNumber}
             </p>
-            <p className="text-xs text-base-content/50 mt-1">
-                Zgłaszasz aktualizację cen dla tej stacji.
-            </p>
         </div>
 
         <div>
             <div className="flex justify-between items-center mb-2">
-                <span className="font-semibold text-sm">{t("proposal.proposed_prices_title") || "Proponowane ceny"}</span>
+                <span className="font-semibold text-sm">{t("proposal.proposed_prices_title")}</span>
             </div>
             <div className="space-y-3">
                 {fuelRows.map((row, idx) => (
@@ -211,29 +203,32 @@ export function ProposalModal({ isOpen, onClose, station }: ProposalModalProps) 
                             value={row.fuelCode}
                             onChange={e => updateFuelRow(idx, { fuelCode: e.target.value })}
                         >
+                            <option value="">{t("proposal.select_fuel_placeholder")}</option>
                             {AVAILABLE_FUEL_TYPES.map(ft => <option key={ft} value={ft}>{ft}</option>)}
                         </select>
                         <div className="relative w-1/3">
                             <input 
                                 className="input input-bordered input-sm w-full pr-8"
                                 type="number" step="0.01"
-                                placeholder="0.00"
+                                placeholder={t("proposal.price_placeholder")}
                                 value={row.price}
                                 onChange={e => updateFuelRow(idx, { price: e.target.value })}
                             />
-                            <span className="absolute right-3 top-1 text-xs text-gray-500 leading-8">zł</span>
                         </div>
                         <button type="button" className="btn btn-sm btn-ghost text-error" onClick={() => removeFuelRow(idx)}>
                            ✕
                         </button>
                     </div>
                 ))}
-                <button type="button" className="btn btn-xs btn-outline w-40 border-dashed" onClick={addFuelRow}>+ Dodaj kolejne paliwo</button>
+                <button type="button" className="btn btn-xs btn-outline w-40 border-dashed" onClick={addFuelRow}>
+                    {t("proposal.add_fuel_button")}
+                </button>
             </div>
         </div>
 
         <div>
-            <label className="label pt-0"><span className="label-text font-semibold">{t("proposal.photo_label") || "Zdjęcie dowodowe (paragon/pylon)"}</span></label>
+            <label className="label pt-0"><span className="label-text font-semibold">{t("proposal.photo_label")}</span></label>
+            <span className="text-xs text-base-content/60 block mb-2">{t("proposal.photo_help")}</span>
             <input type="file" className="file-input file-input-bordered w-full file-input-sm" accept="image/*" onChange={handleFileChange} />
             {globalPreview && (
                 <div className="mt-3 flex justify-center bg-base-200 p-2 rounded-lg">
@@ -246,9 +241,18 @@ export function ProposalModal({ isOpen, onClose, station }: ProposalModalProps) 
         {successMsg && <div className="alert alert-success text-sm py-2">{successMsg}</div>}
 
         <div className="flex justify-end gap-2 pt-2 border-t border-base-200">
-            <button type="button" className="btn btn-ghost" onClick={onClose} disabled={submitting}>{t("common.cancel") || "Anuluj"}</button>
+            <button type="button" className="btn btn-ghost" onClick={onClose} disabled={submitting}>
+                {t("common.cancel") || "Anuluj"} 
+            </button>
             <button type="submit" className="btn btn-primary px-6" disabled={submitting}>
-                {submitting ? <span className="loading loading-spinner loading-xs"></span> : (t("proposal.submit_button") || "Wyślij zgłoszenie")}
+                {submitting ? (
+                    <>
+                        <span className="loading loading-spinner loading-xs"></span>
+                        {t("proposal.sending_text")}
+                    </>
+                ) : (
+                    t("proposal.submit_button")
+                )}
             </button>
         </div>
 
