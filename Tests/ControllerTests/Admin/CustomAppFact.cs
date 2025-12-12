@@ -6,7 +6,6 @@ using Data.Models;
 using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -58,7 +57,6 @@ public class CustomAppFact : WebApplicationFactory<Program>
             if (dbDescriptor != null)
                 services.Remove(dbDescriptor);
 
-            // ✅ ZMIANA: Wyłączenie ostrzeżeń o transakcjach dla in-memory database
             services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseInMemoryDatabase("TestDb");
@@ -138,7 +136,7 @@ public class CustomAppFact : WebApplicationFactory<Program>
                 db.RemoveRange(db.Set<PriceProposal>());
                 db.RemoveRange(db.Users);
                 db.RemoveRange(db.Set<ApplicationUser>());
-                
+                var date = new DateTime(2025, 12, 1, 10, 0, 0, DateTimeKind.Utc);
                 var location = geometryFactory.CreatePoint(new Coordinate(10.0, 10.0));
                 var user1 = new ApplicationUser { UserName = "TestUser", Id = userId, Email = "user@test.com", NormalizedUserName = "USER", NormalizedEmail = "USER@TEST.COM", SecurityStamp = Guid.NewGuid().ToString() };
                 var admin = new ApplicationUser { UserName = "TestAdmin", Id = adminId, Email = "admin@test.com", NormalizedEmail = "ADMIN@TEST.COM", NormalizedUserName = "TESTADMIN", SecurityStamp = Guid.NewGuid().ToString() };
@@ -156,7 +154,20 @@ public class CustomAppFact : WebApplicationFactory<Program>
                 var pp1 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token1", ProposedPrice = 5.0m, PhotoUrl = "url1", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Pending, ReviewedAt = null, ReviewedBy = null, Reviewer = null };
                 var pp2 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token2", ProposedPrice = 4.0m, PhotoUrl = "url2", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Rejected, ReviewedAt = null, ReviewedBy = null, Reviewer = null };
                 var pp3 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token3", ProposedPrice = 4.0m, PhotoUrl = "url3", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Pending, ReviewedAt = DateTime.UtcNow.AddDays(-1), ReviewedBy = admin.Id, Reviewer = admin };
-                
+                var report1 = new ReportUserRecord
+                {
+                    ReportedUser = user1,
+                    ReportedUserId = user1.Id,
+                    Id = Guid.NewGuid(),
+                    CreatedAt = date,
+                    Status = ReportStatusEnum.Pending,
+                    ReportingUser = admin,
+                    ReportingUserId = admin.Id,
+                    Description = "some description",
+                };
+
+                db.ReportUserRecords.Add(report1);
+                db.SaveChanges();
                 if (!db.Users.Any())
                 {
                     db.Users.AddRange(admin, user1);
