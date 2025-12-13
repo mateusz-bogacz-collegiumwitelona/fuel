@@ -15,9 +15,11 @@ using Moq;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
 using StackExchange.Redis;
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Claims;
 
-namespace Tests.ControllerTest;
+namespace Tests.ControllerTests;
 
 public class CustomAppFact : WebApplicationFactory<Program>
 {
@@ -29,10 +31,10 @@ public class CustomAppFact : WebApplicationFactory<Program>
         {
             var fbDescriptors = services
                 .Where(d =>
-                    (d.ServiceType != null && d.ServiceType.FullName?.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0) ||
-                    (d.ImplementationType != null && d.ImplementationType.FullName?.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0) ||
-                    (d.ImplementationInstance != null && d.ImplementationInstance.GetType().FullName?.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0) ||
-                    (d.ImplementationFactory != null && d.ImplementationFactory?.Method.DeclaringType?.FullName.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0)
+                    d.ServiceType != null && d.ServiceType.FullName?.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    d.ImplementationType != null && d.ImplementationType.FullName?.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    d.ImplementationInstance != null && d.ImplementationInstance.GetType().FullName?.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    d.ImplementationFactory != null && d.ImplementationFactory?.Method.DeclaringType?.FullName.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0
                 )
                 .ToList();
 
@@ -70,9 +72,39 @@ public class CustomAppFact : WebApplicationFactory<Program>
                 services.Remove(hs);
 
             var redisMock = new Mock<IConnectionMultiplexer>();
+            var dbMock = new Mock<IDatabase>();
+            var serverMock = new Mock<IServer>();
+
+            dbMock.Setup(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+                  .ReturnsAsync(RedisValue.Null);
+
+            dbMock.Setup(d => d.StringSetAsync(
+                    It.IsAny<RedisKey>(),
+                    It.IsAny<RedisValue>(),
+                    It.IsAny<TimeSpan?>(),
+                    It.IsAny<When>(),
+                    It.IsAny<CommandFlags>()))
+                  .ReturnsAsync(true);
+
+            dbMock.Setup(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+                  .ReturnsAsync(true);
+
+            serverMock.Setup(s => s.Keys(
+                    It.IsAny<int>(),
+                    It.IsAny<RedisValue>(),
+                    It.IsAny<int>(),
+                    It.IsAny<long>(),
+                    It.IsAny<int>(),
+                    It.IsAny<CommandFlags>()))
+                .Returns(Enumerable.Empty<RedisKey>());
+
+            redisMock.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(dbMock.Object);
+            redisMock.Setup(r => r.GetEndPoints(It.IsAny<bool>())).Returns(new EndPoint[] { new IPEndPoint(IPAddress.Loopback, 6379) });
+            redisMock.Setup(r => r.GetServer(It.IsAny<EndPoint>(), It.IsAny<object>())).Returns(serverMock.Object);
+
             services.RemoveAll<IConnectionMultiplexer>();
             services.AddSingleton(redisMock.Object);
-            
+
             services.RemoveAll<BlobServiceClient>();
             var blobMock = new Mock<BlobServiceClient>();
             services.AddSingleton(blobMock.Object);
@@ -80,10 +112,11 @@ public class CustomAppFact : WebApplicationFactory<Program>
             services.RemoveAll<IStorage>();
             var storageMock = new Mock<IStorage>();
             services.AddSingleton(storageMock.Object);
-            
+
             var adminId = Guid.NewGuid();
             var userId = Guid.NewGuid();
-            
+            var userId2 = Guid.NewGuid();
+
             services.PostConfigureAll<JwtBearerOptions>(options =>
             {
                 options.Events = new JwtBearerEvents
@@ -117,8 +150,21 @@ public class CustomAppFact : WebApplicationFactory<Program>
                                 context.Principal = new ClaimsPrincipal(identity);
                                 context.Success();
                             }
+                            else if (authValue.Contains("test-user2-token"))
+                            {
+                                var identity = new ClaimsIdentity(new[]
+                                {
+                                    new Claim(ClaimTypes.Email, "user2@test.com"),
+                                    new Claim(ClaimTypes.NameIdentifier, userId2.ToString()),
+                                    new Claim(ClaimTypes.Name, "TestUser2"),
+                                    new Claim(ClaimTypes.Role, "User"),
+                                }, "Test");
+                                context.Principal = new ClaimsPrincipal(identity);
+                                context.Success();
+                            }
                         }
                         return Task.CompletedTask;
+
                     }
                 };
             });
@@ -140,6 +186,7 @@ public class CustomAppFact : WebApplicationFactory<Program>
                 var date = new DateTime(2025, 12, 1, 10, 0, 0, DateTimeKind.Utc);
                 var location = geometryFactory.CreatePoint(new Coordinate(10.0, 10.0));
                 var user1 = new ApplicationUser { UserName = "TestUser", Id = userId, Email = "user@test.com", NormalizedUserName = "USER", NormalizedEmail = "USER@TEST.COM", SecurityStamp = Guid.NewGuid().ToString() };
+                var user2 = new ApplicationUser { UserName = "TestUser2", Id = userId2, Email = "user2@test.com", NormalizedUserName = "USER2", NormalizedEmail = "USER2@TEST.COM", SecurityStamp = Guid.NewGuid().ToString() };
                 var admin = new ApplicationUser { UserName = "TestAdmin", Id = adminId, Email = "admin@test.com", NormalizedEmail = "ADMIN@TEST.COM", NormalizedUserName = "TESTADMIN", SecurityStamp = Guid.NewGuid().ToString() };
                 var brand1 = new Brand { Name = "Orlen", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
                 var brand2 = new Brand { Name = "Shell", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
@@ -156,6 +203,11 @@ public class CustomAppFact : WebApplicationFactory<Program>
                 var pp1 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token1", ProposedPrice = 5.0m, PhotoUrl = "url1", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Pending, ReviewedAt = null, ReviewedBy = null, Reviewer = null };
                 var pp2 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token2", ProposedPrice = 4.0m, PhotoUrl = "url2", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Rejected, ReviewedAt = null, ReviewedBy = null, Reviewer = null };
                 var pp3 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token3", ProposedPrice = 4.0m, PhotoUrl = "url3", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Pending, ReviewedAt = DateTime.UtcNow.AddDays(-1), ReviewedBy = admin.Id, Reviewer = admin };
+                if (!db.Users.Any())
+                {
+                    db.Users.AddRange(admin, user1, user2);
+                    db.SaveChanges();
+                }
                 var report1 = new ReportUserRecord
                 {
                     ReportedUser = user1,
@@ -170,11 +222,6 @@ public class CustomAppFact : WebApplicationFactory<Program>
 
                 db.ReportUserRecords.Add(report1);
                 db.SaveChanges();
-                if (!db.Users.Any())
-                {
-                    db.Users.AddRange(admin, user1);
-                    db.SaveChanges();
-                }
 
                 var adminRole = new IdentityRole<Guid>
                 {
@@ -182,7 +229,7 @@ public class CustomAppFact : WebApplicationFactory<Program>
                     Name = "Admin",
                     NormalizedName = "ADMIN"
                 };
-                
+
                 var userRole = new IdentityRole<Guid>
                 {
                     Id = Guid.NewGuid(),
@@ -193,35 +240,41 @@ public class CustomAppFact : WebApplicationFactory<Program>
                 db.Roles.Add(adminRole);
                 db.Roles.Add(userRole);
                 db.SaveChanges();
-                
+
                 var adminUserRole = new IdentityUserRole<Guid>
                 {
                     RoleId = adminRole.Id,
                     UserId = admin.Id
                 };
-                
+
                 var normalUserRole = new IdentityUserRole<Guid>
                 {
                     RoleId = userRole.Id,
                     UserId = user1.Id
                 };
-                
+                var normalUserRole2 = new IdentityUserRole<Guid>
+                {
+                    RoleId = userRole.Id,
+                    UserId = user2.Id
+                };
+
                 db.UserRoles.Add(adminUserRole);
                 db.UserRoles.Add(normalUserRole);
+                db.UserRoles.Add(normalUserRole2);
                 db.SaveChanges();
-                
+
                 if (!db.Brand.Any())
                 {
                     db.Brand.AddRange(new[] { brand1, brand2, brand3 });
                     db.SaveChanges();
                 }
-                
+
                 if (!db.FuelTypes.Any())
                 {
                     db.FuelTypes.AddRange(new[] { ft1, ft2, ft3, ft4, ft5, ft6 });
                     db.SaveChanges();
                 }
-                
+
                 if (!db.PriceProposals.Any())
                 {
                     db.PriceProposals.AddRange(pp1, pp2, pp3);

@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Tests.ControllerTests;
 
 namespace Tests.ControllerTest.Admin
 {
