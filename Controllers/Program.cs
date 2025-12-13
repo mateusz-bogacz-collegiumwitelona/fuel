@@ -28,6 +28,7 @@ using StackExchange.Redis;
 using System.Reflection;
 using System.Text;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 
 //log configuration
 Log.Logger = new LoggerConfiguration()
@@ -61,7 +62,7 @@ builder.Services.AddCors(op =>
 {
     op.AddPolicy("AllowClient", p =>
     {
-        p.WithOrigins("http://localhost:4000")
+        p.WithOrigins("http://localhost:4000", "https://localhost")
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials();
@@ -203,6 +204,27 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
+//identity cookie config
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Events.OnRedirectToLogin = context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return Task.CompletedTask;
+    };
+});
+
+//nginx header config
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
+
 // add connection to redis
 var redisHost = builder.Configuration["Redis:Host"] ?? "redis";
 var redisPort = builder.Configuration["Redis:Port"] ?? "6379";
@@ -324,6 +346,8 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 var cliArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
 if (cliArgs.Length > 0)

@@ -3,8 +3,8 @@ import { Link } from "react-router";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { useTranslation } from "react-i18next";
+import { API_BASE } from "../components/api";
 
-const API_BASE = "http://localhost:5111";
 
 function parseJwt(token: string | null) {
     if (!token) return null;

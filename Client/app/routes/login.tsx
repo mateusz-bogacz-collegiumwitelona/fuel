@@ -2,9 +2,8 @@ import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { useTranslation } from "react-i18next";
-import FacebookButton from "../components/FacebookLoginButton"; 
-
-const API_BASE = "http://localhost:5111";
+import FacebookButton from "../components/FacebookLoginButton";
+import { API_BASE } from "../components/api";
 
 function normalizeRole(raw: unknown): string | null {
   if (!raw) return null;
