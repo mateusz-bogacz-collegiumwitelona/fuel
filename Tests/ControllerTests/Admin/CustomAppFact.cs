@@ -134,6 +134,7 @@ public class CustomAppFact : WebApplicationFactory<Program>
                 db.RemoveRange(db.Set<FuelType>());
                 db.RemoveRange(db.Set<Station>());
                 db.RemoveRange(db.Set<PriceProposal>());
+                db.RemoveRange(db.Set<FuelPrice>());
                 db.RemoveRange(db.Users);
                 db.RemoveRange(db.Set<ApplicationUser>());
                 var date = new DateTime(2025, 12, 1, 10, 0, 0, DateTimeKind.Utc);
@@ -150,7 +151,8 @@ public class CustomAppFact : WebApplicationFactory<Program>
                 var ft3 = new FuelType { Name = "ZBenzyna 98", Code = "PB98", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
                 var ft4 = new FuelType { Name = "YBenzyna 98", Code = "Y", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
                 var ft5 = new FuelType { Name = "XDeleteBenzyna", Code = "X", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
-                
+                var ft6 = new FuelType { Name = "ZBenzyna", Code = "Z", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
+
                 var pp1 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token1", ProposedPrice = 5.0m, PhotoUrl = "url1", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Pending, ReviewedAt = null, ReviewedBy = null, Reviewer = null };
                 var pp2 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token2", ProposedPrice = 4.0m, PhotoUrl = "url2", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Rejected, ReviewedAt = null, ReviewedBy = null, Reviewer = null };
                 var pp3 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token3", ProposedPrice = 4.0m, PhotoUrl = "url3", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Pending, ReviewedAt = DateTime.UtcNow.AddDays(-1), ReviewedBy = admin.Id, Reviewer = admin };
@@ -216,7 +218,7 @@ public class CustomAppFact : WebApplicationFactory<Program>
                 
                 if (!db.FuelTypes.Any())
                 {
-                    db.FuelTypes.AddRange(new[] { ft1, ft2, ft3, ft4, ft5 });
+                    db.FuelTypes.AddRange(new[] { ft1, ft2, ft3, ft4, ft5, ft6 });
                     db.SaveChanges();
                 }
                 
