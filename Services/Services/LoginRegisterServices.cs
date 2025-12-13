@@ -23,7 +23,7 @@ namespace Services.Services
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private readonly IConfiguration _configuration;
         private readonly ILogger<LoginRegisterServices> _logger;
-        private EmailSender _email;
+        private IEmailSender _email;
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
         private readonly IUserRepository _userRepository;
         private readonly IHttpContextAccessor _httpContext;
@@ -36,7 +36,7 @@ namespace Services.Services
             RoleManager<IdentityRole<Guid>> roleManager,
             IConfiguration configuration,
             ILogger<LoginRegisterServices> logger,
-            EmailSender email,
+            IEmailSender email,
             IProposalStatisticRepository proposalStatisticRepository,
             IUserRepository userRepository,
             IHttpContextAccessor httpContext,

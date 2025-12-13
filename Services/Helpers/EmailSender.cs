@@ -1,18 +1,12 @@
 ﻿using DTO.Requests;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using NetTopologySuite.Triangulate;
 using Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Mail;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Services.Helpers
 {
-    public class EmailSender
+    public class EmailSender : IEmailSender
     {
         private readonly ILogger<EmailSender> _logger;
         private readonly IConfiguration _config;

@@ -249,7 +249,7 @@ builder.Services.AddScoped<IBanService, BanService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 
 //register helpers
-builder.Services.AddScoped<EmailSender>();
+builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<EmailBodys>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenFactory, TokenFactory>();

@@ -20,7 +20,7 @@ namespace Services.Services
         private readonly IStationRepository _stationRepository;
         private readonly IFuelTypeRepository _fuelTypeRepository;
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
-        private EmailSender _email;
+        private IEmailSender _email;
         private readonly CacheService _cache;
 
         public PriceProposalServices(
@@ -30,7 +30,7 @@ namespace Services.Services
             IStationRepository stationRepository,
             IFuelTypeRepository fuelTypeRepository,
             IProposalStatisticRepository proposalStatisticRepository,
-            EmailSender email,
+            IEmailSender email,
             CacheService cache
             )
         {
