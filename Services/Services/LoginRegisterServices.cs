@@ -711,7 +711,6 @@ namespace Services.Services
         }
 
         //Social logins and registrations
-
         public async Task<Result<LoginResponse>> RegisterWithFacebookTokenAsync(string accessToken, HttpContext httpContext)
         {
             try
