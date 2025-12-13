@@ -1,11 +1,4 @@
-import React, { useEffect } from "react";
-import { API_BASE } from "./api";
-
-interface FacebookButtonProps {
-    onLoginSuccess: (data: any) => void;
-    onLoginFailure: (msg: string) => void;
-    buttonText?: string;
-}
+import React, { useEffect } from 'react';
 
 declare global {
     interface Window {
@@ -14,89 +7,88 @@ declare global {
     }
 }
 
-export default function FacebookButton({
-                                           onLoginSuccess,
-                                           onLoginFailure,
-                                           buttonText = "Kontynuuj z Facebook",
-                                       }: FacebookButtonProps) {
+interface FacebookLoginButtonProps {
+    onLoginSuccess: (data: any) => void;
+    onLoginFailure: (msg: string) => void;
+}
+
+const FacebookLoginButton: React.FC<FacebookLoginButtonProps> = ({ onLoginSuccess, onLoginFailure }) => {
 
     useEffect(() => {
-        window.fbAsyncInit = function () {
+        window.fbAsyncInit = function() {
             window.FB.init({
-                appId: import.meta.env.FACEBOOK_OAUTH_CLIENT_ID,
-                cookie: true,
-                xfbml: true,
-                version: "v18.0",
+                appId      : '1367518931827311',
+                cookie     : true,
+                xfbml      : true,
+                version    : 'v18.0'
             });
         };
 
-        if (!document.getElementById("facebook-jssdk")) {
-            const js = document.createElement("script");
-            js.id = "facebook-jssdk";
-            js.src = "https://connect.facebook.net/en_US/sdk.js";
-            js.async = true;
-            js.defer = true;
+        if (!document.getElementById('facebook-jssdk')) {
+            const js = document.createElement('script');
+            js.id = 'facebook-jssdk';
+            js.src = "https://connect.facebook.net/pl_PL/sdk.js";
             document.body.appendChild(js);
         }
     }, []);
 
-    const handleLoginClick = () => {
+    // 1. Wydzielona funkcja asynchroniczna do komunikacji z Backendem
+// Wewnątrz loginToServer w FacebookLoginButton.tsx
+
+    const loginToServer = async (accessToken: string) => {
+        try {
+            // 1. Najpierw próbujemy się zalogować
+            let res = await fetch("/api/facebook/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ accessToken }),
+                credentials: "include"
+            });
+
+            // 2. Jeśli serwer odpowie 404 (User not found), próbujemy REJESTRACJI
+            if (res.status === 404) {
+                console.log("Użytkownik nie istnieje, próbuję zarejestrować...");
+                res = await fetch("/api/facebook/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ accessToken }),
+                    credentials: "include"
+                });
+            }
+
+            const data = await res.json();
+            if(res.ok) {
+                onLoginSuccess(data.data || data);
+            } else {
+                onLoginFailure(data.message || "Błąd serwera");
+            }
+        } catch (err) {
+            console.error(err);
+            onLoginFailure("Błąd połączenia");
+        }
+    };
+    const handleLogin = () => {
         if (!window.FB) {
-            onLoginFailure("Facebook SDK nie jest jeszcze załadowany.");
+            onLoginFailure("Facebook SDK nie jest gotowy. Odśwież stronę.");
             return;
         }
 
-        window.FB.login(
-            function (response: any) {
-                if (response.authResponse) {
-                    const token = response.authResponse.accessToken;
-                    console.log("FB Token received, sending to backend...");
-
-                    fetch(`${API_BASE}/api/login/facebook`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            Accept: "application/json",
-                        },
-                        body: JSON.stringify({ accessToken: token }),
-                    })
-                        .then((res) => res.json().then((data) => ({ status: res.status, body: data })))
-                        .then(({ status, body }) => {
-                            if (status >= 200 && status < 300) {
-                                onLoginSuccess(body);
-                            } else {
-                                onLoginFailure(body.message || "Błąd logowania przez Facebook (Backend).");
-                            }
-                        })
-                        .catch((err) => {
-                            console.error(err);
-                            onLoginFailure("Błąd połączenia z serwerem.");
-                        });
-                } else {
-                    console.log("User cancelled login or did not fully authorize.");
-                    onLoginFailure("Logowanie anulowane.");
-                }
-            },
-            { scope: "public_profile,email" }
-        );
+        // 2. FB.login przyjmuje teraz zwykłą funkcję (bez async)
+        window.FB.login((response: any) => {
+            if (response.authResponse) {
+                // Wywołujemy funkcję asynchroniczną, ale nie używamy 'await' wewnątrz callbacka SDK
+                loginToServer(response.authResponse.accessToken);
+            } else {
+                onLoginFailure("Anulowano logowanie.");
+            }
+        }, { scope: 'public_profile,email' });
     };
 
     return (
-        <button
-            onClick={handleLoginClick}
-            type="button"
-            className="btn w-full bg-[#1877F2] hover:bg-[#166fe5] text-white border-none mt-2 flex gap-2 no-animation"
-        >
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-            >
-                <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z" />
-            </svg>
-            {buttonText}
+        <button type="button" onClick={handleLogin} className="btn btn-primary w-full mt-2">
+            Zaloguj przez Facebooka
         </button>
     );
-}
+};
+
+export default FacebookLoginButton;
