@@ -2,7 +2,7 @@ import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { API_BASE } from "../components/api";
-
+import FacebookButton from "../components/FacebookLoginButton";
 
 export default function Register() {
   const [username, setUsername] = React.useState("");
@@ -11,6 +11,18 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [message, setMessage] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+
+
+  const handleFacebookSuccess = (data: any) => {
+
+    if (data?.email) localStorage.setItem("email", data.email);
+    if (data?.token) localStorage.setItem("token", data.token);
+
+
+    if (typeof window !== "undefined") {
+       window.location.href = "/dashboard";
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -133,7 +145,7 @@ export default function Register() {
             className="p-3 rounded-md bg-base-100 border border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-400 outline-none"
           />
 
-          <div className="text-xs text-gray-400 leading-snug">
+          <div className="text-xs text-base-400 leading-snug">
             Hasło musi mieć co najmniej 6 znaków, zawierać co najmniej:
             jedną wielką literę, jedną cyfrę oraz jeden znak specjalny.
           </div>
@@ -141,9 +153,18 @@ export default function Register() {
           <button type="submit" className="btn btn-info" disabled={loading}>
             {loading ? "Rejestrowanie..." : "Zarejestruj się"}
           </button>
+          
+          {/* --- FACEBOOK BUTTON --- */}
+          <div className="divider my-2 text-sm text-base-500">LUB</div>
+          
+          <FacebookButton 
+            buttonText="Zarejestruj się przez Facebook"
+            onLoginSuccess={handleFacebookSuccess}
+            onLoginFailure={(msg) => setMessage(msg)}
+          />
 
           {message && (
-            <p className="text-center text-sm text-gray-300 mt-2">
+            <p className="text-center text-sm text-base-300 mt-2">
               {message}
             </p>
           )}
