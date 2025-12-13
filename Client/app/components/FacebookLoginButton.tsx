@@ -32,12 +32,9 @@ const FacebookLoginButton: React.FC<FacebookLoginButtonProps> = ({ onLoginSucces
         }
     }, []);
 
-    // 1. Wydzielona funkcja asynchroniczna do komunikacji z Backendem
-// Wewnątrz loginToServer w FacebookLoginButton.tsx
 
     const loginToServer = async (accessToken: string) => {
         try {
-            // 1. Najpierw próbujemy się zalogować
             let res = await fetch("/api/facebook/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -45,7 +42,6 @@ const FacebookLoginButton: React.FC<FacebookLoginButtonProps> = ({ onLoginSucces
                 credentials: "include"
             });
 
-            // 2. Jeśli serwer odpowie 404 (User not found), próbujemy REJESTRACJI
             if (res.status === 404) {
                 console.log("Użytkownik nie istnieje, próbuję zarejestrować...");
                 res = await fetch("/api/facebook/register", {
@@ -73,10 +69,8 @@ const FacebookLoginButton: React.FC<FacebookLoginButtonProps> = ({ onLoginSucces
             return;
         }
 
-        // 2. FB.login przyjmuje teraz zwykłą funkcję (bez async)
         window.FB.login((response: any) => {
             if (response.authResponse) {
-                // Wywołujemy funkcję asynchroniczną, ale nie używamy 'await' wewnątrz callbacka SDK
                 loginToServer(response.authResponse.accessToken);
             } else {
                 onLoginFailure("Anulowano logowanie.");
