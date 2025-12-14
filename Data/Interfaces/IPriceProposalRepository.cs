@@ -1,5 +1,4 @@
 ﻿using Data.Models;
-using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 
@@ -18,5 +17,6 @@ namespace Data.Interfaces
         Task<List<GetStationPriceProposalResponse>> GetAllPriceProposal(TableRequest request);
         Task<bool> ChangePriceProposalStatus(bool isAccepted, PriceProposal priceProposal, ApplicationUser admin);
         Task<PriceProposal> FindPriceProposal(string token);
+        Task<GetPriceProposalStaisticResponse> GetPriceProposalStaisticAsync();
     }
 }

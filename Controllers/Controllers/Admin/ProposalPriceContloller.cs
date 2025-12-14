@@ -248,5 +248,73 @@ namespace Controllers.Controllers.Admin
                     Data = result.Data
                 });
         }
+
+        /// <summary>
+        /// Retrieves aggregated statistics of all price proposals.
+        /// </summary>
+        /// <remarks>
+        /// Returns a summary of how many price proposals were:
+        /// - **Accepted**
+        /// - **Rejected**
+        /// - **Pending**
+        ///
+        /// This endpoint is typically used for administrative dashboards and monitoring trends.
+        /// It performs a database-side aggregation to ensure optimal performance.
+        ///
+        /// **Returned fields:**
+        /// - <b>acceptedRate</b> – number of proposals marked as Accepted  
+        /// - <b>rejectedRate</b> – number of proposals marked as Rejected  
+        /// - <b>pendingRate</b> – number of proposals still awaiting review  
+        ///
+        /// **Example request:**
+        /// ```
+        /// GET /api/admin/proposal/stats
+        /// ```
+        ///
+        /// **Example successful response (200 OK):**
+        /// ```json
+        /// {
+        ///   "acceptedRate": 10,
+        ///   "rejectedRate": 5,
+        ///   "pendingRate": 2
+        /// }
+        /// ```
+        ///
+        /// **Example error response (500 Internal Server Error):**
+        /// ```json
+        /// {
+        ///   "success": false,
+        ///   "message": "An error occurred while processing your request.",
+        ///   "errors": [ "Detailed error message..." ],
+        ///   "data": null
+        /// }
+        /// ```
+        ///
+        /// **Notes:**
+        /// - Only aggregate counts are returned — no individual proposal details.
+        /// - Endpoint requires authorization if configured in the API.
+        /// - This operation is read-only.
+        /// </remarks>
+        /// <returns>Aggregated statistics of price proposals.</returns>
+        /// <response code="200">Statistics retrieved successfully</response>
+        /// <response code="401">Unauthorized – missing or invalid authentication token</response>
+        /// <response code="403">Forbidden – user does not have permission to access this resource</response>
+        /// <response code="500">Internal server error while generating statistics</response>
+
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetPriceProposalStaisticAsync()
+        {
+            var result = await _priceProposalServices.GetPriceProposalStaisticAsync();
+
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors,
+                    Data = result.Data
+                });
+        }
     }
 }

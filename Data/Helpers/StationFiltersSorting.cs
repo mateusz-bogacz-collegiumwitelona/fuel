@@ -54,9 +54,15 @@ namespace Data.Helpers
                 : query.OrderBy(s => s.Address.Location.Distance(userLocation));
         }
 
-        protected internal IQueryable<Station> SortingByPrice( IQueryable<Station> query, string sortingDirection = "asc")
+        protected internal IQueryable<Station> SortingByPrice(IQueryable<Station> query, string sortingDirection = "asc")
          => sortingDirection?.ToLower() == "desc"
                 ? query.OrderByDescending(s => s.FuelPrice.Min(fp => fp.Price))
                 : query.OrderBy(s => s.FuelPrice.Min(fp => fp.Price));
+
+        protected internal IQueryable<Station> FilterByPriceUpdateDate(IQueryable<Station> query, DateTime? updatedAfter, DateTime? updatedBefore)
+            => query.Where(s => s.FuelPrice.Any(fp =>
+                    (!updatedAfter.HasValue || fp.ValidFrom >= updatedAfter.Value) &&
+                    (!updatedBefore.HasValue || fp.ValidFrom <= updatedBefore.Value)
+                ));
     }
 }
