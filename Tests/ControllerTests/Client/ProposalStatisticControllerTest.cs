@@ -11,7 +11,7 @@ using System.Text.Json;
 using Tests.ControllerTests;
 using Xunit;
 
-namespace Tests.ControllerTest.User
+namespace Tests.ControllerTest.Client
 {
     [Collection("IntegrationTests")]
     public class ProposalStatisticControllerTest : IAsyncLifetime

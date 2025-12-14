@@ -111,6 +111,21 @@ public class CustomAppFact : WebApplicationFactory<Program>
 
             services.RemoveAll<IStorage>();
             var storageMock = new Mock<IStorage>();
+            storageMock.Setup(s => s.UploadFileAsync(
+            It.IsAny<Stream>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()))
+            .ReturnsAsync((Stream stream, string fileName, string contentType, string? bucket, string? subPath) =>
+            {
+                var path = string.IsNullOrWhiteSpace(subPath) ? fileName : $"{subPath.TrimEnd('/')}/{fileName}";
+                return path;
+            });
+            storageMock.Setup(s => s.DeleteFileAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(true);
+            storageMock.Setup(s => s.GetPublicUrl(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns((string objectPath, string? bucket) => $"https://fake-storage/{objectPath}");
             services.AddSingleton(storageMock.Object);
 
             var adminId = Guid.NewGuid();
@@ -208,6 +223,9 @@ public class CustomAppFact : WebApplicationFactory<Program>
                     db.Users.AddRange(admin, user1, user2);
                     db.SaveChanges();
                 }
+                var hasher = new PasswordHasher<ApplicationUser>();
+                user1.PasswordHash = hasher.HashPassword(user1, "User123!");
+                user1.EmailConfirmed = true;
                 var report1 = new ReportUserRecord
                 {
                     ReportedUser = user1,
