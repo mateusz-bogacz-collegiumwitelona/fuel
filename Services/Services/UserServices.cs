@@ -25,7 +25,8 @@ namespace Services.Services
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole<Guid>> roleManager,
             EmailSender email,
-            CacheService cache)
+            CacheService cache,
+            RoleManager<IdentityRole<Guid>> _role_managerMock)
         {
             _userRepository = userRepository;
             _logger = logger;
