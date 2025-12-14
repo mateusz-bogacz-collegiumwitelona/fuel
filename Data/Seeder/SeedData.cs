@@ -342,7 +342,8 @@ namespace Data.Seeder
                                 FuelTypeId = fuelType.Id,
                                 Price = Math.Round((decimal)(_random.NextDouble() * (7.0 - 4.0) + 4.0), 2),
                                 CreatedAt = DateTime.UtcNow,
-                                UpdatedAt = DateTime.UtcNow
+                                UpdatedAt = DateTime.UtcNow,
+                                ValidFrom = DateTime.UtcNow.AddDays(-_random.Next(0, 30))
                             };
 
                             _context.FuelPrices.Add(fuelPrice);

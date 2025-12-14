@@ -23,7 +23,7 @@ namespace Services.Services
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private readonly IConfiguration _configuration;
         private readonly ILogger<LoginRegisterServices> _logger;
-        private EmailSender _email;
+        private IEmailSender _email;
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
         private readonly IUserRepository _userRepository;
         private readonly IHttpContextAccessor _httpContext;
@@ -36,7 +36,7 @@ namespace Services.Services
             RoleManager<IdentityRole<Guid>> roleManager,
             IConfiguration configuration,
             ILogger<LoginRegisterServices> logger,
-            EmailSender email,
+            IEmailSender email,
             IProposalStatisticRepository proposalStatisticRepository,
             IUserRepository userRepository,
             IHttpContextAccessor httpContext,
@@ -83,6 +83,15 @@ namespace Services.Services
                         "User account is deleted.",
                         StatusCodes.Status403Forbidden
                         );
+                }
+
+                if(!user.EmailConfirmed)
+                {
+                    _logger.LogWarning("Login attempt failed. Email not confirmed for user {Email}.", request.Email);
+                    return Result<LoginResponse>.Bad(
+                        "Please confirm your email address before logging in. Check your inbox for the confirmation link.",
+                        StatusCodes.Status403Forbidden
+                    );
                 }
 
                 var result = await _signInManager.PasswordSignInAsync(

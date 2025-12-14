@@ -195,6 +195,18 @@ namespace Services.Services
                         new List<string> { "Cannot filter by price without specifying fuel type." });
                 }
 
+                if (request.PriceUpdatedAfter.HasValue && request.PriceUpdatedBefore.HasValue)
+                {
+                    if (request.PriceUpdatedAfter.Value > request.PriceUpdatedBefore.Value)
+                    {
+                        _logger.LogWarning("Invalid date range for price update filter");
+                        return Result<PagedResult<GetStationListResponse>>.Bad(
+                            "Validation error",
+                            StatusCodes.Status400BadRequest,
+                            new List<string> { "PriceUpdatedAfter cannot be later than PriceUpdatedBefore." });
+                    }
+                }
+
                 var result = await _stationRepository.GetStationListAsync(request);
 
                 if (result == null || result.Count == 0)
@@ -286,7 +298,7 @@ namespace Services.Services
 
                 var result = await _stationRepository.GetStationProfileAsync(request);
 
-                if (request == null)
+                if (result == null)
                 {
                     _logger.LogWarning("Cannot find info about this station");
                     return Result<GetStationListResponse>.Bad(

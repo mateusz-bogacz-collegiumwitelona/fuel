@@ -1,710 +1,774 @@
 import * as React from "react";
+import { Link } from "react-router";
 import Header from "../components/header";
 import Footer from "../components/footer";
+import { useTranslation } from "react-i18next";
 
 const API_BASE = "http://localhost:5111";
 
 function parseJwt(token: string | null) {
-  if (!token) return null;
-  try {
-    const payload = token.split(".")[1];
-    const decoded = atob(payload);
+    if (!token) return null;
     try {
-      // unicode-safe
-      return JSON.parse(decodeURIComponent(escape(decoded)));
-    } catch {
-      return JSON.parse(decoded);
+        const payload = token.split(".")[1];
+        const decoded = atob(payload);
+        try {
+            return JSON.parse(decodeURIComponent(escape(decoded)));
+        } catch {
+            return JSON.parse(decoded);
+        }
+    } catch (e) {
+        return null;
     }
-  } catch (e) {
-    return null;
-  }
 }
-
 
 type Station = {
-  id?: string;
-  brandName?: string; // sometimes backend uses brandName
-  name?: string; // sometimes name
-  street?: string;
-  houseNumber?: string | number;
-  postalCode?: string;
-  latitude?: number;
-  longitude?: number;
-  city?: string;
-  imageUrl?: string;
-  address?: string;
-  distanceMeters?: number; // if backend provides
-  fuelPrices?: Record<string, number | string> | null;
-  // fallback price fields (in case backend shaped differently)
-  pricePb95?: number | null;
-  priceDiesel?: number | null;
-  priceLpg?: number | null;
+    id?: string;
+    brandName?: string;
+    name?: string;
+    street?: string;
+    houseNumber?: string | number;
+    postalCode?: string;
+    latitude?: number;
+    longitude?: number;
+    city?: string;
+    imageUrl?: string;
+    address?: string;
+    distanceMeters?: number;
+    fuelPrices?: Record<string, number | string> | null;
+    pricePb95?: number | null;
+    priceDiesel?: number | null;
+    priceLpg?: number | null;
 };
 
-type SortColumn =
-  | "name"
-  | "city"
-  | "street"
-  | "benzyna"
-  | "diesel"
-  | "lpg"
-  | "distance"
-  | null;
+type SortColumn = "distance" | "price" | null;
 
 export default function ListPage() {
-  const [email, setEmail] = React.useState<string | null>(null);
-  const [stations, setStations] = React.useState<Station[] | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+    const { t, i18n } = useTranslation();
+    const [email, setEmail] = React.useState<string | null>(null);
+    const [stations, setStations] = React.useState<Station[] | null>(null);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState<string | null>(null);
 
-  const [sortColumn, setSortColumn] = React.useState<SortColumn>(null);
-  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("desc"); // first click -> desc
+    // Filters
+    const [selectedFuelTypes, setSelectedFuelTypes] = React.useState<string[]>([]);
+    const [minPrice, setMinPrice] = React.useState<string>("");
+    const [maxPrice, setMaxPrice] = React.useState<string>("");
+    const [brandName, setBrandName] = React.useState<string>("");
+    const [distance, setDistance] = React.useState<string>("");
 
-  const [query, setQuery] = React.useState("");
-  const [userCoords, setUserCoords] = React.useState<{ lat: number; lon: number } | null>(null);
+    // Sorting
+    const [sortColumn, setSortColumn] = React.useState<SortColumn>(null);
+    const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("asc");
 
-  // pagination state (backend-driven)
-  const [pageNumber, setPageNumber] = React.useState<number>(1);
-  const [pageSize, setPageSize] = React.useState<number>(10);
-  const [totalPages, setTotalPages] = React.useState<number>(1);
-  const [totalCount, setTotalCount] = React.useState<number | null>(null);
+    // Location
+    const [userCoords, setUserCoords] = React.useState<{ lat: number; lon: number } | null>(null);
+    // Address autocomplete / geocoding
+    const [address, setAddress] = React.useState<string>("");
+    const [addressSuggestions, setAddressSuggestions] = React.useState<Array<{ display_name: string; lat: string; lon: string }>>([]);
+    const [addressLoading, setAddressLoading] = React.useState<boolean>(false);
+    const geocodeTimeoutRef = React.useRef<number | null>(null);
 
-  React.useEffect(() => {
-  (async () => {
-    const token = localStorage.getItem("token");
-    const expiration = localStorage.getItem("token_expiration");
+    // Available lists from API (fuel types & brands)
+    const [availableFuelTypes, setAvailableFuelTypes] = React.useState<string[]>([]);
+    const [availableBrands, setAvailableBrands] = React.useState<string[]>([]);
+    const [brandsOpen, setBrandsOpen] = React.useState<boolean>(false);
+    const [fuelsOpen, setFuelsOpen] = React.useState<boolean>(false);
+    const [brandFilter, setBrandFilter] = React.useState<string>("");
 
-    if (token && expiration && new Date(expiration) > new Date()) {
-      const decoded = parseJwt(token);
-      const userEmail = decoded?.email || decoded?.sub || null;
-      setEmail(userEmail ?? "Zalogowany użytkownik");
-      await fetchStations(token, pageNumber, pageSize);
-      return;
-    }
+    // Fetch available fuel types and brands once
+    React.useEffect(() => {
+        (async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const fetchOptions: any = {
+                    headers: { Accept: 'application/json' },
+                    credentials: 'include',
+                };
+                if (token) fetchOptions.headers.Authorization = `Bearer ${token}`;
 
-    // no Token, try refresh
-    try {
-      const refreshRes = await fetch(`${API_BASE}/api/refresh`, {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        credentials: "include",
-      });
+                console.log('[ListPage] fetching fuel-codes and all-brands with options:', fetchOptions);
 
-      console.log("/api/refresh status:", refreshRes.status);
-      const bodyText = await refreshRes.text();
-      console.log("refresh body:", bodyText);
+                // Fuel codes
+                try {
+                    const fRes = await fetch(`${API_BASE}/api/station/fuel-codes`, fetchOptions);
+                    const fText = await fRes.text();
 
-      if (refreshRes.ok) {
-        // refresh works
-        setEmail("Zalogowany użytkownik");
-        // fetchStations can work without token
-        await fetchStations(null, pageNumber, pageSize);
-        return;
-      } else {
-        // refresh doesn't work -> redirect to login
-        if (typeof window !== "undefined") window.location.href = "/login";
-      }
-    } catch (err) {
-      console.error("Błąd podczas /api/refresh:", err);
-      if (typeof window !== "undefined") window.location.href = "/login";
-    }
-  })();
+                    if (!fRes.ok) {
+                        console.warn('[ListPage] fuel-codes response not ok', fRes.status, fText);
+                        if (fRes.status === 404) setAvailableFuelTypes([]);
+                    } else {
+                        let fJson: any;
+                        try { fJson = JSON.parse(fText); } catch { fJson = fText; }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+                        // support several shapes: ['PB95',...] or { data: [...] } or { items: [...] } or [{ code: 'PB95' }, ...]
+                        let arr: any[] = [];
+                        if (Array.isArray(fJson)) arr = fJson;
+                        else if (Array.isArray(fJson.data)) arr = fJson.data;
+                        else if (Array.isArray(fJson.items)) arr = fJson.items;
 
+                        // if items are objects, try to extract string code
+                        arr = arr.map((x: any) => typeof x === 'string' ? x : (x.code || x.name || x.value || x));
+                        // filter falsy and unique
+                        arr = Array.from(new Set(arr.filter(Boolean)));
+                        setAvailableFuelTypes(arr);
+                    }
+                } catch (e) {
+                    console.error('[ListPage] error fetching fuel-codes', e);
+                    setAvailableFuelTypes([]);
+                }
 
-  async function fetchStations(token: string | null, pageNum: number, pageSz: number) {
-  setLoading(true);
-  setError(null);
+                // Brands
+                try {
+                    const bRes = await fetch(`${API_BASE}/api/station/all-brands`, fetchOptions);
+                    const bText = await bRes.text();
 
-  const baseBody = {
-    brandName: null,
-    locationLatitude: null,
-    locationLongitude: null,
-    distance: null,
-    fuelType: [],
-    minPrice: null,
-    maxPrice: null,
-    sortingByDisance: false,
-    sortingByPrice: false,
-    sortingDirection: sortDirection,
-    pagging: {
-      pageNumber: pageNum,
-      pageSize: pageSz,
-    },
-  };
+                    if (!bRes.ok) {
+                        console.warn('[ListPage] all-brands response not ok', bRes.status, bText);
+                        if (bRes.status === 404) setAvailableBrands([]);
+                    } else {
+                        let bJson: any;
+                        try { bJson = JSON.parse(bText); } catch { bJson = bText; }
 
-  const altBodies = [
-    {
-      ...baseBody,
-      sortingByDistance: baseBody.sortingByDisance,
-      pagging: undefined,
-      paging: { pageNumber: pageNum, pageSize: pageSz },
-    },
-    {
-      ...baseBody,
-      paging: { pageNumber: pageNum, pageSize: pageSz },
-    },
-    {
-      fuelType: [],
-      pagging: { pageNumber: pageNum, pageSize: pageSz },
-    },
-  ];
+                        let arr: any[] = [];
+                        if (Array.isArray(bJson)) arr = bJson;
+                        else if (Array.isArray(bJson.data)) arr = bJson.data;
+                        else if (Array.isArray(bJson.items)) arr = bJson.items;
 
-    async function tryPost(bodyObj: any) {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+                        arr = arr.map((x: any) => typeof x === 'string' ? x : (x.brandName || x.name || x.value || x));
+                        arr = Array.from(new Set(arr.filter(Boolean)));
+                        setAvailableBrands(arr);
+                    }
+                } catch (e) {
+                    console.error('[ListPage] error fetching all-brands', e);
+                    setAvailableBrands([]);
+                }
 
-    console.log("tryPost -> POST", `${API_BASE}/api/station/list`, "body:", bodyObj);
-    const res = await fetch(`${API_BASE}/api/station/list`, {
-      method: "POST",
-      headers,
-      credentials: "include",
-      body: JSON.stringify(bodyObj),
-    });
-    console.log("tryPost -> status:", res.status);
-    return res;
-  }
+            } catch (e) {
+                console.error('Error fetching fuel types/brands', e);
+                setAvailableFuelTypes([]);
+                setAvailableBrands([]);
+            }
+        })();
+    }, []);
 
-
-  try {
-    let res = await tryPost(baseBody);
-
-    // if the first POST failed, try alternate request bodies
-    if (!res.ok && (res.status === 400 || res.status === 422 || res.status === 404)) {
-      console.warn("Primary POST failed, trying alternative bodies, status:", res.status);
-      try {
-        const txt = await res.text().catch(() => "<no body>");
-        console.warn("Primary body response text:", txt);
-      } catch {}
-
-      let ok = false;
-      for (const alt of altBodies) {
-        try {
-          const altRes = await tryPost(alt);
-          if (altRes.ok) {
-            res = altRes;
-            ok = true;
-            break;
-          } else {
-            const t = await altRes.text().catch(() => "<no body>");
-            console.warn("Alt POST failed status:", altRes.status, "body tried:", alt, "response:", t);
-          }
-        } catch (e) {
-          console.error("Alt POST threw", e);
-        }
-      }
-
-      // if all POSTs fail, try GET fallback (with credentials)
-      if (!ok && !res.ok) {
-        try {
-          const fallbackHeaders: Record<string, string> = { Accept: "application/json" };
-          if (token) fallbackHeaders["Authorization"] = `Bearer ${token}`;
-
-          const fallback = await fetch(`${API_BASE}/api/station/list`, {
-            headers: fallbackHeaders,
-            credentials: "include",
-          });
-
-          if (fallback.ok) {
-            const data2 = await fallback.json();
-                const data = await res.json();
-            console.log("fetchStations: response JSON:", data);
-            applyListResponse(data);
-            applyListResponse(data2);
+    async function geocodeAddress(query: string) {
+        if (!query || query.trim().length === 0) {
+            setAddressSuggestions([]);
             return;
-          } else {
-            const txt = await fallback.text().catch(() => "<no body>");
-            throw new Error(`Fallback GET failed: ${fallback.status} ${txt}`);
-          }
+        }
+        setAddressLoading(true);
+        try {
+            // Using Nominatim (OpenStreetMap) for simple geocoding. Swap to your preferred geocoding API if needed.
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=0&limit=5`);
+            if (!res.ok) return;
+            const json = await res.json();
+            setAddressSuggestions(Array.isArray(json) ? json : []);
         } catch (e) {
-          throw e;
+            console.error("Geocode error", e);
+        } finally {
+            setAddressLoading(false);
         }
-      }
     }
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => "<brak treści>");
-      console.error("fetchStations: non-ok response:", res.status, text);
-      setError(`Serwer zwrócił błąd: ${res.status}. Sprawdź konsolę network / logs backendu.`);
-      setStations([]);
-      setTotalCount(null);
-      setTotalPages(1);
-      return;
+    function selectAddress(suggestion: any) {
+        setAddress(suggestion.display_name || "");
+        setUserCoords({ lat: parseFloat(suggestion.lat), lon: parseFloat(suggestion.lon) });
+        setAddressSuggestions([]);
     }
 
-    const data = await res.json();
-    applyListResponse(data);
-  } catch (err: any) {
-    console.error("Błąd pobierania stacji:", err);
-    if (err instanceof TypeError) {
-      setError("Błąd sieci / CORS: sprawdź konsolę network (może brakuje Access-Control-Allow-Origin na backendzie).");
-    } else {
-      setError("Nie udało się pobrać listy stacji z serwera. Sprawdź konsolę w devtools i logi serwera.");
-    }
-    setStations([]);
-    setTotalCount(null);
-    setTotalPages(1);
-  } finally {
-    setLoading(false);
-  }
-}
-
-
- function applyListResponse(data: any) {
-  // swagger sample uses { items: [...], pageNumber, pageSize, totalCount, totalPages }
-  const items = Array.isArray(data.items)
-    ? data.items
-    : Array.isArray(data)
-    ? data
-    : Array.isArray(data?.stations)
-    ? data.stations
-    : [];
-
-  // totalCount: prefer number from server, otherwise fallback to items length
-  const totalCountVal = typeof data.totalCount === "number" ? data.totalCount : items.length;
-
-  // pageSize: prefer server pageSize if valid, otherwise fallback to items length or 1
-  const pageSizeVal =
-    typeof data.pageSize === "number" && data.pageSize > 0 ? data.pageSize : Math.max(1, items.length || 1);
-
-  // totalPages: prefer server value if valid, otherwise compute from totalCount/pageSize
-  const totalPagesVal =
-    typeof data.totalPages === "number" && data.totalPages > 0
-      ? data.totalPages
-      : Math.max(1, Math.ceil(totalCountVal / pageSizeVal));
-
-  setStations(normalizeStations(items));
-  setTotalCount(totalCountVal);
-  setTotalPages(totalPagesVal);
-  setPageNumber(typeof data.pageNumber === "number" && data.pageNumber > 0 ? data.pageNumber : 1);
-}
-
-
-  function normalizeStations(data: any): Station[] {
-  // backend might return array or { stations: [...] } or { items: [...] }
-  const arr = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.stations)
-    ? data.stations
-    : Array.isArray(data?.items)
-    ? data.items
-    : [];
-
-  return arr.map((s: any) => {
-    // unify fuel price formats:
-    // possible shapes:
-    // - { fuelPrices: { PB95: 6.29, ON: 6.99 } }
-    // - { fuelPrice: [ { fuelCode: "PB95", price: 6.29 }, ... ] }
-    // - { prices: { ... } }
-    let fuelPrices: Record<string, number | string> | null = null;
-
-    if (s.fuelPrices && typeof s.fuelPrices === "object" && !Array.isArray(s.fuelPrices)) {
-      fuelPrices = s.fuelPrices;
-    } else if (s.prices && typeof s.prices === "object" && !Array.isArray(s.prices)) {
-      fuelPrices = s.prices;
-    } else if (Array.isArray(s.fuelPrice)) {
-      // convert array-of-objects to map { PB95: 6.29, ... }
-      const map: Record<string, number> = {};
-      for (const item of s.fuelPrice) {
-        const code = (item.fuelCode ?? item.fuel?.code ?? item.code ?? "").toString();
-        const price = typeof item.price === "string" ? parseFloat(item.price.replace(",", ".")) : Number(item.price);
-        if (code && !Number.isNaN(price)) map[code.toLowerCase()] = price;
-      }
-      if (Object.keys(map).length > 0) fuelPrices = map;
-    } else if (Array.isArray(s.fuelPrices)) {
-      // same for fuelPrices array
-      const map: Record<string, number> = {};
-      for (const item of s.fuelPrices) {
-        const code = (item.fuelCode ?? item.fuel?.code ?? item.code ?? "").toString();
-        const price = typeof item.price === "string" ? parseFloat(item.price.replace(",", ".")) : Number(item.price);
-        if (code && !Number.isNaN(price)) map[code.toLowerCase()] = price;
-      }
-      if (Object.keys(map).length > 0) fuelPrices = map;
-    } else if (s.fuelPrice && typeof s.fuelPrice === "object" && !Array.isArray(s.fuelPrice)) {
-      fuelPrices = s.fuelPrice;
+    async function applyAddress() {
+        if (userCoords) return;
+        if (!address) return;
+        await geocodeAddress(address);
+        const first = addressSuggestions[0];
+        if (first) {
+            selectAddress(first);
+        } else {
+            setError("Nie znaleziono adresu.");
+        }
     }
 
-    const normalized: Station = {
-      id: s.id ?? s.stationId ?? undefined,
-      name: s.brandName ?? s.name ?? s.stationName ?? undefined,
-      brandName: s.brandName ?? s.name ?? undefined,
-      street: s.street ?? (s.address ? s.address.split(",")[0] : undefined) ?? undefined,
-      houseNumber: s.houseNumber ?? s.houseNumberString ?? s.no ?? undefined,
-      postalCode: s.postalCode ?? s.postalcode ?? s.postal ?? undefined,
-      latitude: s.latitude ?? s.lat ?? undefined,
-      longitude: s.longitude ?? s.lon ?? s.lng ?? undefined,
-      city: s.city ?? s.town ?? s.locationCity ?? undefined,
-      imageUrl: s.imageUrl ?? s.image ?? undefined,
-      address: s.address ?? undefined,
-      distanceMeters:
-        s.distanceMeters ??
-        s.distanceInMeters ??
-        (typeof s.distance === "number" ? s.distance : undefined),
-      fuelPrices: fuelPrices,
-      pricePb95: s.pricePb95 ?? s.pb95 ?? null,
-      priceDiesel: s.priceDiesel ?? s.on ?? null,
-      priceLpg: s.priceLpg ?? s.lpg ?? null,
-    };
+    // Pagination
+    const [pageNumber, setPageNumber] = React.useState<number>(1);
+    const [pageSize, setPageSize] = React.useState<number>(10);
+    const [totalPages, setTotalPages] = React.useState<number>(1);
+    const [totalCount, setTotalCount] = React.useState<number | null>(null);
 
-    return normalized;
-  });
-}
+    // Collapsible filters
+    const [filtersOpen, setFiltersOpen] = React.useState<boolean>(false); // domyślnie zwinięte
 
-  function formatDistance(m?: number) {
-    if (m == null || Number.isNaN(m)) return "-";
-    if (m >= 1000) return `${(m / 1000).toFixed(2)} km`;
-    return `${Math.round(m)} m`;
-  }
+    const fuelTypes = ["PB95", "PB98", "ON", "LPG", "CNG"];
 
-  function haversineDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
-    const toRad = (deg: number) => (deg * Math.PI) / 180;
-    const R = 6371000; // meters
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
+    // Auth check on mount
+    React.useEffect(() => {
+        (async () => {
+            const token = localStorage.getItem("token");
+            const expiration = localStorage.getItem("token_expiration");
 
-  function extractPrice(st: Station, candidates: string[]): number | null {
-    // check dedicated fields first
-    if (candidates.includes("benzyna") && typeof st.pricePb95 === "number") return Number(st.pricePb95);
-    if (candidates.includes("diesel") && typeof st.priceDiesel === "number") return Number(st.priceDiesel);
-    if (candidates.includes("lpg") && typeof st.priceLpg === "number") return Number(st.priceLpg);
+            if (token && expiration && new Date(expiration) > new Date()) {
+                const decoded = parseJwt(token);
+                const userEmail = decoded?.email || decoded?.sub || null;
+                setEmail(userEmail ?? "Zalogowany użytkownik");
+                return;
+            }
 
-    const fp = st.fuelPrices;
-    if (!fp) return null;
+            // Try refresh
+            try {
+                const refreshRes = await fetch(`${API_BASE}/api/refresh`, {
+                    method: "POST",
+                    headers: { Accept: "application/json" },
+                    credentials: "include",
+                });
 
-    // normalize keys to lowercase
-    const lcMap: Record<string, number> = {};
-    Object.entries(fp).forEach(([k, v]) => {
-      const val = typeof v === "string" ? parseFloat(v.replace(",", ".")) : Number(v);
-      if (!Number.isNaN(val)) lcMap[k.toLowerCase()] = val;
-    });
+                if (refreshRes.ok) {
+                    setEmail("Zalogowany użytkownik");
+                } else {
+                    if (typeof window !== "undefined") window.location.href = "/login";
+                }
+            } catch (err) {
+                console.error("Błąd podczas /api/refresh:", err);
+                if (typeof window !== "undefined") window.location.href = "/login";
+            }
+        })();
+    }, []);
 
-    // try to find best matching key
-    for (const cand of candidates) {
-      // exact match
-      if (lcMap[cand.toLowerCase()] !== undefined) return lcMap[cand.toLowerCase()];
+    // Fetch stations when filters or pagination changes
+    React.useEffect(() => {
+        if (email) {
+            fetchStations();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [email, pageNumber, pageSize, sortColumn, sortDirection]);
+
+    async function fetchStations() {
+        setLoading(true);
+        setError(null);
+
+        const token = localStorage.getItem("token");
+
+        // Build request body according to your API
+        const requestBody = {
+            LocationLatitude: userCoords?.lat ?? null,
+            LocationLongitude: userCoords?.lon ?? null,
+            Distance: distance ? parseFloat(distance) : null,
+            FuelType: selectedFuelTypes.length > 0 ? selectedFuelTypes : null,
+            MinPrice: minPrice ? parseFloat(minPrice) : null,
+            MaxPrice: maxPrice ? parseFloat(maxPrice) : null,
+            BrandName: brandName || null,
+            SortingByDisance: sortColumn === "distance" ? true : null,
+            SortingByPrice: sortColumn === "price" ? true : null,
+            SortingDirection: sortColumn ? sortDirection : null, // tylko jeśli sortujemy
+            Pagging: {
+                PageNumber: pageNumber,
+                PageSize: pageSize,
+            },
+        };
+
+        try {
+            const headers: Record<string, string> = {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            };
+            if (token) headers["Authorization"] = `Bearer ${token}`;
+
+            console.log("Fetching stations with body:", requestBody);
+
+            const res = await fetch(`${API_BASE}/api/station/list`, {
+                method: "POST",
+                headers,
+                credentials: "include",
+                body: JSON.stringify(requestBody),
+            });
+
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error("API Error:", res.status, errorText);
+
+                let errorMessage = `Błąd ${res.status}: `;
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMessage += errorJson.message || errorJson.errors?.join(", ") || "Nieznany błąd";
+                } catch {
+                    errorMessage += errorText || "Nieznany błąd";
+                }
+
+                setError(errorMessage);
+                setStations([]);
+                return;
+            }
+
+            const data = await res.json();
+            console.log("API Response:", data);
+
+            const items = Array.isArray(data.items) ? data.items : [];
+
+            setStations(normalizeStations(items));
+            setTotalCount(data.totalCount ?? items.length);
+            setTotalPages(data.totalPages ?? 1);
+            setPageNumber(data.pageNumber ?? 1);
+
+        } catch (err: any) {
+            console.error("Błąd pobierania stacji:", err);
+            setError("Nie udało się pobrać listy stacji. Sprawdź konsolę.");
+            setStations([]);
+        } finally {
+            setLoading(false);
+        }
     }
 
-    // try contains
-    for (const key of Object.keys(lcMap)) {
-      for (const cand of candidates) {
-        if (key.includes(cand.toLowerCase())) return lcMap[key];
-      }
+    function normalizeStations(data: any[]): Station[] {
+        return data.map((s: any) => {
+            let fuelPrices: Record<string, number> | null = null;
+
+            if (Array.isArray(s.fuelPrice)) {
+                const map: Record<string, number> = {};
+                for (const item of s.fuelPrice) {
+                    const code = item.fuelCode ?? "";
+                    const price = typeof item.price === "string"
+                        ? parseFloat(item.price.replace(",", "."))
+                        : Number(item.price);
+                    if (code && !Number.isNaN(price)) {
+                        map[code.toUpperCase()] = price;
+                    }
+                }
+                if (Object.keys(map).length > 0) fuelPrices = map;
+            }
+
+            return {
+                id: s.id ?? undefined,
+                brandName: s.brandName ?? undefined,
+                name: s.brandName ?? s.name ?? undefined,
+                street: s.street ?? undefined,
+                houseNumber: s.houseNumber ?? undefined,
+                postalCode: s.postalCode ?? undefined,
+                latitude: s.latitude ?? undefined,
+                longitude: s.longitude ?? undefined,
+                city: s.city ?? undefined,
+                imageUrl: s.imageUrl ?? undefined,
+                fuelPrices: fuelPrices,
+                pricePb95: fuelPrices?.["PB95"] ?? null,
+                priceDiesel: fuelPrices?.["ON"] ?? null,
+                priceLpg: fuelPrices?.["LPG"] ?? null,
+            };
+        });
     }
 
-    // fallback: return the smallest numeric price available in fuelPrices
-    const nums = Object.values(lcMap).filter((n) => typeof n === "number");
-    if (nums.length === 0) return null;
-    return Math.min(...(nums as number[]));
-  }
-
-  const benzynaCandidates = ["pb95", "pb98", "benzyna", "petrol", "gasoline"];
-  const dieselCandidates = ["diesel", "on", "olej", "olejnap", "oil"];
-  const lpgCandidates = ["lpg", "gaz"];
-
-  const sortedAndFiltered = React.useMemo(() => {
-    if (!stations) return [] as Station[];
-
-    // compute distances if possible
-    const withComputed = stations.map((s) => {
-      const newS = { ...s } as Station;
-      if ((newS.distanceMeters === undefined || newS.distanceMeters === null) && userCoords && newS.latitude && newS.longitude) {
-        newS.distanceMeters = Math.round(haversineDistanceMeters(userCoords.lat, userCoords.lon, newS.latitude, newS.longitude));
-      }
-      return newS;
-    });
-
-    // filter by query (client-side; will be replaced later with backend filtering if needed)
-    const q = query.trim().toLowerCase();
-    let out = withComputed.filter((s) => {
-      if (!q) return true;
-      return (
-        (s.name ?? "").toLowerCase().includes(q) ||
-        (s.city ?? "").toLowerCase().includes(q) ||
-        (s.street ?? "").toLowerCase().includes(q)
-      );
-    });
-
-    if (!sortColumn) return out;
-
-    const dir = sortDirection === "asc" ? 1 : -1;
-
-    out.sort((a, b) => {
-      switch (sortColumn) {
-        case "name": {
-          const aa = (a.name ?? "").toLowerCase();
-          const bb = (b.name ?? "").toLowerCase();
-          if (aa === bb) return 0;
-          return aa > bb ? dir : -dir;
-        }
-        case "city": {
-          const aa = (a.city ?? "").toLowerCase();
-          const bb = (b.city ?? "").toLowerCase();
-          if (aa === bb) return 0;
-          return aa > bb ? dir : -dir;
-        }
-        case "street": {
-          const aa = (a.street ?? "").toLowerCase();
-          const bb = (b.street ?? "").toLowerCase();
-          if (aa === bb) return 0;
-          return aa > bb ? dir : -dir;
-        }
-        case "benzyna": {
-          const pa = extractPrice(a, benzynaCandidates);
-          const pb = extractPrice(b, benzynaCandidates);
-          if (pa == null && pb == null) return 0;
-          if (pa == null) return 1 * dir; // put nulls at the bottom for asc
-          if (pb == null) return -1 * dir;
-          return (pa - pb) * dir;
-        }
-        case "diesel": {
-          const pa = extractPrice(a, dieselCandidates);
-          const pb = extractPrice(b, dieselCandidates);
-          if (pa == null && pb == null) return 0;
-          if (pa == null) return 1 * dir;
-          if (pb == null) return -1 * dir;
-          return (pa - pb) * dir;
-        }
-        case "lpg": {
-          const pa = extractPrice(a, lpgCandidates);
-          const pb = extractPrice(b, lpgCandidates);
-          if (pa == null && pb == null) return 0;
-          if (pa == null) return 1 * dir;
-          if (pb == null) return -1 * dir;
-          return (pa - pb) * dir;
-        }
-        case "distance": {
-          const da = a.distanceMeters ?? Number.POSITIVE_INFINITY;
-          const db = b.distanceMeters ?? Number.POSITIVE_INFINITY;
-          return (da - db) * dir;
-        }
-        default:
-          return 0;
-      }
-    });
-
-    return out;
-  }, [stations, query, sortColumn, sortDirection, userCoords]);
-
-  function toggleSort(col: SortColumn) {
-    if (sortColumn === col) {
-      // flip direction
-      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortColumn(col);
-      setSortDirection("desc"); // first click -> desc with "↓" per your request
+    function toggleFuelType(type: string) {
+        setSelectedFuelTypes(prev =>
+            prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+        );
     }
-  }
 
-  function showArrow(col: SortColumn) {
-    if (sortColumn !== col) return null;
-    // per request: first click sorts descending and shows "↓", second click ascending shows "↑"
-    return sortDirection === "desc" ? "↓" : "↑";
-  }
-
-  function formatPriceValue(val: number | null | undefined) {
-    if (val == null || Number.isNaN(val)) return "-";
-    return `${Number(val).toFixed(2)} zł`;
-  }
-
-  function onPageSizeChange(newSize: number) {
-    setPageSize(newSize);
-    setPageNumber(1); // reset to first page when size changes
-  }
-
-  function goToPage(p: number) {
-    if (p < 1) p = 1;
-    if (p > totalPages) p = totalPages;
-    setPageNumber(p);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  // small helper to render page buttons (shows a window of pages)
-  function renderPageButtons() {
-    const pages: number[] = [];
-    const windowSize = 5;
-    let start = Math.max(1, pageNumber - Math.floor(windowSize / 2));
-    let end = start + windowSize - 1;
-    if (end > totalPages) {
-      end = totalPages;
-      start = Math.max(1, end - windowSize + 1);
+    function handleSearch() {
+        setPageNumber(1);
+        fetchStations();
     }
-    for (let i = start; i <= end; i++) pages.push(i);
+
+    function getUserLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setUserCoords({
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude
+                    });
+                },
+                (error) => {
+                    setError("Nie udało się pobrać lokalizacji: " + error.message);
+                }
+            );
+        } else {
+            setError("Geolokalizacja nie jest wspierana przez twoją przeglądarkę");
+        }
+    }
+
+    function formatPriceValue(val: number | null | undefined) {
+        if (val == null || Number.isNaN(val)) return "-";
+        return `${Number(val).toFixed(2)} zł`;
+    }
+
+    function goToPage(p: number) {
+        if (p < 1) p = 1;
+        if (p > totalPages) p = totalPages;
+        setPageNumber(p);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function renderPageButtons() {
+        const pages: number[] = [];
+        const windowSize = 5;
+        let start = Math.max(1, pageNumber - Math.floor(windowSize / 2));
+        let end = start + windowSize - 1;
+        if (end > totalPages) {
+            end = totalPages;
+            start = Math.max(1, end - windowSize + 1);
+        }
+        for (let i = start; i <= end; i++) pages.push(i);
+
+        return (
+            <div className="flex items-center gap-2">
+                <button
+                    className="btn btn-sm"
+                    onClick={() => goToPage(1)}
+                    disabled={pageNumber === 1}
+                >
+                    «1
+                </button>
+                <button
+                    className="btn btn-sm"
+                    onClick={() => goToPage(pageNumber - 1)}
+                    disabled={pageNumber === 1}
+                >
+                    ←
+                </button>
+
+                {pages.map((p) => (
+                    <button
+                        key={p}
+                        className={`btn btn-sm ${p === pageNumber ? "btn-active" : ""}`}
+                        onClick={() => goToPage(p)}
+                    >
+                        {p}
+                    </button>
+                ))}
+
+                <button
+                    className="btn btn-sm"
+                    onClick={() => goToPage(pageNumber + 1)}
+                    disabled={pageNumber === totalPages}
+                >
+                    →
+                </button>
+                <button
+                    className="btn btn-sm"
+                    onClick={() => goToPage(totalPages)}
+                    disabled={pageNumber === totalPages}
+                >
+                    {totalPages} »
+                </button>
+            </div>
+        );
+    }
 
     return (
-      <div className="flex items-center gap-2">
-        <button className="btn btn-sm" onClick={() => goToPage(1)} disabled={pageNumber === 1}>
-          «1
-        </button>
-        <button className="btn btn-sm" onClick={() => goToPage(pageNumber - 1)} disabled={pageNumber === 1}>
-          ←
-        </button>
+        <div className="min-h-screen bg-base-200 text-base-content">
+            <Header />
 
-        {pages.map((p) => (
-          <button
-            key={p}
-            className={`btn btn-sm ${p === pageNumber ? "btn-active" : ""}`}
-            onClick={() => goToPage(p)}
-          >
-            {p}
-          </button>
-        ))}
-
-        <button className="btn btn-sm" onClick={() => goToPage(pageNumber + 1)} disabled={pageNumber === totalPages}>
-          →
-        </button>
-        <button className="btn btn-sm" onClick={() => goToPage(totalPages)} disabled={pageNumber === totalPages}>
-          {totalPages} »
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-base-200 text-base-content">
-      <Header />
-
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold">Lista stacji benzynowych</h1>
-          <a href="/dashboard" className="btn btn-outline">
-            ← Powrót do dashboardu
-          </a>
-        </div>
-
-        <section className="bg-base-300 p-4 rounded-xl shadow-md mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-            <div className="flex items-center gap-3">
-              <input
-                className="p-2 rounded-md bg-base-100 border border-gray-600 outline-none"
-                placeholder="Szukaj po nazwie, mieście lub ulicy..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="text-sm text-gray-400">Znaleziono: {totalCount ?? (stations ? stations.length : "-")}</div>
-
-              <div className="flex items-center gap-2 text-sm">
-                <label>Stacji na stronę:</label>
-                <select
-                  className="select select-sm"
-                  value={pageSize}
-                  onChange={(e) => onPageSizeChange(Number(e.target.value))}
-                >
-                  {[10, 20, 30, 40, 50].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {loading ? (
-            <div>Ładowanie listy stacji...</div>
-          ) : error ? (
-            <div className="text-red-400">{error}</div>
-          ) : stations && stations.length > 0 ? (
-            <>
-              <div className="overflow-x-auto">
-                <table className="table table-compact w-full">
-                  <thead>
-                    <tr>
-                      <th className="cursor-pointer" onClick={() => toggleSort("name")}>
-                        Nazwa {showArrow("name")}
-                      </th>
-                      <th className="cursor-pointer" onClick={() => toggleSort("benzyna")}>
-                        Cena benzyny {showArrow("benzyna")}
-                      </th>
-                      <th className="cursor-pointer" onClick={() => toggleSort("diesel")}>
-                        Cena diesel {showArrow("diesel")}
-                      </th>
-                      <th className="cursor-pointer" onClick={() => toggleSort("lpg")}>
-                        Cena LPG {showArrow("lpg")}
-                      </th>
-                      <th className="cursor-pointer" onClick={() => toggleSort("distance")}>
-                        Odległość {showArrow("distance")}
-                      </th>
-                      <th className="cursor-pointer" onClick={() => toggleSort("city")}>
-                        Miasto {showArrow("city")}
-                      </th>
-                      <th className="cursor-pointer" onClick={() => toggleSort("street")}>
-                        Ulica {showArrow("street")}
-                      </th>
-                      <th>Akcje</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedAndFiltered.map((s, idx) => {
-                      const name = s.name ?? s.brandName ?? "-";
-                      const benz = extractPrice(s, benzynaCandidates);
-                      const dies = extractPrice(s, dieselCandidates);
-                      const lpg = extractPrice(s, lpgCandidates);
-                      const distance = s.distanceMeters ?? null;
-
-                      return (
-                        <tr key={s.id ?? `${name}-${idx}`}>
-                          <td>
-                            <a className="font-medium hover:underline cursor-pointer" onClick={() => toggleSort("name")}>
-                              {name}
-                            </a>
-                          </td>
-                          <td>{formatPriceValue(benz)}</td>
-                          <td>{formatPriceValue(dies)}</td>
-                          <td>{formatPriceValue(lpg)}</td>
-                          <td>{formatDistance(distance ?? undefined)}</td>
-                          <td>{s.city ?? "-"}</td>
-                          <td>{`${s.street ?? "-"}${s.houseNumber ? " " + s.houseNumber : ""}`}</td>
-                          <td>
-                            <div className="flex gap-2">
-                              <a
-                                href={`/map?lat=${s.latitude ?? ""}&lon=${s.longitude ?? ""}`}
-                                className="btn btn-xs btn-outline"
-                              >
-                                Pokaż na mapie
-                              </a>
-                              <a
-                                href={`/list#${encodeURIComponent(s.id ?? name ?? String(idx))}`}
-                                className="btn btn-xs btn-outline btn-primary"
-                              >
-                                Szczegóły
-                              </a>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mt-4 flex items-center justify-between">
-                <div>{renderPageButtons()}</div>
-                <div className="text-sm text-gray-400">
-                  Strona {pageNumber} / {totalPages} — {totalCount ?? (stations ? stations.length : 0)} wyników
+            <main className="mx-auto max-w-7xl px-4 py-8">
+                <div className="flex items-center justify-between mb-6">
+                    <h1 className="text-2xl md:text-3xl font-bold">{t("list.stationlist")}</h1>
+                    <a href="/dashboard" className="btn btn-outline">
+                        {t("list.dashboardback")}
+                    </a>
                 </div>
-              </div>
-            </>
-          ) : (
-            <div className="text-gray-300">Brak dostępnych stacji.</div>
-          )}
-        </section>
-      </main>
 
-      <Footer />
-    </div>
-  );
+                <section className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                        <button
+                            onClick={() => setFiltersOpen(prev => !prev)}
+                            aria-expanded={filtersOpen}
+                            className="btn btn-outline btn-sm">
+
+                            {t("list.filters")} {filtersOpen ? '↑' : '↓'}
+                        </button>
+                    </div>
+
+                    <div className={`overflow-hidden transition-all duration-300 bg-base-300 rounded-xl shadow-md ${filtersOpen ? 'p-6 max-h-[2000px] opacity-100' : 'p-0 max-h-0 opacity-0'}`}>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">{t("list.address")}</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder={t("list.typeaddress")}
+                                    value={address}
+                                    onChange={(e) => {
+                                        const v = e.target.value;
+                                        setAddress(v);
+                                        if (geocodeTimeoutRef.current) window.clearTimeout(geocodeTimeoutRef.current);
+                                        geocodeTimeoutRef.current = window.setTimeout(() => geocodeAddress(v), 500);
+                                    }}
+                                    className="input input-bordered input-sm w-full"
+                                />
+
+                                {addressLoading && (
+                                    <span className="loading loading-spinner loading-sm absolute right-2 top-2"></span>
+                                )}
+
+                                {addressSuggestions.length > 0 && (
+                                    <ul className="absolute z-50 bg-base-100 w-full mt-1 rounded-md shadow-lg max-h-52 overflow-auto">
+                                        {addressSuggestions.map((s, i) => (
+                                            <li
+                                                key={i}
+                                                className="p-2 hover:bg-base-200 cursor-pointer"
+                                                onClick={() => selectAddress(s)}
+                                            >
+                                                {s.display_name}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+
+                            <div className="mt-2 flex gap-2">
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline"
+                                    onClick={() => geocodeAddress(address)}
+                                >
+                                    {t("list.searchaddress")}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm"
+                                    onClick={() => applyAddress()}
+                                >
+                                    {t("list.useaddress")}
+                                </button>
+                                <button onClick={getUserLocation} className="btn btn-sm btn-outline ml-auto">
+                                    {t("list.usealocalization")}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">{t("list.fueltype")}</label>
+
+                            <div className="relative inline-block">
+                                <button
+                                    type="button"
+                                    className="btn"
+                                    onClick={() => setFuelsOpen(v => !v)}
+                                >
+                                    {selectedFuelTypes.length > 0
+                                        ? selectedFuelTypes.join(', ')
+                                        : t("list.choosefuel")
+                                    } {fuelsOpen ? '▲' : '▼'}
+                                </button>
+
+                                {fuelsOpen && (
+                                    <ul className="dropdown menu w-64 rounded-box bg-base-100 shadow-sm mt-2 p-2 z-50">
+                                        {availableFuelTypes.length === 0 ? (
+                                            <li className="p-2 text-sm text-gray-500">{t("list.nofuel")}</li>
+                                        ) : (
+                                            availableFuelTypes.map((ft) => (
+                                                <li key={ft}>
+                                                    <button
+                                                        type="button"
+                                                        className={`w-full text-left ${selectedFuelTypes.includes(ft) ? 'font-semibold' : ''}`}
+                                                        onClick={() => toggleFuelType(ft)}
+                                                    >
+                                                        {selectedFuelTypes.includes(ft) ? '✓ ' : ''}{ft}
+                                                    </button>
+                                                </li>
+                                            ))
+                                        )}
+                                    </ul>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">{t("list.mark")}</label>
+                            <div className="relative inline-block w-full">
+                                <button
+                                    type="button"
+                                    className="btn w-full justify-between"
+                                    onClick={() => setBrandsOpen(b => !b)}
+                                >
+                                    {brandName || t("list.choosemark")} {brandsOpen ? '▲' : '▼'}
+                                </button>
+
+                                {brandsOpen && (
+                                    <div className="dropdown-content mt-2 w-full rounded-box bg-base-100 shadow-sm p-2 z-50">
+                                        <input
+                                            type="text"
+                                            placeholder="Filtruj marki..."
+                                            className="input input-sm mb-2 w-full"
+                                            value={brandFilter}
+                                            onChange={(e) => setBrandFilter(e.target.value)}
+                                        />
+                                        <ul className="max-h-40 overflow-auto">
+                                            {availableBrands.filter(b => b.toLowerCase().includes(brandFilter.toLowerCase())).map((b) => (
+                                                <li key={b}>
+                                                    <button
+                                                        type="button"
+                                                        className={`w-full text-left ${brandName === b ? 'font-semibold' : ''}`}
+                                                        onClick={() => { setBrandName(b); setBrandsOpen(false); }}
+                                                    >
+                                                        {b}
+                                                    </button>
+                                                </li>
+                                            ))}
+                                            {availableBrands.length === 0 && (
+                                                <li className="p-2 text-sm text-gray-500">{t("list.nomark")}</li>
+                                            )}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">{t("list.pricerange")}</label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <input
+                                    type="number"
+                                    placeholder={t("list.minprice")}
+                                    value={minPrice}
+                                    onChange={(e) => setMinPrice(e.target.value)}
+                                    className="input input-bordered input-sm"
+                                    step="0.01"
+                                />
+                                <input
+                                    type="number"
+                                    placeholder={t("list.maxprice")}
+                                    value={maxPrice}
+                                    onChange={(e) => setMaxPrice(e.target.value)}
+                                    className="input input-bordered input-sm"
+                                    step="0.01"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">{t("list.sort")}</label>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setSortColumn("distance");
+                                        setSortDirection("asc");
+                                    }}
+                                    className={`btn btn-sm ${sortColumn === "distance" ? "btn-primary" : "btn-outline"}`}
+                                >
+                                    {t("list.distance")}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setSortColumn("price");
+                                        setSortDirection("asc");
+                                    }}
+                                    className={`btn btn-sm ${sortColumn === "price" ? "btn-primary" : "btn-outline"}`}
+                                >
+                                    {t("list.price")}
+                                </button>
+                                <select
+                                    value={sortDirection}
+                                    onChange={(e) => setSortDirection(e.target.value as "asc" | "desc")}
+                                    className="select select-sm select-bordered"
+                                >
+                                    <option value="asc">{t("list.ascending")}</option>
+                                    <option value="desc">{t("list.descending")}</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button onClick={handleSearch} className="btn btn-primary w-full">
+                            {t("list.searchstation")}
+                        </button>
+
+                    </div>
+                </section>
+
+                <section className="bg-base-300 p-6 rounded-xl shadow-md">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-semibold">
+                            {t("list.results")} ({totalCount ?? 0})
+                        </h2>
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm">{t("list.muchresults")}</label>
+                            <select
+                                value={pageSize}
+                                onChange={(e) => {
+                                    setPageSize(Number(e.target.value));
+                                    setPageNumber(1);
+                                }}
+                                className="select select-sm select-bordered"
+                            >
+                                {[10, 20, 30, 50].map(n => (
+                                    <option key={n} value={n}>{n}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {loading ? (
+                        <div className="text-center py-8">
+                            <span className="loading loading-spinner loading-lg"></span>
+                            <p className="mt-2">{t("list.stationloading")}</p>
+                        </div>
+                    ) : error ? (
+                        <div className="alert alert-error">
+                            <span>{error}</span>
+                        </div>
+                    ) : stations && stations.length > 0 ? (
+                        <>
+                            <div className="overflow-x-auto">
+                                <table className="table table-zebra w-full">
+                                    <thead>
+                                    <tr>
+                                        <th>{t("list.name")}</th>
+                                        <th>{t("list.pb95")}</th>
+                                        <th>{t("list.diesel")}</th>
+                                        <th>{t("list.lpg")}</th>
+                                        <th>{t("list.city")}</th>
+                                        <th>{t("list.street")}</th>
+                                        <th>{t("list.action")}</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {stations.map((s, idx) => (
+                                        <tr key={s.id ?? idx}>
+                                            <td className="font-medium">{s.brandName ?? s.name ?? "-"}</td>
+                                            <td>{formatPriceValue(s.pricePb95)}</td>
+                                            <td>{formatPriceValue(s.priceDiesel)}</td>
+                                            <td>{formatPriceValue(s.priceLpg)}</td>
+                                            <td>{s.city ?? "-"}</td>
+                                            <td>
+                                                {s.street ?? "-"}
+                                                {s.houseNumber ? ` ${s.houseNumber}` : ""}
+                                            </td>
+                                            <td>
+                                                <div className="flex gap-2">
+                                                    <a
+                                                        href={`/map?lat=${s.latitude ?? ""}&lon=${s.longitude ?? ""}`}
+                                                        className="btn btn-xs btn-outline"
+                                                    >
+                                                        {t("list.map")}
+                                                    </a>
+
+                                                    <Link
+                                                        to={`/station/${encodeURIComponent(s.brandName)}/${encodeURIComponent(s.city)}/${encodeURIComponent(
+                                                        s.street
+                                                        )}/${encodeURIComponent(s.houseNumber)}`}
+                                                        className="btn btn-xs btn-outline"
+                                                        >
+                                                            {t("map.seedetails")}
+                                                    </Link>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="mt-6 flex justify-between items-center">
+                                {renderPageButtons()}
+                                <div className="text-sm text-gray-400">
+                                    {t("list.page")} {pageNumber} / {totalPages}
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="text-center py-8 text-gray-400">
+                            {t("list.nostation2")}
+                        </div>
+                    )}
+                </section>
+            </main>
+
+            <Footer />
+        </div>
+    );
 }

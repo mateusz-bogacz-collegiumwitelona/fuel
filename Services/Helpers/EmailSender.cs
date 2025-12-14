@@ -1,18 +1,12 @@
 ﻿using DTO.Requests;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using NetTopologySuite.Triangulate;
 using Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Mail;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Services.Helpers
 {
-    public class EmailSender
+    public class EmailSender : IEmailSender
     {
         private readonly ILogger<EmailSender> _logger;
         private readonly IConfiguration _config;
@@ -95,7 +89,7 @@ namespace Services.Helpers
                 string encodedEmail = Uri.EscapeDataString(email);
                 string confirmLink = $"{_frontendUrl}/confirm-email?email={encodedEmail}&token={encodedToken}";
 
-                var emailBody = _emailBody.GenerateRegisterConfirmEmailBody(userName, confirmLink, token);
+                var emailBody = _emailBody.GenerateRegisterConfirmEmailBody(userName, confirmLink);
                 string subject = "Fuel App - Confirm Your Email Address";
 
                 return await SendEmailAsync(email, subject, emailBody);
@@ -118,9 +112,9 @@ namespace Services.Helpers
             {
                 string encodedToken = Uri.EscapeDataString(token);
                 string encodedEmail = Uri.EscapeDataString(email);
-                string confirmLink = $"{_frontendUrl}/confirm-email?email={encodedEmail}&token={encodedToken}";
+                string confirmLink = $"{_frontendUrl}/reset-password?email={encodedEmail}&token={encodedToken}";
 
-                var emailBody = _emailBody.GenerateResetPasswordBody(userName, confirmLink, token);
+                var emailBody = _emailBody.GenerateResetPasswordBody(userName, confirmLink);
                 string subject = "Fuel App - Confirm Reset Passowrd";
 
                 return await SendEmailAsync(email, subject, emailBody);

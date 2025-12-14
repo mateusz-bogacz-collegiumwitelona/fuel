@@ -10,5 +10,6 @@ namespace Services.Interfaces
         Task<Result<GetPriceProposalResponse>> GetPriceProposal(string photoToken);
         Task<Result<PagedResult<GetStationPriceProposalResponse>>> GetAllPriceProposal(GetPaggedRequest pagged, TableRequest request);
         Task<Result<bool>> ChangePriceProposalStatus(string adminEmail, bool isAccepted, string photoToken);
+        Task<Result<GetPriceProposalStaisticResponse>> GetPriceProposalStaisticAsync();
     }
 }

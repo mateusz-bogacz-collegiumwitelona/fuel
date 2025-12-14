@@ -16,7 +16,7 @@ namespace Services.Services
         private readonly ILogger<UserServices> _logger;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
-        private EmailSender _email;
+        private IEmailSender _email;
         private readonly CacheService _cache;
 
         public UserServices(
@@ -24,7 +24,7 @@ namespace Services.Services
             ILogger<UserServices> logger,
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole<Guid>> roleManager,
-            EmailSender email,
+            IEmailSender email,
             CacheService cache)
         {
             _userRepository = userRepository;

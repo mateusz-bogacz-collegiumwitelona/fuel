@@ -24,6 +24,9 @@ namespace DTO.Requests
         [Range(0, double.MaxValue, ErrorMessage = "Maximum price cannot be negative")]
         public decimal? MaxPrice { get; set; }
 
+        public DateTime? PriceUpdatedAfter { get; set; }
+        public DateTime? PriceUpdatedBefore { get; set; }
+
         //brand
         public string? BrandName { get; set; }
 

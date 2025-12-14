@@ -16,7 +16,7 @@ namespace Services.Services
         private readonly ILogger<BanService> _logger;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
-        private EmailSender _email;
+        private IEmailSender _email;
         private readonly IReportRepositry _reportRepositry;
         private readonly CacheService _cache;
 
@@ -25,7 +25,7 @@ namespace Services.Services
             ILogger<BanService> logger,
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole<Guid>> roleManager,
-            EmailSender email,
+            IEmailSender email,
             IReportRepositry reportRepositry,
             CacheService cache)
         {
