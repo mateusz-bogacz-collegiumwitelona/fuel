@@ -75,7 +75,7 @@ export default function Register() {
             Array.isArray(data.errors) &&
             data.errors.join(", ")) ??
           "Nie udało się utworzyć konta.";
-        setMessage(serverMsg);
+        setMessage("test");
         return;
       }
 
@@ -164,7 +164,7 @@ export default function Register() {
           />
 
           {message && (
-            <p className="text-center text-sm text-base-300 mt-2">
+            <p className="text-center text-sm text-base-400 mt-2">
               {message}
             </p>
           )}
