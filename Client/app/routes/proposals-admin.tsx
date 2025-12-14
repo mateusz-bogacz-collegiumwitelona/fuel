@@ -36,6 +36,14 @@ type ProposalListResponseData = {
   hasNextPage?: boolean;
 };
 
+// --- STATYSTYKI ---
+type StatsData = {
+  acceptedRate: number;
+  rejectedRate: number;
+  pendingRate: number;
+};
+// ------------------
+
 export default function ProposalAdminPage() {
   const { t } = useTranslation();
   const { state, email } = useAdminGuard();
@@ -61,6 +69,11 @@ export default function ProposalAdminPage() {
   const [modalError, setModalError] = React.useState<string | null>(null);
   const [photosLoading, setPhotosLoading] = React.useState(false);
 
+  // --- STATYSTYKI STATE ---
+  const [stats, setStats] = React.useState<StatsData | null>(null);
+  const [statsLoading, setStatsLoading] = React.useState(false);
+  // ------------------------
+
   React.useEffect(() => {
     if (state !== "allowed") return;
     (async () => {
@@ -71,8 +84,33 @@ export default function ProposalAdminPage() {
         sortBy,
         sortDirection,
       );
+      // Ładujemy statystyki przy okazji odświeżania listy (np. po zmianie strony)
+      // lub można to wywołać tylko raz przy montowaniu - zależy od potrzeb.
+      // Tutaj wywołuję przy każdej zmianie filtrów/strony, żeby były w miarę aktualne.
+      loadStats(); 
     })();
   }, [state, pageNumber, pageSize, search, sortBy, sortDirection]);
+
+  // --- FUNKCJA ŁADOWANIA STATYSTYK ---
+  async function loadStats() {
+    setStatsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/proposal/stats`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data);
+      }
+    } catch (e) {
+      console.warn("Błąd pobierania statystyk", e);
+    } finally {
+      setStatsLoading(false);
+    }
+  }
+  // -----------------------------------
 
   async function loadProposalsFromApi(
     page: number,
@@ -189,6 +227,8 @@ export default function ProposalAdminPage() {
     setActiveGroup(null);
     setModalError(null);
     setModalLoading(false);
+    // Po zamknięciu modala odświeżamy statystyki, bo mogły się zmienić
+    loadStats();
   };
 
   async function fetchPhotosForGroup(group: ProposalGroup) {
@@ -354,7 +394,7 @@ export default function ProposalAdminPage() {
     }
   };
 
-const handleRejectAll = async () => {
+  const handleRejectAll = async () => {
     if (!activeGroup) return;
     setModalLoading(true);
     setModalError(null);
@@ -477,6 +517,28 @@ const handleRejectAll = async () => {
           </a>
         </div>
 
+        {/* --- STATYSTYKI --- */}
+        <div className="mt-6 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+           <div className="bg-base-300 rounded-xl p-4 shadow-md flex flex-col items-center">
+              <h3 className="text-lg font-semibold mb-1">Zgłoszenia Zaakceptowane</h3>
+              {statsLoading ? <span className="loading loading-dots"/> : (
+                 <span className="text-3xl font-bold text-success">{stats?.acceptedRate ?? "-"}</span>
+              )}
+           </div>
+           <div className="bg-base-300 rounded-xl p-4 shadow-md flex flex-col items-center">
+              <h3 className="text-lg font-semibold mb-1">Zgłoszenia Oczekujące</h3>
+              {statsLoading ? <span className="loading loading-dots"/> : (
+                 <span className="text-3xl font-bold text-warning">{stats?.pendingRate ?? "-"}</span>
+              )}
+           </div>
+           <div className="bg-base-300 rounded-xl p-4 shadow-md flex flex-col items-center">
+              <h3 className="text-lg font-semibold mb-1">Zgłoszenia Odrzucone</h3>
+              {statsLoading ? <span className="loading loading-dots"/> : (
+                 <span className="text-3xl font-bold text-error">{stats?.rejectedRate ?? "-"}</span>
+              )}
+           </div>
+        </div>
+        {/* ---------------------------------------- */}
 
         <div className="bg-base-300 rounded-xl p-4 shadow-md mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col gap-2 md:flex-row md:items-end">
@@ -601,6 +663,9 @@ const handleRejectAll = async () => {
             </>
           )}
         </div>
+
+
+
       </main>
 
       <Footer />
