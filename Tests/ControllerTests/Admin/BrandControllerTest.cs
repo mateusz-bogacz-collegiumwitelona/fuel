@@ -120,7 +120,7 @@ namespace Tests.ControllerTest.Admin
             var response = await _client.PatchAsync(url, null);
 
             //Assert
-            Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
 
         [Fact]

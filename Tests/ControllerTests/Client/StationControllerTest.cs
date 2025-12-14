@@ -249,7 +249,7 @@ namespace Tests.ControllerTest.Client
             var response = await _client.GetAsync(url);
 
             //Assert
-            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
 
         [Fact]

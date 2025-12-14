@@ -1,10 +1,17 @@
-﻿using Data.Context;
+﻿using Azure.Core;
+using Data.Context;
 using DTO.Requests;
 using DTO.Responses;
+using FluentEmail.Core;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using RTools_NTS.Util;
+using Services.Helpers;
+using Services.Interfaces;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -161,45 +168,319 @@ namespace Tests.ControllerTest.Client
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
 
-        /*[Fact]
-        public async Task RegisterNewUserTest_200OK()
+        [Fact]
+        public async Task RegisterNewUserTest_201()
         {
+            //Arrange
             var request = new RegisterNewUserRequest
             {
-                UserName = "NewUser",
-                Email = "newuser@test.com",
+                UserName = "NewTestUser",
+                Email = "newUser@test.com",
                 Password = "NewPass123!",
                 ConfirmPassword = "NewPass123!"
             };
-            using var client = _factory.WithWebHostBuilder(builder =>
+            using var newClient = _factory.WithWebHostBuilder(builder =>
             {
                 builder.ConfigureServices(services =>
                 {
                     var tempProvider = services.BuildServiceProvider();
-                    var logger = tempProvider.GetService<ILogger<Services.Helpers.EmailSender>>() ?? NullLogger<Services.Helpers.EmailSender>.Instance;
-                    var config = tempProvider.GetService<IConfiguration>() ?? new ConfigurationBuilder().Build();
-                    var mockEmailSender = new Mock<Services.Helpers.EmailSender>(logger, config, null);
+                    var config = tempProvider.GetService<IConfiguration>()
+                                 ?? new ConfigurationBuilder().Build();
+
+                    var mockEmailSender = new Mock<IEmailSender>();
                     mockEmailSender
                         .Setup(m => m.SendRegisterConfirmEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                         .ReturnsAsync(true);
-                    services.RemoveAll<Services.Helpers.EmailSender>();
-                    services.AddSingleton(mockEmailSender.Object);
+
+                    services.RemoveAll<IEmailSender>();
+                    services.AddSingleton<IEmailSender>(mockEmailSender.Object);
                 });
             }).CreateClient();
             var json = JsonSerializer.Serialize(request);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await client.PostAsync("api/register", content);
 
-            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-
+            //Act
+            var response = await newClient.PostAsync("api/register", content);
             var body = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(body);
             var root = doc.RootElement;
-            Assert.True(root.TryGetProperty("success", out var success));
-            Assert.True(success.GetBoolean());
-            Assert.True(root.TryGetProperty("message", out var message));
-            Assert.False(string.IsNullOrWhiteSpace(message.GetString()));
-        }*/
+
+            //Assert
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            Assert.True(root.TryGetProperty("success", out var success) && success.GetBoolean());
+            Assert.True(root.TryGetProperty("message", out var message) && !string.IsNullOrWhiteSpace(message.GetString()));
+        }
+
+        [Fact]
+        public async Task RegisterNewUserTest_404()
+        {
+            //Arrange
+            var request = new RegisterNewUserRequest
+            {
+                UserName = "",
+                Email = "",
+                Password = "",
+                ConfirmPassword = ""
+            };
+            using var newClient = _factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    var tempProvider = services.BuildServiceProvider();
+                    var config = tempProvider.GetService<IConfiguration>()
+                                 ?? new ConfigurationBuilder().Build();
+
+                    var mockEmailSender = new Mock<IEmailSender>();
+                    mockEmailSender
+                        .Setup(m => m.SendRegisterConfirmEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                        .ReturnsAsync(true);
+
+                    services.RemoveAll<IEmailSender>();
+                    services.AddSingleton<IEmailSender>(mockEmailSender.Object);
+                });
+            }).CreateClient();
+            var json = JsonSerializer.Serialize(request);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            //Act
+            var response = await newClient.PostAsync("api/register", content);
+
+            //Assert
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task ConfirmEmailAsyncTest_200OK()
+        {
+            //Arrange
+            string token;
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                var userManager = services.GetRequiredService<UserManager<Data.Models.ApplicationUser>>();
+                var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+                var db = services.GetRequiredService<ApplicationDbContext>();
+                var user = new Data.Models.ApplicationUser
+                {
+                    Id = Guid.NewGuid(),
+                    UserName = "newUser",
+                    NormalizedUserName = "NEWUSER",
+                    Email = "new@test.com",
+                    NormalizedEmail = "NEW@TEST.COM",
+                    EmailConfirmed = false,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    ConcurrencyStamp = Guid.NewGuid().ToString(),
+                    CreatedAt = DateTime.UtcNow
+                };
+                var createResult = await userManager.CreateAsync(user);
+                await userManager.AddToRoleAsync(user, "User");
+                token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+            }
+
+            var request = new ConfirmEmailRequest
+            {
+                Email = "new@test.com",
+                Token = token
+            };
+            var json = JsonSerializer.Serialize(request);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            //Act
+            var response = await _client.PostAsync("api/confirm-email", content);
+            var body = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            var root = doc.RootElement;
+
+            //Assert
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.True(root.TryGetProperty("success", out var success) && success.GetBoolean());
+            Assert.True(root.TryGetProperty("message", out var message) && !string.IsNullOrWhiteSpace(message.GetString()));
+        }
+
+        [Fact]
+        public async Task ConfirmEmailAsyncTest_400()
+        {
+            //Arrange
+            string token;
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                var userManager = services.GetRequiredService<UserManager<Data.Models.ApplicationUser>>();
+                var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+                var db = services.GetRequiredService<ApplicationDbContext>();
+                var user = new Data.Models.ApplicationUser
+                {
+                    Id = Guid.NewGuid(),
+                    UserName = "newUser",
+                    NormalizedUserName = "NEWUSER",
+                    Email = "new@test.com",
+                    NormalizedEmail = "NEW@TEST.COM",
+                    EmailConfirmed = true,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    ConcurrencyStamp = Guid.NewGuid().ToString(),
+                    CreatedAt = DateTime.UtcNow
+                };
+                var createResult = await userManager.CreateAsync(user);
+                await userManager.AddToRoleAsync(user, "User");
+                token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+            }
+
+            var request = new ConfirmEmailRequest
+            {
+                Email = "new@test.com",
+                Token = token
+            };
+            var json = JsonSerializer.Serialize(request);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            //Act
+            var response = await _client.PostAsync("api/confirm-email", content);
+
+            //Assert
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task ConfirmEmailAsyncTest_404()
+        {
+            //Arrange
+            var request = new ConfirmEmailRequest
+            {
+                Email = "new@test.com",
+                Token = "bad"
+            };
+            var json = JsonSerializer.Serialize(request);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            //Act
+            var response = await _client.PostAsync("api/confirm-email", content);
+
+            //Assert
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task ForgotPasswordAsyncTest_200OK()
+        {
+            //Arrange
+            var mockEmailSender = new Mock<IEmailSender>();
+            mockEmailSender
+                .Setup(m => m.SendResetPasswordEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(true);
+            var factoryWithMock = _factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<IEmailSender>();
+                    services.AddSingleton<IEmailSender>(mockEmailSender.Object);
+                });
+            });
+            using (var scope = factoryWithMock.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                var userManager = services.GetRequiredService<UserManager<Data.Models.ApplicationUser>>();
+                var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+                var db = services.GetRequiredService<ApplicationDbContext>();
+                var user = new Data.Models.ApplicationUser
+                    {
+                        Id = Guid.NewGuid(),
+                        UserName = "newUser",
+                        NormalizedUserName = "NEWUSER",
+                        Email = "newuser@test.com",
+                        NormalizedEmail = "newuser@test.com",
+                        EmailConfirmed = true,
+                        SecurityStamp = Guid.NewGuid().ToString(),
+                        ConcurrencyStamp = Guid.NewGuid().ToString(),
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    var createResult = await userManager.CreateAsync(user, "Test123!");
+                    Assert.True(createResult.Succeeded, "Nie udało się utworzyć użytkownika testowego dla reset-password test.");
+                    if (!await roleManager.RoleExistsAsync("User"))
+                    await roleManager.CreateAsync(new IdentityRole<Guid> { Name = "User" });
+                    await userManager.AddToRoleAsync(user, "User");
+            }
+            using var client = factoryWithMock.CreateClient();
+            var request = Uri.EscapeDataString("newuser@test.com");
+
+            //Act
+            var response = await client.PostAsync($"api/reset-password?email={request}", null);
+            var body = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            var root = doc.RootElement;
+
+            //Assert
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.True(root.TryGetProperty("success", out var success) && success.GetBoolean());
+            Assert.True(root.TryGetProperty("message", out var message) && !string.IsNullOrWhiteSpace(message.GetString()));
+            mockEmailSender.Verify(m => m.SendResetPasswordEmailAsync(
+                It.Is<string>(e => e == "newuser@test.com"),
+                It.IsAny<string>(),
+                It.IsAny<string>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task ForgotPasswordAsyncTest_400()
+        {
+            //Arrange
+            var mockEmailSender = new Mock<IEmailSender>();
+            mockEmailSender
+                .Setup(m => m.SendResetPasswordEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(true);
+            var factoryWithMock = _factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<IEmailSender>();
+                    services.AddSingleton<IEmailSender>(mockEmailSender.Object);
+                });
+            });
+            using (var scope = factoryWithMock.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                var userManager = services.GetRequiredService<UserManager<Data.Models.ApplicationUser>>();
+                var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+                var db = services.GetRequiredService<ApplicationDbContext>();
+                var user = new Data.Models.ApplicationUser
+                {
+                    Id = Guid.NewGuid(),
+                    UserName = "newUser",
+                    NormalizedUserName = "NEWUSER",
+                    Email = "newuser@test.com",
+                    NormalizedEmail = "newuser@test.com",
+                    EmailConfirmed = false,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    ConcurrencyStamp = Guid.NewGuid().ToString(),
+                    CreatedAt = DateTime.UtcNow
+                };
+                var createResult = await userManager.CreateAsync(user, "Test123!");
+                Assert.True(createResult.Succeeded, "Nie udało się utworzyć użytkownika testowego dla reset-password test.");
+                if (!await roleManager.RoleExistsAsync("User"))
+                    await roleManager.CreateAsync(new IdentityRole<Guid> { Name = "User" });
+                await userManager.AddToRoleAsync(user, "User");
+            }
+            using var client = factoryWithMock.CreateClient();
+            var request = Uri.EscapeDataString("newuser@test.com");
+
+            //Act
+            var response = await client.PostAsync($"api/reset-password?email={request}", null);
+
+            //Assert
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task ForgotPasswordAsyncTest_404()
+        {
+            //Arrange
+            //--
+
+            //Act
+            var response = await _client.PostAsync($"api/reset-password?email=bad@test.com", null);
+
+            //Assert
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
 
         [Fact]
         public async Task LogoutAsyncTest_200OK()
@@ -333,7 +614,7 @@ namespace Tests.ControllerTest.Client
         }
 
         [Fact]
-        public async Task GetCurrentUserAsync_200OK()
+        public async Task GetCurrentUserAsyncTest_200OK()
         {
             //Arrange
             //--
@@ -353,7 +634,7 @@ namespace Tests.ControllerTest.Client
         }
 
         [Fact]
-        public async Task GetCurrentUserAsync_400()
+        public async Task GetCurrentUserAsyncTest_400()
         {
             //Arrange
             var unauthClient = _factory.CreateClient();
@@ -366,7 +647,7 @@ namespace Tests.ControllerTest.Client
         }
 
         [Fact]
-        public async Task GetCurrentUserAsync_403()
+        public async Task GetCurrentUserAsyncTest_403()
         {
             //Arrange
             using (var scope = _factory.Services.CreateScope())
@@ -395,7 +676,7 @@ namespace Tests.ControllerTest.Client
         }
 
         [Fact]
-        public async Task GetCurrentUserAsync_404()
+        public async Task GetCurrentUserAsyncTest_404()
         {
             //Arrange
             using var scope = _factory.Services.CreateScope();
@@ -408,6 +689,191 @@ namespace Tests.ControllerTest.Client
             var response = await _client.GetAsync("api/me");
 
             // Assert
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task SetNewPasswordAsyncTest_200OK()
+        {
+            //Arrange
+            var email = "reset@test.com";
+            var newPassword = "NewPass123!";
+            string token;
+            var mockEmailSender = new Mock<IEmailSender>();
+            mockEmailSender
+                .Setup(m => m.SendResetPasswordEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(true);
+            var factoryWithMock = _factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<IEmailSender>();
+                    services.AddSingleton<IEmailSender>(mockEmailSender.Object);
+                });
+            });
+            using (var scope = factoryWithMock.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                var userManager = services.GetRequiredService<UserManager<Data.Models.ApplicationUser>>();
+                var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+                var db = services.GetRequiredService<ApplicationDbContext>();
+                var existingUser = await db.Users.SingleOrDefaultAsync(u => u.Email == email);
+                var user = new Data.Models.ApplicationUser
+                    {
+                        Id = Guid.NewGuid(),
+                        UserName = "reset",
+                        NormalizedUserName = "RESET",
+                        Email = email,
+                        NormalizedEmail = email.ToUpperInvariant(),
+                        EmailConfirmed = true,
+                        SecurityStamp = Guid.NewGuid().ToString(),
+                        ConcurrencyStamp = Guid.NewGuid().ToString(),
+                        CreatedAt = DateTime.UtcNow
+                    };
+                var createResult = await userManager.CreateAsync(user, "Temp123!");
+                await userManager.AddToRoleAsync(user, "User");
+                token = await userManager.GeneratePasswordResetTokenAsync(user);
+            }
+            using var resetClient = factoryWithMock.CreateClient();
+            var request = new ResetPasswordRequest
+            {
+                Email = email,
+                Password = newPassword,
+                ConfirmPassword = newPassword,
+                Token = Uri.EscapeDataString(token)
+            };
+            var json = JsonSerializer.Serialize(request);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            //Act
+            var response = await resetClient.PostAsync("api/set-new-password", content);
+            var body = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            var root = doc.RootElement;
+
+            //Assert
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.True(root.TryGetProperty("success", out var success) && success.GetBoolean());
+            Assert.True(root.TryGetProperty("message", out var message) && !string.IsNullOrWhiteSpace(message.GetString()));
+        }
+
+        [Fact]
+        public async Task SetNewPasswordAsyncTest_400()
+        {
+            //Arrange
+            var email = "reset@test.com";
+            var newPassword = "NewPass123!";
+            string token;
+            var mockEmailSender = new Mock<IEmailSender>();
+            mockEmailSender
+                .Setup(m => m.SendResetPasswordEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(true);
+            var factoryWithMock = _factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<IEmailSender>();
+                    services.AddSingleton<IEmailSender>(mockEmailSender.Object);
+                });
+            });
+            using (var scope = factoryWithMock.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                var userManager = services.GetRequiredService<UserManager<Data.Models.ApplicationUser>>();
+                var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+                var db = services.GetRequiredService<ApplicationDbContext>();
+                var existingUser = await db.Users.SingleOrDefaultAsync(u => u.Email == email);
+                var user = new Data.Models.ApplicationUser
+                {
+                    Id = Guid.NewGuid(),
+                    UserName = "reset",
+                    NormalizedUserName = "RESET",
+                    Email = email,
+                    NormalizedEmail = email.ToUpperInvariant(),
+                    EmailConfirmed = true,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    ConcurrencyStamp = Guid.NewGuid().ToString(),
+                    CreatedAt = DateTime.UtcNow
+                };
+                var createResult = await userManager.CreateAsync(user, "Temp123!");
+                await userManager.AddToRoleAsync(user, "User");
+                token = await userManager.GeneratePasswordResetTokenAsync(user);
+            }
+            using var resetClient = factoryWithMock.CreateClient();
+            var request = new ResetPasswordRequest
+            {
+                Email = "",
+                Password = "",
+                ConfirmPassword = "",
+                Token = Uri.EscapeDataString(token)
+            };
+            var json = JsonSerializer.Serialize(request);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            //Act
+            var response = await resetClient.PostAsync("api/set-new-password", content);
+
+            //Assert
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task SetNewPasswordAsyncTest_404()
+        {
+            //Arrange
+            var email = "reset@test.com";
+            var newPassword = "NewPass123!";
+            string token;
+            var mockEmailSender = new Mock<IEmailSender>();
+            mockEmailSender
+                .Setup(m => m.SendResetPasswordEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(true);
+            var factoryWithMock = _factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<IEmailSender>();
+                    services.AddSingleton<IEmailSender>(mockEmailSender.Object);
+                });
+            });
+            using (var scope = factoryWithMock.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                var userManager = services.GetRequiredService<UserManager<Data.Models.ApplicationUser>>();
+                var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+                var db = services.GetRequiredService<ApplicationDbContext>();
+                var existingUser = await db.Users.SingleOrDefaultAsync(u => u.Email == email);
+                var user = new Data.Models.ApplicationUser
+                {
+                    Id = Guid.NewGuid(),
+                    UserName = "reset",
+                    NormalizedUserName = "RESET",
+                    Email = email,
+                    NormalizedEmail = email.ToUpperInvariant(),
+                    EmailConfirmed = true,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    ConcurrencyStamp = Guid.NewGuid().ToString(),
+                    CreatedAt = DateTime.UtcNow
+                };
+                var createResult = await userManager.CreateAsync(user, "Temp123!");
+                await userManager.AddToRoleAsync(user, "User");
+                token = await userManager.GeneratePasswordResetTokenAsync(user);
+            }
+            using var resetClient = factoryWithMock.CreateClient();
+            var request = new ResetPasswordRequest
+            {
+                Email = "bad@test.com",
+                Password = "Asd123!",
+                ConfirmPassword = "Asd123!",
+                Token = Uri.EscapeDataString(token)
+            };
+            var json = JsonSerializer.Serialize(request);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            //Act
+            var response = await resetClient.PostAsync("api/set-new-password", content);
+
+            //Assert
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
     }

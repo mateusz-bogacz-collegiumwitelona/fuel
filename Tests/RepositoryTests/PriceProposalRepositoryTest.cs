@@ -507,6 +507,82 @@ namespace Tests.RepositoryTests
             Assert.Null(result);
             _output.WriteLine("Success, FindPriceProposal returns null when token is bad");
         }
+
+        [Fact]
+        public async Task GetPriceProposalStaisticAsync_SuccessIfNoProposalsReturned()
+        {
+            //Act
+            var result = await _repository.GetPriceProposalStaisticAsync();
+
+            //Assert
+            Assert.Equal(0, result.AcceptedRate);
+            Assert.Equal(0, result.RejectedRate);
+            Assert.Equal(0, result.PendingRate);
+            _output.WriteLine("Success, GetPriceProposalStaisticAsync returns 0s when no proposals exist");
+        }
+
+        [Fact]
+        public async Task GetPriceProposalStaisticAsync_SuccessIfOneOfEachReturned()
+        {
+            //Arrange
+            var proposal1 = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = _user,
+                UserId = _user.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = 1.0m,
+                Token = "123",
+                PhotoUrl = "",
+                CreatedAt = DateTime.UtcNow,
+                Status = PriceProposalStatus.Accepted,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+            var proposal2 = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = _user,
+                UserId = _user.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = 1.0m,
+                Token = "123",
+                PhotoUrl = "",
+                CreatedAt = DateTime.UtcNow,
+                Status = PriceProposalStatus.Pending,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+            var proposal3 = new PriceProposal
+            {
+                Id = Guid.NewGuid(),
+                User = _user,
+                UserId = _user.Id,
+                Station = _station,
+                StationId = _station.Id,
+                ProposedPrice = 1.0m,
+                Token = "123",
+                PhotoUrl = "",
+                CreatedAt = DateTime.UtcNow,
+                Status = PriceProposalStatus.Rejected,
+                FuelType = _fuel,
+                FuelTypeId = _fuel.Id,
+            };
+
+            _context.PriceProposals.AddRange(proposal1, proposal2, proposal3);
+            await _context.SaveChangesAsync();
+
+            //Act
+            var result = await _repository.GetPriceProposalStaisticAsync();
+
+            //Assert
+            Assert.Equal(1, result.AcceptedRate);
+            Assert.Equal(1, result.RejectedRate);
+            Assert.Equal(1, result.PendingRate);
+            _output.WriteLine("Success, GetPriceProposalStaisticAsync returns existing proposal rates");
+        }
     }
 
 }
