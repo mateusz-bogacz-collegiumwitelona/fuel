@@ -1,11 +1,6 @@
 ﻿using Data.Interfaces;
 using Microsoft.Extensions.Logging;
 using Services.Event.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Services.Event.Handlers
 {

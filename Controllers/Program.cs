@@ -272,6 +272,11 @@ builder.Services.AddTransient<IEventHandler<PriceProposalEvaluatedEvent>, Propos
 builder.Services.AddTransient<IEventHandler<PriceProposalEvaluatedEvent>, ProposalCacheInvalidationHandler>();
 builder.Services.AddTransient<IEventHandler<UserRegisteredEvent>, InitializeUserStatsHandler>();
 builder.Services.AddTransient<IEventHandler<UserRegisteredEvent>, SendRegistrationEmailHandler>();
+builder.Services.AddTransient<IEventHandler<UserBannedEvent>, ClearUserReportsHandler>();
+builder.Services.AddTransient<IEventHandler<UserBannedEvent>, NotifyUserBanHandler>();
+builder.Services.AddTransient<IEventHandler<UserBannedEvent>, InvalidateBannedUserCacheHandler>();
+builder.Services.AddTransient<IEventHandler<UserUnlockedEvent>, NotifyUserUnlockHandler>();
+builder.Services.AddTransient<IEventHandler<UserUnlockedEvent>, InvalidateUnlockedUserCacheHandler>();
 
 //controllers and swagger
 builder.Services.AddControllers(op =>
