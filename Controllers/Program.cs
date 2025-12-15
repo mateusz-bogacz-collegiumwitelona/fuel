@@ -21,6 +21,7 @@ using Serilog.Sinks.PeriodicBatching;
 using Services.BackgroundServices;
 using Services.BackgrounServices;
 using Services.Commands;
+using Services.Email;
 using Services.Event;
 using Services.Event.Handlers;
 using Services.Event.Interfaces;
@@ -251,6 +252,9 @@ builder.Services.AddScoped<IBrandServices, BrandServices>();
 builder.Services.AddScoped<IBanService, BanService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 
+//singleton email queue
+builder.Services.AddSingleton<IEmailQueue, InMemoryEmailQueue>();
+
 //register helpers
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<EmailBodys>();
@@ -262,6 +266,7 @@ builder.Services.AddScoped<IStorage, BlobApiHelper>();
 //register background services
 builder.Services.AddHostedService<BanExpirationService>();
 builder.Services.AddHostedService<ProposalExpirationService>();
+builder.Services.AddHostedService<EmailBackgroundWorker>();
 
 //register dispacher
 builder.Services.AddTransient<IEventDispatcher, EventDispatcher>();
