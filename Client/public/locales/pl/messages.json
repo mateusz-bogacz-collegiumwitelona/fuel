@@ -19,7 +19,8 @@
     "accepted": "Zaakceptowane",
     "rejected": "Odrzucone",
     "acceptrate": "Wskaźnik akceptacji",
-    "nostatistics": "Brak zgłoszeń"
+    "nostatistics": "Brak zgłoszeń",
+    "points": "punkty"
   },
 
   "map": {
@@ -97,7 +98,8 @@
       "users": "Użytkownicy",
       "stations": "Stacje",
       "logout": "Wyloguj",
-      "proposaladmin": "Zaproponowane zmiany"
+      "proposaladmin": "Zaproponowane zmiany",
+      "points": "Widok punktów"
     }
   },
 
@@ -129,7 +131,8 @@
       "admindashboard": "Panel admina",
       "brands": "Marki",
       "users": "Użytkownicy",
-      "stations": "Stacje"
+      "stations": "Stacje",
+      "points": "Widok punktów"
     },
     "rightTitle": "Prawa i kontakt",
     "rightText": "Wszelkie prawa zastrzeżone. Możesz podać tu pełną informację o licencji.",
@@ -556,5 +559,20 @@
     "save": "Zapisz",
     "cancel": "Anuluj",
     "close": "Zamknij"
+  },
+
+  "points": {
+    "pointsTitle": "Użytkownicy — punkty",
+    "searchPlaceholder": "Szukaj po nazwie lub punktach",
+    "minPoints": "Min. punkty",
+    "maxPoints": "Max. punkty",
+    "sortPoints": "Punkty",
+    "sortName": "Nazwa",
+    "desc": "Malejąco",
+    "asc": "Rosnąco",
+    "clear": "Wyczyść",
+    "nousers": "Brak użytkowników",
+    "leaderboard": "użytkownicy i ich punkty",
+    "perPage": "wyniki na strone"
   }
 }

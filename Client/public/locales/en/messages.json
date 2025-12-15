@@ -19,7 +19,8 @@
     "accepted": "Accepted",
     "rejected": "Rejected",
     "acceptrate": "Acceptance rate",
-    "nostatistics": "No reports"
+    "nostatistics": "No reports",
+    "points": "points"
   },
 
   "map": {
@@ -97,7 +98,8 @@
       "users": "Users",
       "stations": "Stations",
       "logout": "Logout",
-      "proposaladmin": "Proposed changes"
+      "proposaladmin": "Proposed changes",
+      "points": "Points"
     }
   },
 
@@ -129,7 +131,8 @@
       "admindashboard": "Admin dashboard",
       "brands": "Brands",
       "users": "Users",
-      "stations": "Stations"
+      "stations": "Stations",
+      "points": "Points"
     },
     "rightTitle": "Rights & contact",
     "rightText": "All rights reserved. Place license or company info here.",
@@ -556,5 +559,20 @@
     "save": "Save",
     "cancel": "Cancel",
     "close": "Close"
+  },
+
+  "points": {
+    "pointsTitle": "Users — points",
+    "searchPlaceholder": "Search by name or points",
+    "minPoints": "Min points",
+    "maxPoints": "Max points",
+    "sortPoints": "Points",
+    "sortName": "Name",
+    "desc": "Descending",
+    "asc": "Ascending",
+    "clear": "Clear",
+    "nousers": "No users",
+    "leaderboard": "users and them points",
+    "perPage": "results per page"
   }
 }

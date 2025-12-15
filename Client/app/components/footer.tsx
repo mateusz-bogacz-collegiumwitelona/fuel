@@ -120,6 +120,7 @@ export default function Footer() {
               <li><Link to="/map" className="link link-hover">{t("footer.links.map")}</Link></li>
               <li><Link to="/list" className="link link-hover">{t("footer.links.list")}</Link></li>
               <li><Link to="/proposals" className="link link-hover">{t("footer.links.proposals")}</Link></li>
+              <li><Link to="/points" className="link link-hover">{t("footer.links.points")}</Link></li>
             </ul>
 
             {/* For admin */}

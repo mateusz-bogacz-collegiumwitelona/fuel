@@ -43,6 +43,11 @@ export default function Dashboard(): JSX.Element {
   const [statsLoading, setStatsLoading] = React.useState(true);
   const [statsError, setStatsError] = React.useState<string | null>(null);
 
+  // --- user points state ---
+  const [userPoints, setUserPoints] = React.useState<number | null>(null);
+  const [userPointsLoading, setUserPointsLoading] = React.useState<boolean>(false);
+  const [userPointsError, setUserPointsError] = React.useState<string | null>(null);
+
   React.useEffect(() => {
     if (state !== "allowed") return;
 
@@ -51,6 +56,7 @@ export default function Dashboard(): JSX.Element {
         fetchRequests(),
         fetchProposalStats(),
         fetchNearestStations(),
+        fetchUserPoints(), // <-- fetch points too
       ]);
     })();
   }, [state]);
@@ -316,6 +322,92 @@ export default function Dashboard(): JSX.Element {
     setStatsLoading(false);
   }
 
+  // ----------------------------
+  // fetch user points
+  // ----------------------------
+  async function fetchUserPoints() {
+    setUserPointsLoading(true);
+    setUserPointsError(null);
+
+    const tryEndpoints = [
+      "api/proposal-statistic/top-users"
+    ];
+
+    for (const ep of tryEndpoints) {
+      try {
+        const url =
+          ep.includes("top-users")
+            ? `${API_BASE}${ep}?PageNumber=1&PageSize=200`
+            : `${API_BASE}${ep}`;
+
+        const res = await fetch(url, {
+          headers: { Accept: "application/json" },
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          // try next endpoint
+          continue;
+        }
+
+        const data = await res.json();
+
+        // Case: simple object { points: N }
+        if (data && typeof data === "object" && !Array.isArray(data) && (data.points != null || data.points === 0)) {
+          setUserPoints(Number(data.points));
+          setUserPointsLoading(false);
+          return;
+        }
+
+        // Case: object with items array (top-users)
+        if (data && Array.isArray(data.items)) {
+          const match = data.items.find((x: any) => {
+            const name = String(x.userName ?? x.name ?? x.username ?? "").toLowerCase();
+            if (!name) return false;
+            if (email && name === String(email).toLowerCase()) return true;
+            if (email) {
+              const local = String(email).split("@")[0].toLowerCase();
+              if (name === local) return true;
+            }
+            return false;
+          });
+          if (match) {
+            setUserPoints(Number(match.points ?? 0));
+            setUserPointsLoading(false);
+            return;
+          }
+        }
+
+        // Case: array of users
+        if (Array.isArray(data)) {
+          const match = data.find((x: any) => {
+            const name = String(x.userName ?? x.name ?? x.username ?? "").toLowerCase();
+            if (!name) return false;
+            if (email && name === String(email).toLowerCase()) return true;
+            if (email) {
+              const local = String(email).split("@")[0].toLowerCase();
+              if (name === local) return true;
+            }
+            return false;
+          });
+          if (match) {
+            setUserPoints(Number(match.points ?? 0));
+            setUserPointsLoading(false);
+            return;
+          }
+        }
+
+        // If endpoint returned something else but includes points for the currently logged user, you can add parsing here.
+      } catch (err) {
+        console.warn(`fetchUserPoints failed for ${ep}`, err);
+      }
+    }
+
+    // no data found — leave null (or set 0 if you prefer)
+    setUserPoints(null);
+    setUserPointsLoading(false);
+  }
+
   const handleLogout = () => {
     try {
       if (typeof localStorage !== "undefined") {
@@ -460,6 +552,16 @@ export default function Dashboard(): JSX.Element {
 
         <section className="bg-base-300 p-6 rounded-xl shadow-md">
           <h2 className="text-xl font-semibold mb-4">{t("dashboard.yourstatistics")}</h2>
+
+          <div className="mb-4">
+            <div className="text-sm text-gray-600">
+              {(t("dashboard.points") || "Punkty")}:{" "}
+              <span className="text-2xl font-bold">
+                {userPointsLoading ? "..." : userPoints != null ? userPoints : "-"}
+              </span>
+            </div>
+            {userPointsError && <div className="text-xs text-error mt-1">{userPointsError}</div>}
+          </div>
 
           {statsLoading ? (
             <div>{t("dashboard.loadstatistics")}</div>
