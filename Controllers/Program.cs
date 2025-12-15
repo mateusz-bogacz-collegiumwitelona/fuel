@@ -20,7 +20,12 @@ using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using Services.BackgroundServices;
 using Services.BackgrounServices;
+using Services.Cache;
 using Services.Commands;
+using Services.Email;
+using Services.Event;
+using Services.Event.Handlers;
+using Services.Event.Interfaces;
 using Services.Helpers;
 using Services.Interfaces;
 using Services.Services;
@@ -259,6 +264,16 @@ builder.Services.AddScoped<IStorage, BlobApiHelper>();
 //register background services
 builder.Services.AddHostedService<BanExpirationService>();
 builder.Services.AddHostedService<ProposalExpirationService>();
+
+//register dispacher
+builder.Services.AddTransient<IEventDispatcher, EventDispatcher>();
+
+//register observers
+builder.Services.AddTransient<IEventHandler<PriceProposalEvaluatedEvent>, UpdateUserStatisticsHandler>();
+builder.Services.AddTransient<IEventHandler<PriceProposalEvaluatedEvent>, ProposalEmailNotificationHandler>();
+builder.Services.AddTransient<IEventHandler<PriceProposalEvaluatedEvent>, ProposalCacheInvalidationHandler>();
+
+//controllers and swagger
 
 builder.Services.AddControllers(op =>
 {

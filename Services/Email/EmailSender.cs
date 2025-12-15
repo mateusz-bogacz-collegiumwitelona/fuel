@@ -4,19 +4,19 @@ using Microsoft.Extensions.Logging;
 using Services.Interfaces;
 using System.Net.Mail;
 
-namespace Services.Helpers
+namespace Services.Email
 {
     public class EmailSender : IEmailSender
     {
         private readonly ILogger<EmailSender> _logger;
         private readonly IConfiguration _config;
-        private readonly Helpers.EmailBodys _emailBody;
+        private readonly EmailBodys _emailBody;
         private readonly string _frontendUrl;
 
         public EmailSender(
             ILogger<EmailSender> logger,
             IConfiguration config,
-            Helpers.EmailBodys emailBody
+            EmailBodys emailBody
             )
         {
             _logger = logger;
