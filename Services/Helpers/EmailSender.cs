@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Services.Interfaces;
 using System.Net.Mail;
 
-namespace Services.Email
+namespace Services.Helpers
 {
     public class EmailSender : IEmailSender
     {

@@ -20,9 +20,7 @@ using Serilog;
 using Serilog.Sinks.PeriodicBatching;
 using Services.BackgroundServices;
 using Services.BackgrounServices;
-using Services.Cache;
 using Services.Commands;
-using Services.Email;
 using Services.Event;
 using Services.Event.Handlers;
 using Services.Event.Interfaces;
@@ -272,9 +270,10 @@ builder.Services.AddTransient<IEventDispatcher, EventDispatcher>();
 builder.Services.AddTransient<IEventHandler<PriceProposalEvaluatedEvent>, UpdateUserStatisticsHandler>();
 builder.Services.AddTransient<IEventHandler<PriceProposalEvaluatedEvent>, ProposalEmailNotificationHandler>();
 builder.Services.AddTransient<IEventHandler<PriceProposalEvaluatedEvent>, ProposalCacheInvalidationHandler>();
+builder.Services.AddTransient<IEventHandler<UserRegisteredEvent>, InitializeUserStatsHandler>();
+builder.Services.AddTransient<IEventHandler<UserRegisteredEvent>, SendRegistrationEmailHandler>();
 
 //controllers and swagger
-
 builder.Services.AddControllers(op =>
 {
     var policy = new AuthorizationPolicyBuilder()

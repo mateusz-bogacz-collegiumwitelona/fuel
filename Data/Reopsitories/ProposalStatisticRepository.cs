@@ -53,7 +53,6 @@ namespace Data.Reopsitories
             {
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
-                User = user,
                 TotalProposals = 0,
                 ApprovedProposals = 0,
                 RejectedProposals = 0,

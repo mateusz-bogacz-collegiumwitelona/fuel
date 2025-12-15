@@ -3,7 +3,7 @@ using Services.Event;
 using Services.Event.Interfaces;
 using Services.Interfaces;
 
-namespace Services.Email
+namespace Services.Event.Handlers
 {
     public class ProposalEmailNotificationHandler : IEventHandler<PriceProposalEvaluatedEvent>
     {

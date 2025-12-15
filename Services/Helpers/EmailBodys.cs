@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
 using System.Text;
 
-namespace Services.Email
+namespace Services.Helpers
 {
     public class EmailBodys
     {

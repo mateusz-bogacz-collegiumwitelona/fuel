@@ -3,7 +3,6 @@ using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
-using Services.Cache;
 
 namespace Services.Helpers
 {

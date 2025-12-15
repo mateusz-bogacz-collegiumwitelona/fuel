@@ -1,7 +1,8 @@
 ﻿using Services.Event;
 using Services.Event.Interfaces;
+using Services.Helpers;
 
-namespace Services.Cache
+namespace Services.Event.Handlers
 {
     public class ProposalCacheInvalidationHandler : IEventHandler<PriceProposalEvaluatedEvent>
     {

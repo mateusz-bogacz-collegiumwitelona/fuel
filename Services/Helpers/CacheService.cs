@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using System.Text.Json;
 
-namespace Services.Cache
+namespace Services.Helpers
 {
     public class CacheService
     {

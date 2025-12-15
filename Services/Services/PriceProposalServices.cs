@@ -6,7 +6,6 @@ using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
-using Services.Cache;
 using Services.Event;
 using Services.Event.Interfaces;
 using Services.Helpers;
