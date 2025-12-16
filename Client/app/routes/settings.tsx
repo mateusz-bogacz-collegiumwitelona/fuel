@@ -1,24 +1,9 @@
 import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
-
-const API_BASE = "http://localhost:5111";
-
-// Helper: decode JWT payload (same approach as other pages)
-function parseJwt(token: string | null) {
-  if (!token) return null;
-  try {
-    const payload = token.split(".")[1];
-    const decoded = atob(payload);
-    try {
-      return JSON.parse(decodeURIComponent(escape(decoded)));
-    } catch {
-      return JSON.parse(decoded);
-    }
-  } catch (e) {
-    return null;
-  }
-}
+import { API_BASE } from "../components/api";
+import { useUserGuard } from "../components/useUserGuard";
+import { useTranslation } from "react-i18next";
 
 type ProposalStats = {
   totalProposals?: number;
@@ -36,7 +21,12 @@ type UserProfile = {
 };
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = React.useState<"account" | "general" | "appearance">("account");
+  const { t } = useTranslation();
+  const { state, email } = useUserGuard();
+
+  const [activeTab, setActiveTab] = React.useState<
+    "account" | "general" | "appearance"
+  >("account");
 
   const [user, setUser] = React.useState<UserProfile | null>(null);
   const [loadingUser, setLoadingUser] = React.useState(true);
@@ -55,26 +45,28 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = React.useState("");
   const [confirmNewPassword, setConfirmNewPassword] = React.useState("");
   const [changingPassword, setChangingPassword] = React.useState(false);
-  const [passwordMessage, setPasswordMessage] = React.useState<string | null>(null);
+  const [passwordMessage, setPasswordMessage] = React.useState<string | null>(
+    null,
+  );
 
   React.useEffect(() => {
+    if (state !== "allowed") return;
+
     (async () => {
       setLoadingUser(true);
       setUserError(null);
       try {
-        const token = localStorage.getItem("token");
         const headers: Record<string, string> = { Accept: "application/json" };
-        if (token) headers["Authorization"] = `Bearer ${token}`;
 
-        const res = await fetch(`${API_BASE}/api/user`, {
+        const res = await fetch(`${API_BASE}/api/me`, {
           method: "GET",
           headers,
           credentials: "include",
         });
 
         if (!res.ok) {
-          // try a fallback endpoint used in other pages (/api/user/me)
-          const fallback = await fetch(`${API_BASE}/api/user/me`, {
+          // fallback attempt
+          const fallback = await fetch(`${API_BASE}/api/me`, {
             method: "GET",
             headers,
             credentials: "include",
@@ -98,24 +90,24 @@ export default function SettingsPage() {
         setNewEmail(data.email ?? "");
       } catch (err) {
         console.error("Nie udało się pobrać profilu użytkownika:", err);
-        setUserError("Nie udało się pobrać profilu. Upewnij się, że jesteś zalogowany.");
+        setUserError(t("settings.error_load_profile"));
       } finally {
         setLoadingUser(false);
       }
     })();
-  }, []);
+  }, [state, t]);
 
-  // Validation helpers
+  // Validation helpers (use t for messages)
   function validateEmailFormat(email: string) {
-    // simple regex for basic validation
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
   function validatePasswordRules(pw: string) {
-    if (pw.length < 6) return "Hasło musi mieć co najmniej 6 znaków.";
-    if (!/[A-Z]/.test(pw)) return "Hasło musi zawierać przynajmniej jedną wielką literę.";
-    if (!/[0-9]/.test(pw)) return "Hasło musi zawierać przynajmniej jedną cyfrę.";
-    if (!/[!@#$%^&*(),.?":{}|<>\\/;\\[\\]\\-_=+~`]/.test(pw)) return "Hasło musi zawierać przynajmniej jeden znak specjalny.";
+    if (pw.length < 6) return t("settings.pw_rule_min");
+    if (!/[A-Z]/.test(pw)) return t("settings.pw_rule_upper");
+    if (!/[0-9]/.test(pw)) return t("settings.pw_rule_digit");
+    if (!/[!@#$%^&*(),.?":{}|<>\\/;\[\]\-_=+~`]/.test(pw))
+      return t("settings.pw_rule_special");
     return null;
   }
 
@@ -126,32 +118,35 @@ export default function SettingsPage() {
     try {
       const toSend = newUserName.trim();
       if (!toSend) {
-        setNameMessage("Nazwa użytkownika nie może być pusta.");
+        setNameMessage(t("settings.msg_name_empty"));
         return;
       }
 
-      const token = localStorage.getItem("token");
       const headers: Record<string, string> = { Accept: "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await fetch(`${API_BASE}/api/user/change-name?userName=${encodeURIComponent(toSend)}`, {
-        method: "POST",
-        headers,
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${API_BASE}/api/user/change-name?userName=${encodeURIComponent(
+          toSend,
+        )}`,
+        {
+          method: "POST",
+          headers,
+          credentials: "include",
+        },
+      );
 
       const data = await res.json().catch(() => null);
       if (!res.ok || (data && data.success === false)) {
-        const msg = (data && data.message) || `Błąd serwera: ${res.status}`;
+        const msg = (data && data.message) || t("settings.msg_name_server_error", { status: res.status });
         setNameMessage(msg);
         return;
       }
 
-      setNameMessage("Nazwa użytkownika zmieniona pomyślnie.");
+      setNameMessage(t("settings.msg_name_success"));
       setUser((u) => (u ? { ...u, userName: toSend } : u));
     } catch (err) {
       console.error("change-name error:", err);
-      setNameMessage("Błąd połączenia z serwerem.");
+      setNameMessage(t("settings.msg_connection_error"));
     } finally {
       setChangingName(false);
     }
@@ -164,32 +159,35 @@ export default function SettingsPage() {
     try {
       const toSend = newEmail.trim();
       if (!validateEmailFormat(toSend)) {
-        setEmailMessage("Nieprawidłowy format adresu email.");
+        setEmailMessage(t("settings.msg_email_invalid"));
         return;
       }
 
-      const token = localStorage.getItem("token");
       const headers: Record<string, string> = { Accept: "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await fetch(`${API_BASE}/api/user/change-email?newEmail=${encodeURIComponent(toSend)}`, {
-        method: "POST",
-        headers,
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${API_BASE}/api/user/change-email?newEmail=${encodeURIComponent(
+          toSend,
+        )}`,
+        {
+          method: "POST",
+          headers,
+          credentials: "include",
+        },
+      );
 
       const data = await res.json().catch(() => null);
       if (!res.ok || (data && data.success === false)) {
-        const msg = (data && data.message) || `Błąd serwera: ${res.status}`;
+        const msg = (data && data.message) || t("settings.msg_email_server_error", { status: res.status });
         setEmailMessage(msg);
         return;
       }
 
-      setEmailMessage("Email zmieniony pomyślnie. Możesz potrzebować ponownego zalogowania.");
+      setEmailMessage(t("settings.msg_email_success"));
       setUser((u) => (u ? { ...u, email: toSend } : u));
     } catch (err) {
       console.error("change-email error:", err);
-      setEmailMessage("Błąd połączenia z serwerem.");
+      setEmailMessage(t("settings.msg_connection_error"));
     } finally {
       setChangingEmail(false);
     }
@@ -201,12 +199,12 @@ export default function SettingsPage() {
     setChangingPassword(true);
     try {
       if (!currentPassword) {
-        setPasswordMessage("Podaj aktualne hasło.");
+        setPasswordMessage(t("settings.msg_password_current_missing"));
         return;
       }
 
       if (newPassword !== confirmNewPassword) {
-        setPasswordMessage("Nowe hasła nie są identyczne.");
+        setPasswordMessage(t("settings.msg_password_mismatch"));
         return;
       }
 
@@ -216,12 +214,10 @@ export default function SettingsPage() {
         return;
       }
 
-      const token = localStorage.getItem("token");
       const headers: Record<string, string> = {
         Accept: "application/json",
         "Content-Type": "application/json",
       };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
 
       const body = {
         currentPassword,
@@ -238,19 +234,18 @@ export default function SettingsPage() {
 
       const data = await res.json().catch(() => null);
       if (!res.ok || (data && data.success === false)) {
-        const msg = (data && data.message) || `Błąd serwera: ${res.status}`;
+        const msg = (data && data.message) || t("settings.msg_password_server_error", { status: res.status });
         setPasswordMessage(msg);
         return;
       }
 
-      setPasswordMessage("Hasło zmienione pomyślnie.");
-      // clear password fields
+      setPasswordMessage(t("settings.msg_password_success"));
       setCurrentPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
     } catch (err) {
       console.error("change-password error:", err);
-      setPasswordMessage("Błąd połączenia z serwerem.");
+      setPasswordMessage(t("settings.msg_connection_error"));
     } finally {
       setChangingPassword(false);
     }
@@ -261,7 +256,7 @@ export default function SettingsPage() {
       <Header />
 
       <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-2xl md:text-3xl font-bold mb-4">Ustawienia</h1>
+        <h1 className="text-2xl md:text-3xl font-bold mb-4">{t("settings.title")}</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Sidebar */}
@@ -271,20 +266,20 @@ export default function SettingsPage() {
                 className={`btn btn-ghost justify-start ${activeTab === "account" ? "btn-active" : ""}`}
                 onClick={() => setActiveTab("account")}
               >
-                Ustawienia konta
+                {t("settings.tab_account")}
               </button>
 
               <button
                 className={`btn btn-ghost justify-start ${activeTab === "general" ? "btn-active" : ""}`}
                 onClick={() => setActiveTab("general")}
               >
-                Ogólne
+                {t("settings.tab_general")}
               </button>
 
               <div className="divider my-2"></div>
 
               <a href="/dashboard" className="btn btn-outline">
-                ← Powrót
+                {t("settings.back")}
               </a>
             </nav>
           </aside>
@@ -292,7 +287,7 @@ export default function SettingsPage() {
           {/* Content area */}
           <section className="col-span-1 md:col-span-3 bg-base-300 p-6 rounded-xl shadow-md">
             {loadingUser ? (
-              <div>Ładowanie profilu...</div>
+              <div>{t("settings.loading_profile")}</div>
             ) : userError ? (
               <div className="text-error">{userError}</div>
             ) : (
@@ -301,42 +296,42 @@ export default function SettingsPage() {
                   <div className="grid grid-cols-1 gap-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h2 className="text-xl font-semibold">Ustawienia konta</h2>
-                        <p className="text-sm text-gray-400">Zarządzaj swoim loginem, emailem i hasłem.</p>
+                        <h2 className="text-xl font-semibold">{t("settings.account_title")}</h2>
+                        <p className="text-sm text-gray-400">{t("settings.account_desc")}</p>
                       </div>
                     </div>
 
                     <div className="bg-base-100 p-4 rounded">
-                      <h3 className="font-medium mb-2">Dane konta</h3>
+                      <h3 className="font-medium mb-2">{t("settings.account_data_title")}</h3>
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
-                          <div className="text-sm text-gray-400">Nazwa użytkownika</div>
+                          <div className="text-sm text-gray-400">{t("settings.label_username")}</div>
                           <div className="font-medium">{user?.userName ?? "-"}</div>
                         </div>
                         <div>
-                          <div className="text-sm text-gray-400">Email</div>
+                          <div className="text-sm text-gray-400">{t("settings.label_email")}</div>
                           <div className="font-medium">{user?.email ?? "-"}</div>
                         </div>
                       </div>
 
                       <div className="mt-4">
-                        <div className="text-sm text-gray-400">Zarejestrowano</div>
+                        <div className="text-sm text-gray-400">{t("settings.label_registered")}</div>
                         <div className="text-sm">{user?.createdAt ? new Date(user.createdAt).toLocaleString() : "-"}</div>
                       </div>
                     </div>
 
                     {/* change name */}
                     <form onSubmit={handleChangeName} className="bg-base-100 p-4 rounded">
-                      <h3 className="font-medium mb-2">Zmień nazwę użytkownika</h3>
+                      <h3 className="font-medium mb-2">{t("settings.change_name_title")}</h3>
                       <div className="flex gap-2">
                         <input
                           className="input flex-1"
                           value={newUserName}
                           onChange={(e) => setNewUserName(e.target.value)}
-                          placeholder="Nowa nazwa użytkownika"
+                          placeholder={t("settings.change_name_placeholder")}
                         />
                         <button type="submit" className="btn btn-primary" disabled={changingName}>
-                          {changingName ? "Zmienianie..." : "Zmień"}
+                          {changingName ? t("settings.changing_text") : t("settings.change_name_button")}
                         </button>
                       </div>
                       {nameMessage && <div className="text-sm text-gray-400 mt-2">{nameMessage}</div>}
@@ -344,17 +339,17 @@ export default function SettingsPage() {
 
                     {/* change email */}
                     <form onSubmit={handleChangeEmail} className="bg-base-100 p-4 rounded">
-                      <h3 className="font-medium mb-2">Zmień email</h3>
+                      <h3 className="font-medium mb-2">{t("settings.change_email_title")}</h3>
                       <div className="flex gap-2">
                         <input
                           className="input flex-1"
                           value={newEmail}
                           onChange={(e) => setNewEmail(e.target.value)}
-                          placeholder="Nowy email"
+                          placeholder={t("settings.change_email_placeholder")}
                           type="email"
                         />
                         <button type="submit" className="btn btn-primary" disabled={changingEmail}>
-                          {changingEmail ? "Zmienianie..." : "Zmień"}
+                          {changingEmail ? t("settings.changing_text") : t("settings.change_email_button")}
                         </button>
                       </div>
                       {emailMessage && <div className="text-sm text-gray-400 mt-2">{emailMessage}</div>}
@@ -362,12 +357,12 @@ export default function SettingsPage() {
 
                     {/* change password */}
                     <form onSubmit={handleChangePassword} className="bg-base-100 p-4 rounded">
-                      <h3 className="font-medium mb-2">Zmień hasło</h3>
+                      <h3 className="font-medium mb-2">{t("settings.change_password_title")}</h3>
 
                       <div className="grid gap-2">
                         <input
                           className="input"
-                          placeholder="Aktualne hasło"
+                          placeholder={t("settings.placeholder_current_password")}
                           type="password"
                           value={currentPassword}
                           onChange={(e) => setCurrentPassword(e.target.value)}
@@ -375,7 +370,7 @@ export default function SettingsPage() {
 
                         <input
                           className="input"
-                          placeholder="Nowe hasło"
+                          placeholder={t("settings.placeholder_new_password")}
                           type="password"
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
@@ -383,19 +378,19 @@ export default function SettingsPage() {
 
                         <input
                           className="input"
-                          placeholder="Powtórz nowe hasło"
+                          placeholder={t("settings.placeholder_confirm_password")}
                           type="password"
                           value={confirmNewPassword}
                           onChange={(e) => setConfirmNewPassword(e.target.value)}
                         />
 
                         <div className="text-xs text-gray-400">
-                          Hasło musi mieć co najmniej 6 znaków, jedną wielką literę, jedną cyfrę i jeden znak specjalny.
+                          {t("settings.pw_rules_summary")}
                         </div>
 
                         <div className="flex gap-2">
                           <button className="btn btn-primary" type="submit" disabled={changingPassword}>
-                            {changingPassword ? "Zmienianie..." : "Zmień hasło"}
+                            {changingPassword ? t("settings.changing_text") : t("settings.change_password_button")}
                           </button>
                           <button
                             className="btn btn-ghost"
@@ -407,7 +402,7 @@ export default function SettingsPage() {
                               setPasswordMessage(null);
                             }}
                           >
-                            Anuluj
+                            {t("settings.cancel")}
                           </button>
                         </div>
 
@@ -417,28 +412,28 @@ export default function SettingsPage() {
 
                     {/* proposal stats (from /api/user response) */}
                     <div className="bg-base-100 p-4 rounded">
-                      <h3 className="font-medium mb-2">Statystyki propozycji</h3>
+                      <h3 className="font-medium mb-2">{t("settings.proposal_stats_title")}</h3>
                       {user?.proposalStatistics ? (
                         <div className="grid md:grid-cols-4 gap-4">
                           <div className="p-2 bg-base-200 rounded text-base-content text-center">
                             <div className="font-bold">{user.proposalStatistics.totalProposals ?? 0}</div>
-                            <div className="text-sm">Wszystkie</div>
+                            <div className="text-sm">{t("settings.stats_all")}</div>
                           </div>
                           <div className="p-2 bg-base-200 rounded text-success text-center">
                             <div className="font-bold">{user.proposalStatistics.approvedProposals ?? 0}</div>
-                            <div className="text-sm">Zaakceptowane</div>
+                            <div className="text-sm">{t("settings.stats_approved")}</div>
                           </div>
                           <div className="p-2 bg-base-200 rounded text-error text-center">
                             <div className="font-bold">{user.proposalStatistics.rejectedProposals ?? 0}</div>
-                            <div className="text-sm">Odrzucone</div>
+                            <div className="text-sm">{t("settings.stats_rejected")}</div>
                           </div>
                           <div className="p-2 bg-base-200 text-info rounded text-center">
                             <div className="font-bold">{user.proposalStatistics.acceptedRate ?? "-"}%</div>
-                            <div className="text-sm">Wskaźnik akceptacji</div>
+                            <div className="text-sm">{t("settings.stats_rate")}</div>
                           </div>
                         </div>
                       ) : (
-                        <div className="text-sm text-gray-400">Brak statystyk.</div>
+                        <div className="text-sm text-gray-400">{t("settings.stats_none")}</div>
                       )}
                     </div>
                   </div>
@@ -446,22 +441,22 @@ export default function SettingsPage() {
 
                 {activeTab === "general" && (
                   <div>
-                    <h2 className="text-xl font-semibold mb-2">Ogólne</h2>
+                    <h2 className="text-xl font-semibold mb-2">{t("settings.general_title")}</h2>
                     <div className="bg-base-100 p-4 rounded">
-                      <p className="text-sm text-gray-400 mb-2">Losowe rzeczy, nie wiem co tu dać xD:</p>
+                      <p className="text-sm text-gray-400 mb-2">{t("settings.misc_text")}</p>
                       <div className="grid md:grid-cols-2 gap-4">
                         <label className="flex items-center gap-2">
                           <input type="checkbox" className="checkbox" />
-                          <span className="text-sm">Otrzymuj powiadomienia o akceptacji propozycji</span>
+                          <span className="text-sm">{t("settings.opt_notify_accepted")}</span>
                         </label>
 
                         <label className="flex items-center gap-2">
                           <input type="checkbox" className="checkbox" />
-                          <span className="text-sm">Automatyczne doładowanie lokalizacji przy starcie</span>
+                          <span className="text-sm">{t("settings.opt_auto_loc")}</span>
                         </label>
                       </div>
                       <div className="mt-4">
-                        <button className="btn btn-primary">Zapisz ustawienia</button>
+                        <button className="btn btn-primary">{t("settings.save_settings")}</button>
                       </div>
                     </div>
                   </div>

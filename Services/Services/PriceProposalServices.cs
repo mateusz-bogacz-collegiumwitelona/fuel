@@ -20,7 +20,7 @@ namespace Services.Services
         private readonly IStationRepository _stationRepository;
         private readonly IFuelTypeRepository _fuelTypeRepository;
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
-        private EmailSender _email;
+        private IEmailSender _email;
         private readonly CacheService _cache;
 
         public PriceProposalServices(
@@ -30,7 +30,7 @@ namespace Services.Services
             IStationRepository stationRepository,
             IFuelTypeRepository fuelTypeRepository,
             IProposalStatisticRepository proposalStatisticRepository,
-            EmailSender email,
+            IEmailSender email,
             CacheService cache
             )
         {
@@ -352,6 +352,38 @@ namespace Services.Services
                 _logger.LogError(ex, "Error changing price proposal status for token: {token}",
                     token);
                 return Result<bool>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { ex.Message });
+            }
+        }
+
+        public async Task<Result<GetPriceProposalStaisticResponse>> GetPriceProposalStaisticAsync()
+        {
+            try
+            {
+                var response = await _priceProposalRepository.GetPriceProposalStaisticAsync();
+
+                if (response == null)
+                {
+                    _logger.LogError("Failed to review Price proposal statistic");
+                    return Result<GetPriceProposalStaisticResponse>.Bad(
+                        "Failed to review Price proposal statistic",
+                        StatusCodes.Status500InternalServerError,
+                        new List<string> { "Failed to review Price proposal statistic" }
+                        );
+                }
+
+                return Result<GetPriceProposalStaisticResponse>.Good(
+                    "Proposal Statistic review successfully",
+                    StatusCodes.Status200OK,
+                    response
+                    );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error review Price proposal statistic");
+                return Result<GetPriceProposalStaisticResponse>.Bad(
                     "An error occurred while processing your request.",
                     StatusCodes.Status500InternalServerError,
                     new List<string> { ex.Message });

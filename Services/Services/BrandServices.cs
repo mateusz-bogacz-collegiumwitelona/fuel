@@ -106,7 +106,7 @@ namespace Services.Services
                     _logger.LogWarning("This brand dosn't exist {OldName}", oldName);
                     return Result<bool>.Bad(
                         "Application error",
-                        StatusCodes.Status409Conflict,
+                        StatusCodes.Status404NotFound,
                         new List<string> { "This brand dosn't exist" }
                         );
                 }

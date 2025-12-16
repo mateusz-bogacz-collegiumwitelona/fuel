@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using System.Text.Json;
 
@@ -129,7 +129,7 @@ namespace Services.Helpers
                 _logger.LogError(ex, "Error removing cache keys by pattern: {Pattern}", pattern);
             }
         }
-  
+
         public async Task InvalidateBrandCacheAsync()
         {
             await RemoveAsync(CacheKeys.AllBrands);

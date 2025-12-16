@@ -1,4 +1,5 @@
 ﻿using Data.Context;
+using Data.Enums;
 using Data.Helpers;
 using Data.Interfaces;
 using Data.Models;
@@ -169,6 +170,7 @@ namespace Data.Repositories
 
             string photoUrl = _storage.GetPublicUrl(path, bucketName);
 
+
             return new GetPriceProposalResponse
             {
                 Email = proposal.User.Email,
@@ -236,7 +238,6 @@ namespace Data.Repositories
                     Status = pp.Status.ToString(),
                     CreatedAt = pp.CreatedAt,
                 });
-
 
         public async Task<bool> ChangePriceProposalStatus(
             bool isAccepted,
@@ -324,5 +325,25 @@ namespace Data.Repositories
                     .Include(pp => pp.FuelType)
                     .FirstOrDefaultAsync(pp =>
                         pp.Token == token && pp.Status == Enums.PriceProposalStatus.Pending);
+
+
+        public async Task<GetPriceProposalStaisticResponse> GetPriceProposalStaisticAsync()
+        {
+            var stats = await _context.PriceProposals
+                .GroupBy(pp => pp.Status)
+                .Select(g => new
+                {
+                    Status = g.Key,
+                    Count = g.Count()
+                })
+                .ToListAsync();
+
+            return new GetPriceProposalStaisticResponse()
+            {
+                AcceptedRate = stats.FirstOrDefault(s => s.Status == PriceProposalStatus.Accepted)?.Count ?? 0,
+                RejectedRate = stats.FirstOrDefault(s => s.Status == PriceProposalStatus.Rejected)?.Count ?? 0,
+                PendingRate = stats.FirstOrDefault(s => s.Status == PriceProposalStatus.Pending)?.Count ?? 0,
+            };
+        }
     }
 }

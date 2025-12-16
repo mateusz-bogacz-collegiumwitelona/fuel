@@ -374,7 +374,7 @@ logs/
 
 # Environment files with sensitive data
 .env
-.env.*
+!.env.example
 appsettings.Development.json
 appsettings.*.json
 !appsettings.json

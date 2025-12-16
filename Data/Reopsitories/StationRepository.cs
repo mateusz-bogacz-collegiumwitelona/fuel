@@ -135,6 +135,9 @@ namespace Data.Reopsitories
 
             if (!string.IsNullOrEmpty(request.BrandName))
                 stations = _filters.FilterByBrand(stations, request.BrandName);
+            
+            if (request.PriceUpdatedAfter.HasValue || request.PriceUpdatedBefore.HasValue)
+                stations = _filters.FilterByPriceUpdateDate(stations, request.PriceUpdatedAfter, request.PriceUpdatedBefore);
 
             if (request.SortingByDisance.HasValue)
             {
@@ -164,26 +167,26 @@ namespace Data.Reopsitories
                 Latitude = s.Address.Location.Y,
                 Longitude = s.Address.Location.X,
                 FuelPrice = s.FuelPrice
-                            .Where(fp =>
-                                (request.FuelType == null || !request.FuelType.Any() ||
-                                 request.FuelType.Contains(fp.FuelType.Name)) &&
-                                (!request.MinPrice.HasValue || fp.Price >= request.MinPrice.Value) &&
-                                (!request.MaxPrice.HasValue || fp.Price <= request.MaxPrice.Value)
-                            )
-                            .Select(fp => new GetFuelPriceAndCodeResponse
-                            {
-                                FuelCode = fp.FuelType.Code,
-                                Price = fp.Price,
-                                ValidFrom = fp.ValidFrom
-                            })
-                            .ToList()
+                    .Where(fp =>
+                        (request.FuelType == null || !request.FuelType.Any() ||
+                         request.FuelType.Contains(fp.FuelType.Name)) &&
+                        (!request.MinPrice.HasValue || fp.Price >= request.MinPrice.Value) &&
+                        (!request.MaxPrice.HasValue || fp.Price <= request.MaxPrice.Value)
+                    )
+                    .Select(fp => new GetFuelPriceAndCodeResponse
+                    {
+                        FuelCode = fp.FuelType.Code,
+                        Price = fp.Price,
+                        ValidFrom = fp.ValidFrom
+                    })
+                    .ToList()
             })
             .Where(s => s.FuelPrice.Any())
             .ToList();
 
             return result;
         }
-        
+
         public async Task<GetStationListResponse> GetStationProfileAsync(FindStationRequest request)
         {
             var station = await _context.Stations

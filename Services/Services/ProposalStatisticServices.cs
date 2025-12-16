@@ -16,6 +16,7 @@ namespace Services.Services
         private readonly ILogger<ProposalStatisticServices> _logger;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly CacheService _cache;
+
         public ProposalStatisticServices(
             IProposalStatisticRepository proposalStatisticRepository,
             ILogger<ProposalStatisticServices> logger,
