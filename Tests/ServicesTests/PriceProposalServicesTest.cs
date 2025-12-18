@@ -11,9 +11,11 @@ using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Services.Helpers;
+using Services.Interfaces;
 using Services.Services;
 using StackExchange.Redis;
 using Xunit;
@@ -30,7 +32,7 @@ namespace Tests.ServicesTests
         private readonly Mock<ILogger<PriceProposalServices>> _loggerMock;
         private readonly Mock<ILogger<CacheService>> _cacheLoggerMock;
         private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
-        private readonly Mock<EmailSender> _emailMock;
+        private readonly Mock<IEmailSender> _emailMock;
         private readonly CacheService _cache;
         private readonly PriceProposalServices _service;
         private readonly ITestOutputHelper _output;
@@ -45,9 +47,24 @@ namespace Tests.ServicesTests
             _proposalStatisticRepoMock = new Mock<IProposalStatisticRepository>();
             _loggerMock = new Mock<ILogger<PriceProposalServices>>();
             _cacheLoggerMock = new Mock<ILogger<CacheService>>();
-            _emailMock = new Mock<EmailSender>(MockBehavior.Strict);
+           
+            var inMemorySettings = new Dictionary<string, string?>
+            {
+                ["Frontend:Url"] = "http://localhost:4000",
+                ["Mail:Host"] = "",
+                ["Mail:Port"] = "1025",
+                ["Mail:EnableSsl"] = "false",
+                ["Mail:From"] = ""
+            };
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(inMemorySettings)
+                .Build();
+            var emailBodys = new EmailBodys();
 
-            // Setup Redis-backed CacheService using mocks (same approach as other tests in repo)
+            
+            _emailMock = new Mock<IEmailSender>(MockBehavior.Strict);
+
+           
             var redisMock = new Mock<IConnectionMultiplexer>(MockBehavior.Strict);
             var dbMock = new Mock<IDatabase>(MockBehavior.Loose);
             var serverMock = new Mock<IServer>(MockBehavior.Loose);
@@ -60,7 +77,7 @@ namespace Tests.ServicesTests
 
             _cache = new CacheService(redisMock.Object, _cacheLoggerMock.Object);
 
-            // UserManager mock
+      
             var store = new Mock<IUserStore<ApplicationUser>>();
             _userManagerMock = new Mock<UserManager<ApplicationUser>>(
                 store.Object, null, null, null, null, null, null, null, null
@@ -116,7 +133,7 @@ namespace Tests.ServicesTests
             _output.WriteLine("Invalid file type returns 400 as expected.");
         }
 
-        [Fact]
+        [Fact]                  
         public async Task AddNewProposalAsync_ReturnsBad_WhenUserNotFound()
         {
             // Arrange

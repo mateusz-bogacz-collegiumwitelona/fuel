@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Services.Helpers;
@@ -28,7 +29,7 @@ namespace Tests.ServicesTests
         private readonly Mock<SignInManager<ApplicationUser>> _signInManagerMock;
         private readonly Mock<RoleManager<IdentityRole<Guid>>> _roleManagerMock;
         private readonly Mock<ILogger<LoginRegisterServices>> _loggerMock;
-        private readonly Mock<EmailSender> _emailMock;
+        private readonly Mock<IEmailSender> _emailMock;
         private readonly Mock<IProposalStatisticRepository> _proposalStatisticRepositoryMock;
         private readonly Mock<IUserRepository> _userRepositoryMock;
         private readonly Mock<IHttpContextAccessor> _httpContextAccessorMock;
@@ -108,7 +109,7 @@ namespace Tests.ServicesTests
         public async Task HandleLoginAsync_InvalidPassword_ReturnsBadResultWithStatus401()
         {
             // Arrange
-            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = "test@example.com" };
+            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = "test@example.com", EmailConfirmed = true };
             var request = new LoginRequest { Email = user.Email, Password = "wrongpassword" };
 
             _userManagerMock.Setup(um => um.FindByEmailAsync(request.Email))
@@ -131,7 +132,7 @@ namespace Tests.ServicesTests
         public async Task HandleLoginAsync_UserHasNoRoles_ReturnsBadResultWithStatus403()
         {
             // Arrange
-            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = "test@example.com" };
+            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = "test@example.com", EmailConfirmed = true };
             var request = new LoginRequest { Email = user.Email, Password = "password" };
 
             _userManagerMock.Setup(um => um.FindByEmailAsync(request.Email))
@@ -199,6 +200,13 @@ namespace Tests.ServicesTests
         {
             // Arrange
             var httpContext = new DefaultHttpContext();
+
+            var envMock = new Mock<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
+            envMock.SetupGet(e => e.EnvironmentName).Returns(Microsoft.Extensions.Hosting.Environments.Development);
+            var services = new ServiceCollection();
+            services.AddSingleton<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(envMock.Object);
+            httpContext.RequestServices = services.BuildServiceProvider();
+
             _httpContextAccessorMock.Setup(hca => hca.HttpContext).Returns(httpContext);
             _signInManagerMock.Setup(sm => sm.SignOutAsync()).Returns(Task.CompletedTask);
 
@@ -216,6 +224,13 @@ namespace Tests.ServicesTests
         {
             // Arrange
             var httpContext = new DefaultHttpContext();
+
+            var envMock = new Mock<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
+            envMock.SetupGet(e => e.EnvironmentName).Returns(Microsoft.Extensions.Hosting.Environments.Development);
+            var services = new ServiceCollection();
+            services.AddSingleton<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(envMock.Object);
+            httpContext.RequestServices = services.BuildServiceProvider();
+
             _httpContextAccessorMock.Setup(hca => hca.HttpContext).Returns(httpContext);
             _signInManagerMock.Setup(sm => sm.SignOutAsync())
                 .ThrowsAsync(new Exception("Signout error"));
@@ -606,30 +621,11 @@ namespace Tests.ServicesTests
                 null
             );
         }
-
-        private Mock<EmailSender> CreateEmailSenderMock()
+            
+        private Mock<IEmailSender> CreateEmailSenderMock()
         {
-            var inMemorySettings = new Dictionary<string, string?>
-            {
-                ["Frontend:Url"] = "http://localhost:4000",
-                // ustawienia mail pozostaw puste/bezpieczne, aby SendEmailAsync nie próbował wysyłać prawdziwej poczty
-                ["Mail:Host"] = "",
-                ["Mail:Port"] = "1025",
-                ["Mail:EnableSsl"] = "false",
-                ["Mail:From"] = ""
-            };
-
-            var configuration = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
-                .AddInMemoryCollection(inMemorySettings)
-                .Build();
-
-            var emailBodys = new Services.Helpers.EmailBodys();
-
-            return new Mock<EmailSender>(
-                Mock.Of<ILogger<EmailSender>>(),
-                configuration,
-                emailBodys
-            );
+           
+            return new Mock<IEmailSender>();
         }
 
         private void SetupSuccessfulLogin(ApplicationUser user, List<string> roles, JwtSecurityToken jwtToken, RefreshToken refreshToken)
@@ -637,6 +633,16 @@ namespace Tests.ServicesTests
             var httpContext = new DefaultHttpContext();
             var responseFeature = new HttpResponseFeature();
             httpContext.Features.Set<IHttpResponseFeature>(responseFeature);
+
+            
+            user.EmailConfirmed = true;
+
+           
+            var envMock = new Mock<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>();
+            envMock.SetupGet(e => e.EnvironmentName).Returns(Microsoft.Extensions.Hosting.Environments.Development);
+            var services = new ServiceCollection();
+            services.AddSingleton<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(envMock.Object);
+            httpContext.RequestServices = services.BuildServiceProvider();
 
             _userManagerMock.Setup(um => um.FindByEmailAsync(user.Email))
                 .ReturnsAsync(user);

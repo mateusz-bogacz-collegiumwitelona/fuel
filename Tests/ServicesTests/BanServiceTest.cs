@@ -1,19 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
-using Data.Interfaces;
+﻿using Data.Interfaces;
 using Data.Models;
 using DTO.Requests;
 using DTO.Responses;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Services.Helpers;
 using Services.Services;
+using Services.Interfaces;
 using StackExchange.Redis;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,10 +24,13 @@ namespace Tests.ServicesTests
     {
         private readonly Mock<IBanRepository> _banRepoMock;
         private readonly Mock<IReportRepositry> _reportRepoMock;
-        private readonly Mock<ILogger<BanService>> _loggerMock;
+        private readonly Mock<IEmailSender> _emailMock;
         private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
         private readonly Mock<RoleManager<IdentityRole<Guid>>> _roleManagerMock;
-        private readonly Mock<EmailSender> _emailMock;
+        private readonly Mock<ILogger<BanService>> _loggerMock;
+        private readonly Mock<IConnectionMultiplexer> _redisMock;
+        private readonly Mock<IDatabase> _dbMock;
+        private readonly Mock<IServer> _serverMock;
         private readonly CacheService _cache;
         private readonly BanService _service;
         private readonly ITestOutputHelper _output;
@@ -37,64 +41,32 @@ namespace Tests.ServicesTests
 
             _banRepoMock = new Mock<IBanRepository>();
             _reportRepoMock = new Mock<IReportRepositry>();
+            _emailMock = new Mock<IEmailSender>();
             _loggerMock = new Mock<ILogger<BanService>>();
-          
-            var inMemorySettings = new Dictionary<string, string?>
-            {
-                ["Frontend:Url"] = "http://localhost:4000",
-                ["Mail:Host"] = "",
-                ["Mail:Port"] = "1025",
-                ["Mail:EnableSsl"] = "false",
-                ["Mail:From"] = ""
-            };
 
-            var configuration = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
-                .AddInMemoryCollection(inMemorySettings)
-                .Build();
-
-            _emailMock = new Mock<EmailSender>(
-                MockBehavior.Strict,
-                Mock.Of<ILogger<EmailSender>>(),
-                configuration,
-                new Services.Helpers.EmailBodys()
-            );
-
-          
-            var store = new Mock<IUserStore<ApplicationUser>>();
             _userManagerMock = new Mock<UserManager<ApplicationUser>>(
-                store.Object,
-                Mock.Of<Microsoft.Extensions.Options.IOptions<IdentityOptions>>(),
-                Mock.Of<IPasswordHasher<ApplicationUser>>(),
-                Array.Empty<IUserValidator<ApplicationUser>>(),
-                Array.Empty<IPasswordValidator<ApplicationUser>>(),
-                Mock.Of<ILookupNormalizer>(),
-                Mock.Of<IdentityErrorDescriber>(),
-                Mock.Of<IServiceProvider>(),
-                Mock.Of<ILogger<UserManager<ApplicationUser>>>()
-            ) { DefaultValue = DefaultValue.Mock };
+                Mock.Of<IUserStore<ApplicationUser>>(),
+                null, null, null, null, null, null, null, null);
 
-            
-            var roleStore = new Mock<IRoleStore<IdentityRole<Guid>>>();
             _roleManagerMock = new Mock<RoleManager<IdentityRole<Guid>>>(
-                roleStore.Object,
-                Array.Empty<IRoleValidator<IdentityRole<Guid>>>(),
-                Mock.Of<ILookupNormalizer>(),
-                Mock.Of<IdentityErrorDescriber>(),
-                Mock.Of<ILogger<RoleManager<IdentityRole<Guid>>>>()
-            ) { DefaultValue = DefaultValue.Mock };
+                Mock.Of<IRoleStore<IdentityRole<Guid>>>(),
+                null, null, null, null);
 
-           
-            var redisMock = new Mock<IConnectionMultiplexer>(MockBehavior.Strict);
-            var dbMock = new Mock<IDatabase>(MockBehavior.Loose);
-            var serverMock = new Mock<IServer>(MockBehavior.Loose);
-            redisMock.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(dbMock.Object);
-            var endpoint = new DnsEndPoint("127.0.0.1", 6379);
-            redisMock.Setup(r => r.GetEndPoints(It.IsAny<bool>())).Returns(new EndPoint[] { endpoint });
-            redisMock.Setup(r => r.GetServer(endpoint, It.IsAny<object>())).Returns(serverMock.Object);
-            serverMock.Setup(s => s.Keys(It.IsAny<int>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CommandFlags>()))
+          
+            _redisMock = new Mock<IConnectionMultiplexer>(MockBehavior.Strict);
+            _dbMock = new Mock<IDatabase>(MockBehavior.Loose);
+            _serverMock = new Mock<IServer>(MockBehavior.Strict);
+
+            _redisMock.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(_dbMock.Object);
+
+            EndPoint[] endpoints = new EndPoint[] { new DnsEndPoint("127.0.0.1", 6379) };
+            _redisMock.Setup(r => r.GetEndPoints(It.IsAny<bool>())).Returns(endpoints);
+            _redisMock.Setup(r => r.GetServer(It.IsAny<EndPoint>(), It.IsAny<object>())).Returns(_serverMock.Object);
+
+            _serverMock.Setup(s => s.Keys(It.IsAny<int>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CommandFlags>()))
                 .Returns(Enumerable.Empty<RedisKey>());
 
-            _cache = new CacheService(redisMock.Object, Mock.Of<ILogger<CacheService>>());
+            _cache = new CacheService(_redisMock.Object, Mock.Of<ILogger<CacheService>>());
 
             _service = new BanService(
                 _banRepoMock.Object,
@@ -108,219 +80,235 @@ namespace Tests.ServicesTests
         }
 
         [Fact]
-        public async Task LockoutUserAsync_ReturnsBad_WhenRequestEmailMissing()
+        public async Task LockoutUserAsync_ReturnsBadRequest_WhenEmailMissing()
         {
-            // Arrange
-            var adminEmail = "admin@example.com";
-            var request = new SetLockoutForUserRequest { Email = "", Reason = "reason", Days = 3 };
+            var request = new SetLockoutForUserRequest { Email = "", Reason = "reason" };
 
-            // Act
-            var result = await _service.LockoutUserAsync(adminEmail, request);
+            var result = await _service.LockoutUserAsync("admin@example.com", request);
 
-            // Assert
             Assert.False(result.IsSuccess);
-            Assert.Equal(400, result.StatusCode);
-            _output.WriteLine("Lockout returns 400 when request email missing");
+            Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
+            _output.WriteLine("Test passed: LockoutUserAsync validates email");
         }
 
         [Fact]
-        public async Task LockoutUserAsync_ReturnsNotFound_WhenUserMissing()
+        public async Task LockoutUserAsync_ReturnsBadRequest_WhenReasonMissing()
         {
-            // Arrange
-            var adminEmail = "admin@example.com";
-            var request = new SetLockoutForUserRequest { Email = "missing@example.com", Reason = "reason", Days = 3 };
+            var request = new SetLockoutForUserRequest { Email = "user@example.com", Reason = " " };
 
+            var result = await _service.LockoutUserAsync("admin@example.com", request);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
+            _output.WriteLine("Test passed: LockoutUserAsync validates reason");
+        }
+
+        [Fact]
+        public async Task LockoutUserAsync_ReturnsNotFound_WhenTargetUserNotFound()
+        {
+            var request = new SetLockoutForUserRequest { Email = "missing@example.com", Reason = "r" };
             _userManagerMock.Setup(u => u.FindByEmailAsync(request.Email)).ReturnsAsync((ApplicationUser?)null);
 
-            // Act
-            var result = await _service.LockoutUserAsync(adminEmail, request);
+            var result = await _service.LockoutUserAsync("admin@example.com", request);
 
-            // Assert
             Assert.False(result.IsSuccess);
-            Assert.Equal(404, result.StatusCode);
-            _output.WriteLine("Lockout returns 404 when target user missing");
+            Assert.Equal(StatusCodes.Status404NotFound, result.StatusCode);
+            _output.WriteLine("Test passed: LockoutUserAsync returns 404 when target user not found");
         }
 
         [Fact]
         public async Task LockoutUserAsync_ReturnsForbidden_WhenTargetIsAdmin()
         {
-            // Arrange
-            var adminEmail = "admin@example.com";
-            var request = new SetLockoutForUserRequest { Email = "target@example.com", Reason = "reason", Days = 3 };
-            var targetUser = new ApplicationUser { Id = Guid.NewGuid(), Email = request.Email };
+            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = "admin-target@example.com", UserName = "admintarget" };
+            var request = new SetLockoutForUserRequest { Email = user.Email, Reason = "r" };
 
-            _userManagerMock.Setup(u => u.FindByEmailAsync(request.Email)).ReturnsAsync(targetUser);
-            _userManagerMock.Setup(u => u.IsInRoleAsync(targetUser, "Admin")).ReturnsAsync(true);
+            _userManagerMock.Setup(u => u.FindByEmailAsync(request.Email)).ReturnsAsync(user);
+            _userManagerMock.Setup(u => u.IsInRoleAsync(user, "Admin")).ReturnsAsync(true);
 
-            // Act
-            var result = await _service.LockoutUserAsync(adminEmail, request);
+            var result = await _service.LockoutUserAsync("superadmin@example.com", request);
 
-            // Assert
             Assert.False(result.IsSuccess);
-            Assert.Equal(403, result.StatusCode);
-            _output.WriteLine("Lockout returns 403 when trying to ban an admin");
+            Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
+            _output.WriteLine("Test passed: LockoutUserAsync forbids banning an admin target");
         }
 
         [Fact]
-        public async Task LockoutUserAsync_ReturnsSuccess_WhenAllDepsSucceed()
+        public async Task LockoutUserAsync_ReturnsNotFound_WhenAdminMissing()
         {
-            // Arrange
-            var adminEmail = "admin@example.com";
-            var request = new SetLockoutForUserRequest { Email = "user@example.com", Reason = "violation", Days = 7 };
-            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = request.Email, UserName = "target" };
-            var admin = new ApplicationUser { Id = Guid.NewGuid(), Email = adminEmail, UserName = "admin" };
+            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = "user@example.com", UserName = "user" };
+            var request = new SetLockoutForUserRequest { Email = user.Email, Reason = "r" };
 
             _userManagerMock.Setup(u => u.FindByEmailAsync(request.Email)).ReturnsAsync(user);
             _userManagerMock.Setup(u => u.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
-            _userManagerMock.Setup(u => u.FindByEmailAsync(adminEmail)).ReturnsAsync(admin);
-            _userManagerMock.Setup(u => u.IsInRoleAsync(admin, "Admin")).ReturnsAsync(true);
 
-            _banRepoMock.Setup(r => r.DeactivateActiveBansAsync(user.Id, admin.Id)).Returns(Task.CompletedTask);
-            _userManagerMock.Setup(u => u.SetLockoutEnabledAsync(user, true)).ReturnsAsync(IdentityResult.Success);
-            _userManagerMock.Setup(u => u.SetLockoutEndDateAsync(user, It.IsAny<DateTimeOffset>())).ReturnsAsync(IdentityResult.Success);
-            _banRepoMock.Setup(r => r.AddBanRecordAsync(user, admin, request)).ReturnsAsync(true);
-            _emailMock.Setup(e => e.SendLockoutEmailAsync(user.Email, user.UserName, admin.UserName, request.Days, request.Reason)).ReturnsAsync(true);
-            _reportRepoMock.Setup(r => r.ClearReports(user.Id, admin)).Returns(Task.CompletedTask);
-            // cache remove invoked internally; CacheService uses mocks so it will succeed
+            _userManagerMock.Setup(u => u.FindByEmailAsync("missing-admin@example.com")).ReturnsAsync((ApplicationUser?)null);
 
-            // Act
-            var result = await _service.LockoutUserAsync(adminEmail, request);
+            var result = await _service.LockoutUserAsync("missing-admin@example.com", request);
 
-            // Assert
-            Assert.True(result.IsSuccess);
-            Assert.Equal(200, result.StatusCode);
-            Assert.Contains("banned", result.Message, StringComparison.OrdinalIgnoreCase);
-            _output.WriteLine("Lockout success path returned 200.");
+            Assert.False(result.IsSuccess);
+            Assert.Equal(StatusCodes.Status404NotFound, result.StatusCode);
+            _output.WriteLine("Test passed: LockoutUserAsync returns 404 when calling admin not found");
         }
 
         [Fact]
-        public async Task UnlockUserAsync_ReturnsBad_WhenUserEmailMissing()
+        public async Task LockoutUserAsync_ReturnsForbidden_WhenCallerNotAdmin()
         {
-            // Arrange
-            var adminEmail = "admin@example.com";
+            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = "user@example.com", UserName = "user" };
+            var admin = new ApplicationUser { Id = Guid.NewGuid(), Email = "caller@example.com", UserName = "caller" };
+            var request = new SetLockoutForUserRequest { Email = user.Email, Reason = "r" };
 
-            // Act
-            var result = await _service.UnlockUserAsync(adminEmail, "");
+            _userManagerMock.Setup(u => u.FindByEmailAsync(request.Email)).ReturnsAsync(user);
+            _userManagerMock.Setup(u => u.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
 
-            // Assert
+            _userManagerMock.Setup(u => u.FindByEmailAsync("caller@example.com")).ReturnsAsync(admin);
+            _userManagerMock.Setup(u => u.IsInRoleAsync(admin, "Admin")).ReturnsAsync(false);
+
+            var result = await _service.LockoutUserAsync("caller@example.com", request);
+
             Assert.False(result.IsSuccess);
-            Assert.Equal(400, result.StatusCode);
-            _output.WriteLine("Unlock returns 400 when userEmail missing");
+            Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
+            _output.WriteLine("Test passed: LockoutUserAsync forbids when caller is not admin");
+        }
+
+        [Fact]
+        public async Task LockoutUserAsync_Successful_BansUserAndRecordsBan()
+        {
+            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = "target@example.com", UserName = "target" };
+            var admin = new ApplicationUser { Id = Guid.NewGuid(), Email = "admin@example.com", UserName = "admin" };
+            var request = new SetLockoutForUserRequest { Email = user.Email, Reason = "violation", Days = 3 };
+
+            _userManagerMock.Setup(u => u.FindByEmailAsync(request.Email)).ReturnsAsync(user);
+            _userManagerMock.Setup(u => u.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
+
+            _userManagerMock.Setup(u => u.FindByEmailAsync(admin.Email)).ReturnsAsync(admin);
+            _userManagerMock.Setup(u => u.IsInRoleAsync(admin, "Admin")).ReturnsAsync(true);
+
+            _banRepoMock.Setup(b => b.DeactivateActiveBansAsync(user.Id, admin.Id)).Returns(Task.CompletedTask);
+            _userManagerMock.Setup(u => u.SetLockoutEnabledAsync(user, true)).ReturnsAsync(IdentityResult.Success);
+            _userManagerMock.Setup(u => u.SetLockoutEndDateAsync(user, It.IsAny<DateTimeOffset>())).ReturnsAsync(IdentityResult.Success);
+            _banRepoMock.Setup(b => b.AddBanRecordAsync(user, admin, request)).ReturnsAsync(true);
+            _emailMock.Setup(e => e.SendLockoutEmailAsync(user.Email, user.UserName, admin.UserName, request.Days, request.Reason)).ReturnsAsync(true);
+            _reportRepoMock.Setup(r => r.ClearReports(user.Id, admin)).Returns(Task.CompletedTask);
+            _dbMock.Invocations.Clear(); // clear any prior redis mock invocations
+
+            var result = await _service.LockoutUserAsync(admin.Email, request);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(StatusCodes.Status200OK, result.StatusCode);
+            _output.WriteLine("Test passed: LockoutUserAsync bans user and records ban");
+        }
+
+        [Fact]
+        public async Task UnlockUserAsync_ReturnsBadRequest_WhenEmailMissing()
+        {
+            var result = await _service.UnlockUserAsync("admin@example.com", "");
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
+            _output.WriteLine("Test passed: UnlockUserAsync validates email");
         }
 
         [Fact]
         public async Task UnlockUserAsync_ReturnsNotFound_WhenUserMissing()
         {
-            // Arrange
-            var adminEmail = "admin@example.com";
-            var userEmail = "missing@example.com";
-            _userManagerMock.Setup(u => u.FindByEmailAsync(userEmail)).ReturnsAsync((ApplicationUser?)null);
+            _userManagerMock.Setup(u => u.FindByEmailAsync("missing@example.com")).ReturnsAsync((ApplicationUser?)null);
 
-            // Act
-            var result = await _service.UnlockUserAsync(adminEmail, userEmail);
+            var result = await _service.UnlockUserAsync("admin@example.com", "missing@example.com");
 
-            // Assert
             Assert.False(result.IsSuccess);
-            Assert.Equal(404, result.StatusCode);
-            _output.WriteLine("Unlock returns 404 when target user missing");
+            Assert.Equal(StatusCodes.Status404NotFound, result.StatusCode);
+            _output.WriteLine("Test passed: UnlockUserAsync returns 404 when user missing");
         }
 
         [Fact]
-        public async Task UnlockUserAsync_ReturnsBad_WhenUserNotLockedOut()
+        public async Task UnlockUserAsync_ReturnsBadRequest_WhenUserNotLockedOut()
         {
-            // Arrange
-            var adminEmail = "admin@example.com";
-            var userEmail = "user@example.com";
-            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = userEmail };
+            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = "user@example.com", UserName = "user" };
+            var admin = new ApplicationUser { Id = Guid.NewGuid(), Email = "admin@example.com", UserName = "admin" };
 
-            _userManagerMock.Setup(u => u.FindByEmailAsync(userEmail)).ReturnsAsync(user);
+            _userManagerMock.Setup(u => u.FindByEmailAsync(user.Email)).ReturnsAsync(user);
             _userManagerMock.Setup(u => u.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
-            _userManagerMock.Setup(u => u.FindByEmailAsync(adminEmail)).ReturnsAsync(new ApplicationUser { Id = Guid.NewGuid(), Email = adminEmail });
-            _userManagerMock.Setup(u => u.IsInRoleAsync(It.IsAny<ApplicationUser>(), "Admin")).ReturnsAsync(true);
             _userManagerMock.Setup(u => u.IsLockedOutAsync(user)).ReturnsAsync(false);
 
-            // Act
-            var result = await _service.UnlockUserAsync(adminEmail, userEmail);
+       
+            _userManagerMock.Setup(u => u.FindByEmailAsync(admin.Email)).ReturnsAsync(admin);
+            _userManagerMock.Setup(u => u.IsInRoleAsync(admin, "Admin")).ReturnsAsync(true);
 
-            // Assert
+            var result = await _service.UnlockUserAsync(admin.Email, user.Email);
+
             Assert.False(result.IsSuccess);
-            Assert.Equal(400, result.StatusCode);
-            _output.WriteLine("Unlock returns 400 when user is not locked out");
+            Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
+            _output.WriteLine("Test passed: UnlockUserAsync validates lockout state");
         }
 
         [Fact]
-        public async Task UnlockUserAsync_ReturnsSuccess_WhenAllDepsSucceed()
+        public async Task UnlockUserAsync_Successful_UnlocksUserAndSendsEmail()
         {
-            // Arrange
-            var adminEmail = "admin@example.com";
-            var userEmail = "user@example.com";
-            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = userEmail, UserName = "t" };
-            var admin = new ApplicationUser { Id = Guid.NewGuid(), Email = adminEmail, UserName = "admin" };
+            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = "locked@example.com", UserName = "locked" };
+            var admin = new ApplicationUser { Id = Guid.NewGuid(), Email = "admin@example.com", UserName = "admin" };
 
-            _userManagerMock.Setup(u => u.FindByEmailAsync(userEmail)).ReturnsAsync(user);
+            _userManagerMock.Setup(u => u.FindByEmailAsync(user.Email)).ReturnsAsync(user);
             _userManagerMock.Setup(u => u.IsInRoleAsync(user, "Admin")).ReturnsAsync(false);
-            _userManagerMock.Setup(u => u.FindByEmailAsync(adminEmail)).ReturnsAsync(admin);
+            _userManagerMock.Setup(u => u.FindByEmailAsync(admin.Email)).ReturnsAsync(admin);
             _userManagerMock.Setup(u => u.IsInRoleAsync(admin, "Admin")).ReturnsAsync(true);
-
             _userManagerMock.Setup(u => u.IsLockedOutAsync(user)).ReturnsAsync(true);
-            _banRepoMock.Setup(r => r.DeactivateActiveBansAsync(user.Id, admin.Id)).Returns(Task.CompletedTask);
+
+            _banRepoMock.Setup(b => b.DeactivateActiveBansAsync(user.Id, admin.Id)).Returns(Task.CompletedTask);
             _userManagerMock.Setup(u => u.SetLockoutEndDateAsync(user, null)).ReturnsAsync(IdentityResult.Success);
             _userManagerMock.Setup(u => u.ResetAccessFailedCountAsync(user)).ReturnsAsync(IdentityResult.Success);
             _emailMock.Setup(e => e.SendUnlockEmailAsync(user.Email, user.UserName, admin.UserName)).ReturnsAsync(true);
+            _reportRepoMock.Setup(r => r.ClearReports(user.Id, admin)).Returns(Task.CompletedTask);
 
-            // Act
-            var result = await _service.UnlockUserAsync(adminEmail, userEmail);
+            var result = await _service.UnlockUserAsync(admin.Email, user.Email);
 
-            // Assert
             Assert.True(result.IsSuccess);
-            Assert.Equal(200, result.StatusCode);
-            _output.WriteLine("Unlock success path returned 200.");
+            Assert.Equal(StatusCodes.Status200OK, result.StatusCode);
+            _output.WriteLine("Test passed: UnlockUserAsync unlocks user and sends email");
         }
 
         [Fact]
         public async Task GetUserBanInfoAsync_ReturnsUnauthorized_WhenEmailMissing()
         {
-            // Act
-            var result = await _service.GetUserBanInfoAsync("");
+            var result = await _service.GetUserBanInfoAsync(" ");
 
-            // Assert
             Assert.False(result.IsSuccess);
-            Assert.Equal(401, result.StatusCode);
-            _output.WriteLine("GetUserBanInfo returns 401 when email missing");
+            Assert.Equal(StatusCodes.Status401Unauthorized, result.StatusCode);
+            _output.WriteLine("Test passed: GetUserBanInfoAsync validates email");
         }
 
         [Fact]
-        public async Task GetUserBanInfoAsync_ReturnsNotFound_WhenRepoReturnsNull()
+        public async Task GetUserBanInfoAsync_ReturnsNotFound_WhenNoBanInfo()
         {
-            // Arrange
-            var email = "noban@example.com";
-            _banRepoMock.Setup(r => r.GetUserBanInfoAsync(email)).ReturnsAsync((ReviewUserBanResponses?)null!);
+            _banRepoMock.Setup(b => b.GetUserBanInfoAsync("missing@example.com")).ReturnsAsync((ReviewUserBanResponses?)null);
 
-            // Act
-            var result = await _service.GetUserBanInfoAsync(email);
+            var result = await _service.GetUserBanInfoAsync("missing@example.com");
 
-            // Assert
             Assert.False(result.IsSuccess);
-            Assert.Equal(404, result.StatusCode);
-            _output.WriteLine("GetUserBanInfo returns 404 when repo returns null");
+            Assert.Equal(StatusCodes.Status404NotFound, result.StatusCode);
+            _output.WriteLine("Test passed: GetUserBanInfoAsync returns 404 when no ban info");
         }
 
         [Fact]
-        public async Task GetUserBanInfoAsync_ReturnsSuccess_WhenFound()
+        public async Task GetUserBanInfoAsync_ReturnsData_WhenBanInfoExists()
         {
-            // Arrange
-            var email = "banned@example.com";
-            var response = new ReviewUserBanResponses { UserName = "u", Reason = "x", BannedAt = DateTime.UtcNow, BannedBy = "admin" };
-            _banRepoMock.Setup(r => r.GetUserBanInfoAsync(email)).ReturnsAsync(response);
+            var email = "a@b.com";
+            var banInfo = new ReviewUserBanResponses
+            {
+                UserName = "user",
+                Reason = "violation",
+                BannedAt = DateTime.UtcNow,
+                BannedUntil = DateTime.UtcNow.AddDays(1),
+                BannedBy = "admin"
+            };
+            _banRepoMock.Setup(b => b.GetUserBanInfoAsync(email)).ReturnsAsync(banInfo);
 
-            // Act
             var result = await _service.GetUserBanInfoAsync(email);
 
-            // Assert
             Assert.True(result.IsSuccess);
-            Assert.Equal(200, result.StatusCode);
-            Assert.Same(response, result.Data);
-            _output.WriteLine("GetUserBanInfo returns 200 and data when found");
+            Assert.Equal(StatusCodes.Status200OK, result.StatusCode);
+            Assert.NotNull(result.Data);
+            Assert.Equal(banInfo.UserName, result.Data.UserName);
+            _output.WriteLine("Test passed: GetUserBanInfoAsync returns ban info");
         }
     }
 }

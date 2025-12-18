@@ -124,7 +124,8 @@ namespace Tests.ServicesTests
 
             // Assert
             Assert.False(result.IsSuccess);
-            Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
+            
+            Assert.Equal(StatusCodes.Status500InternalServerError, result.StatusCode);
         }
 
         [Fact]

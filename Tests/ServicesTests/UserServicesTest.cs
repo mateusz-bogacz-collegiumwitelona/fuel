@@ -47,8 +47,6 @@ namespace Tests.ServicesTests
             );
         }
 
-      
-
         [Fact]
         public async Task ChangeUserNameAsync_EmailIsNull_Returns401()
         {
@@ -128,9 +126,6 @@ namespace Tests.ServicesTests
             Assert.Equal(StatusCodes.Status200OK, result.StatusCode);
         }
 
-      
-
-
         [Fact]
         public async Task ChangeUserPasswordAsync_PasswordsDoNotMatch_Returns400()
         {
@@ -204,9 +199,6 @@ namespace Tests.ServicesTests
             Assert.True(result.IsSuccess);
             Assert.Equal(StatusCodes.Status200OK, result.StatusCode);
         }
-
-        
-
 
         [Fact]
         public async Task ChangeUserRoleAsync_EmailIsNull_Returns400()
@@ -289,8 +281,6 @@ namespace Tests.ServicesTests
             Assert.Equal(StatusCodes.Status200OK, result.StatusCode);
         }
 
-
-
         [Fact]
         public async Task DeleteUserAsyc_PasswordMismatch_Returns400()
         {
@@ -301,6 +291,10 @@ namespace Tests.ServicesTests
                 Password = "one",
                 ConfirmPassword = "two"
             };
+
+            
+            ApplicationUser user = new ApplicationUser { Id = Guid.NewGuid(), Email = email };
+            _userManagerMock.Setup(um => um.FindByEmailAsync(email)).ReturnsAsync(user);
 
             // Act
             var result = await _service.DeleteUserAsyc(email, request);
@@ -337,8 +331,6 @@ namespace Tests.ServicesTests
             Assert.Equal(StatusCodes.Status200OK, result.StatusCode);
         }
 
-        
-
         private Mock<UserManager<ApplicationUser>> CreateUserManagerMock()
         {
             Mock<IUserStore<ApplicationUser>> userStoreMock = new Mock<IUserStore<ApplicationUser>>();
@@ -371,8 +363,7 @@ namespace Tests.ServicesTests
         {
             var inMemorySettings = new Dictionary<string, string?>
             {
-                ["Frontend:Url"] = "http://localhost:4000",
-                // ustawienia mail pozostaw puste/bezpieczne, aby SendEmailAsync nie próbował wysyłać prawdziwej poczty
+                ["Frontend:Url"] = "http://localhost:4000", 
                 ["Mail:Host"] = "",
                 ["Mail:Port"] = "1025",
                 ["Mail:EnableSsl"] = "false",
@@ -397,8 +388,6 @@ namespace Tests.ServicesTests
             var connMock = new Mock<IConnectionMultiplexer>();
             var dbMock = new Mock<IDatabase>();
             var serverMock = new Mock<IServer>();
-
-            // DB safe defaults
             dbMock.Setup(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
                 .ReturnsAsync(RedisValue.Null);
             dbMock.Setup(d => d.StringSetAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<TimeSpan?>(), It.IsAny<When>(), It.IsAny<CommandFlags>()))
@@ -407,12 +396,8 @@ namespace Tests.ServicesTests
                 .ReturnsAsync(0L);
             dbMock.Setup(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
                 .ReturnsAsync(false);
-
-            // Server returns no keys for any pattern
             serverMock.Setup(s => s.Keys(It.IsAny<int>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CommandFlags>()))
                 .Returns(Enumerable.Empty<RedisKey>());
-
-            // ConnectionMultiplexer wiring
             connMock.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
                 .Returns(dbMock.Object);
 

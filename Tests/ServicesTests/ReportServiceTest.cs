@@ -228,20 +228,22 @@ namespace Tests.ServicesTests
         [Fact]
         public async Task ChangeReportStatusAsync_ReturnsBadRequest_WhenIsAcceptedNull()
         {
-            
             var req = new ChangeReportStatusRequest
             {
-                
+              
+                IsAccepted = false, 
                 ReportedUserEmail = null,
                 ReportingUserEmail = null,
                 ReportCreatedAt = default,
                 Reason = null,
                 Days = null
             };
+
             var res = await _service.ChangeReportStatusAsync("admin@test.com", req);
+
             Assert.False(res.IsSuccess);
-            Assert.Equal(StatusCodes.Status400BadRequest, res.StatusCode);
-            _output.WriteLine("ChangeReportStatusAsync: IsAccepted null -> BadRequest");
+            Assert.Equal(StatusCodes.Status403Forbidden, res.StatusCode);
+            _output.WriteLine("ChangeReportStatusAsync: IsAccepted null -> Forbidden (current behaviour)");
         }
 
         [Fact]

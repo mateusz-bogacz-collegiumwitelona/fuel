@@ -63,7 +63,7 @@ namespace Tests.ServicesTests
         {
             // Arrange
             var brands = new List<string> { "Brand1", "Brand2" };
-            // let factory (repo) return the list; CacheService will call factory on cache miss
+            
             _brandRepoMock.Setup(r => r.GetAllBrandsAsync()).ReturnsAsync(brands);
 
             // Act
@@ -101,7 +101,7 @@ namespace Tests.ServicesTests
         }
 
         [Fact]
-        public async Task EditBrandAsync_ReturnsConflict_WhenOldDoesNotExist()
+        public async Task EditBrandAsync_ReturnsNotFound_WhenOldDoesNotExist()
         {
             // Arrange
             _brandRepoMock.Setup(r => r.FindBrandAsync("Old")).ReturnsAsync(false);
@@ -111,8 +111,8 @@ namespace Tests.ServicesTests
 
             // Assert
             Assert.False(result.IsSuccess);
-            Assert.Equal(StatusCodes.Status409Conflict, result.StatusCode);
-            _output.WriteLine("Test passed: EditBrandAsync returns conflict when old brand missing");
+            Assert.Equal(StatusCodes.Status404NotFound, result.StatusCode);
+            _output.WriteLine("Test passed: EditBrandAsync returns 404 when old brand missing");
         }
 
         [Fact]
@@ -145,8 +145,6 @@ namespace Tests.ServicesTests
             // Assert
             Assert.True(result.IsSuccess);
             Assert.Equal(StatusCodes.Status200OK, result.StatusCode);
-
-            // verify that cache DB had at least one KeyDelete (invalidate) invocation
             Assert.True(_dbMock.Invocations.Any(inv => inv.Method.Name.IndexOf("KeyDelete", StringComparison.OrdinalIgnoreCase) >= 0),
                 "Expected cache key delete to be invoked during cache invalidation.");
 
