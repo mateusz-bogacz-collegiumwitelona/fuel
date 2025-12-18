@@ -43,8 +43,7 @@ namespace Tests.ServicesTests
                 _userManagerMock.Object,
                 _roleManagerMock.Object,
                 _emailMock.Object,
-                _cache,
-                _roleManagerMock.Object
+                _cache
             );
         }
 
