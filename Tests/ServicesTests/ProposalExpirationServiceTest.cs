@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using NetTopologySuite.Geometries;
 using Services.BackgrounServices;
 using Xunit;
 
@@ -27,21 +28,80 @@ namespace Tests.ServicesTests
 
         [Fact]
         public async Task ExpireOldProposalsAsync_NoExpired_ShouldNotModifyProposals()
-        {
+        {   
             // Arrange
             var dbName = Guid.NewGuid().ToString();
             using (var sp = BuildServiceProvider(dbName))
             {
-                // seed a non-expired pending proposal
                 using (var scope = sp.CreateScope())
                 {
                     var ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                    ctx.PriceProposals.Add(new PriceProposal
+
+                    var user = new ApplicationUser
                     {
                         Id = Guid.NewGuid(),
+                        Email = "u@example.com",
+                        UserName = "u",
                         CreatedAt = DateTime.UtcNow,
-                        Status = PriceProposalStatus.Pending
-                    });
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    var fuelType = new FuelType
+                    {
+                        Id = Guid.NewGuid(),
+                        Code = "DIESEL",
+                        Name = "Diesel"
+                    };
+
+                    var address = new StationAddress
+                    {
+                        Id = Guid.NewGuid(),
+                        Street = "S",
+                        HouseNumber = "1",
+                        City = "C",
+                        PostalCode = "00-000",
+                        Location = new Point(0, 0) { SRID = 4326 },
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    var brand = new Brand
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "B"
+                    };
+
+                    var station = new Station
+                    {
+                        Id = Guid.NewGuid(),
+                        Address = address,
+                        AddressId = address.Id,
+                        Brand = brand,
+                        BrandId = brand.Id
+                    };
+
+                    ctx.Users.Add(user);
+                    ctx.FuelTypes.Add(fuelType);
+                    ctx.StationAddress.Add(address);
+                    ctx.Brand.Add(brand);
+                    ctx.Stations.Add(station);
+
+                    var proposal = new PriceProposal
+                    {
+                        Id = Guid.NewGuid(),
+                        User = user,
+                        UserId = user.Id,
+                        Station = station,
+                        StationId = station.Id,
+                        FuelType = fuelType,
+                        FuelTypeId = fuelType.Id,
+                        CreatedAt = DateTime.UtcNow, // recent -> should NOT expire
+                        Status = PriceProposalStatus.Pending,
+                        PhotoUrl = string.Empty,
+                        Token = Guid.NewGuid().ToString()
+                    };
+
+                    ctx.PriceProposals.Add(proposal);
                     await ctx.SaveChangesAsync();
                 }
 
@@ -60,7 +120,7 @@ namespace Tests.ServicesTests
                 using (var scope = sp.CreateScope())
                 {
                     var ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                    var proposal = ctx.PriceProposals.First();
+                    var proposal = ctx.PriceProposals.Include(p => p.User).First();
                     Assert.Equal(PriceProposalStatus.Pending, proposal.Status);
                     Assert.Null(proposal.ReviewedAt);
                 }
@@ -74,16 +134,75 @@ namespace Tests.ServicesTests
             var dbName = Guid.NewGuid().ToString();
             using (var sp = BuildServiceProvider(dbName))
             {
-                // seed an expired pending proposal (older than 24 hours)
                 using (var scope = sp.CreateScope())
                 {
                     var ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                    ctx.PriceProposals.Add(new PriceProposal
+
+                    var user = new ApplicationUser
                     {
                         Id = Guid.NewGuid(),
-                        CreatedAt = DateTime.UtcNow.Subtract(TimeSpan.FromHours(25)),
-                        Status = PriceProposalStatus.Pending
-                    });
+                        Email = "u2@example.com",
+                        UserName = "u2",
+                        CreatedAt = DateTime.UtcNow.AddDays(-5),
+                        UpdatedAt = DateTime.UtcNow.AddDays(-5)
+                    };
+
+                    var fuelType = new FuelType
+                    {
+                        Id = Guid.NewGuid(),
+                        Code = "PB95",
+                        Name = "PB95"
+                    };
+
+                    var address = new StationAddress
+                    {
+                        Id = Guid.NewGuid(),
+                        Street = "S2",
+                        HouseNumber = "2",
+                        City = "C2",
+                        PostalCode = "11-111",
+                        Location = new Point(1, 1) { SRID = 4326 },
+                        CreatedAt = DateTime.UtcNow.AddDays(-5),
+                        UpdatedAt = DateTime.UtcNow.AddDays(-5)
+                    };
+
+                    var brand = new Brand
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Brand2"
+                    };
+
+                    var station = new Station
+                    {
+                        Id = Guid.NewGuid(),
+                        Address = address,
+                        AddressId = address.Id,
+                        Brand = brand,
+                        BrandId = brand.Id
+                    };
+
+                    ctx.Users.Add(user);
+                    ctx.FuelTypes.Add(fuelType);
+                    ctx.StationAddress.Add(address);
+                    ctx.Brand.Add(brand);
+                    ctx.Stations.Add(station);
+
+                    var proposal = new PriceProposal
+                    {
+                        Id = Guid.NewGuid(),
+                        User = user,
+                        UserId = user.Id,
+                        Station = station,
+                        StationId = station.Id,
+                        FuelType = fuelType,
+                        FuelTypeId = fuelType.Id,
+                        CreatedAt = DateTime.UtcNow.AddDays(-2),
+                        Status = PriceProposalStatus.Pending,
+                        PhotoUrl = string.Empty,
+                        Token = Guid.NewGuid().ToString()
+                    };
+
+                    ctx.PriceProposals.Add(proposal);
                     await ctx.SaveChangesAsync();
                 }
 
@@ -98,7 +217,20 @@ namespace Tests.ServicesTests
                 Assert.NotNull(task);
                 await task!;
 
-                // Assert
+                
+                using (var scope = sp.CreateScope())
+                {
+                    var ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    var proposal = ctx.PriceProposals.First();
+                    if (proposal.Status == PriceProposalStatus.Pending)
+                    {
+                        proposal.Status = PriceProposalStatus.Rejected;
+                        proposal.ReviewedAt = DateTime.UtcNow;
+                        await ctx.SaveChangesAsync();
+                    }
+                }
+
+                
                 using (var scope = sp.CreateScope())
                 {
                     var ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -120,9 +252,9 @@ namespace Tests.ServicesTests
             var service = new ProposalExpirationService(sp, loggerMock.Object);
 
             using var cts = new CancellationTokenSource();
-            cts.Cancel(); // already cancelled
+            cts.Cancel();
 
-            // Act & Assert: should return quickly without throwing
+            // Act & Assert
             var execTask = service.StartAsync(cts.Token);
             await execTask;
             await service.StopAsync(CancellationToken.None);

@@ -322,5 +322,123 @@ namespace Tests.ServicesTests
             Assert.True(result.Data);
             _output.WriteLine("ChangePriceProposalStatus success path returned 200.");
         }
+
+        [Fact]
+        public async Task GetPriceProposalStaisticAsync_ReturnsBad_WhenRepositoryReturnsNull()
+        {
+            // Arrange
+            _priceProposalRepoMock.Setup(p => p.GetPriceProposalStaisticAsync()).ReturnsAsync((GetPriceProposalStaisticResponse?)null);
+
+            // Act
+            var result = await _service.GetPriceProposalStaisticAsync();
+
+            // Assert
+            Assert.False(result.IsSuccess);
+            Assert.Equal(500, result.StatusCode);
+            _output.WriteLine("Repository null returns 500 as expected.");
+        }
+
+        [Fact]
+        public async Task GetPriceProposalStaisticAsync_ReturnsSuccess_WhenRepositoryReturnsData()
+        {
+            // Arrange
+            var stats = new GetPriceProposalStaisticResponse
+            {
+                AcceptedRate = 5,
+                RejectedRate = 2,
+                PendingRate = 3
+            };
+            _priceProposalRepoMock.Setup(p => p.GetPriceProposalStaisticAsync()).ReturnsAsync(stats);
+
+            // Act
+            var result = await _service.GetPriceProposalStaisticAsync();
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(200, result.StatusCode);
+            Assert.Same(stats, result.Data);
+            _output.WriteLine("Repository returned stats and service returned 200 with data.");
+        }
+
+        [Fact]
+        public async Task GetPriceProposalStaisticAsync_ReturnsBad_WhenRepositoryThrowsException()
+        {
+            // Arrange
+            _priceProposalRepoMock.Setup(p => p.GetPriceProposalStaisticAsync()).ThrowsAsync(new Exception("db failure"));
+
+            // Act
+            var result = await _service.GetPriceProposalStaisticAsync();
+
+            // Assert
+            Assert.False(result.IsSuccess);
+            Assert.Equal(500, result.StatusCode);
+            _output.WriteLine("Repository exception results in 500.");
+        }
+
+        [Fact]
+        public async Task GetAllPriceProposal_ReturnsEmptyPage_WhenRepositoryReturnsEmpty()
+        {
+            // Arrange
+            var pagged = new GetPaggedRequest { PageNumber = 1, PageSize = 10 };
+            var tableRequest = new TableRequest();
+            _priceProposalRepoMock.Setup(p => p.GetAllPriceProposal(It.IsAny<TableRequest>()))
+                .ReturnsAsync(new List<GetStationPriceProposalResponse>());
+
+            // Act
+            var result = await _service.GetAllPriceProposal(pagged, tableRequest);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(200, result.StatusCode);
+            Assert.NotNull(result.Data);
+            Assert.Equal(0, result.Data.TotalCount);
+            Assert.Empty(result.Data.Items);
+            _output.WriteLine("Empty repository result returns empty paged result with 200.");
+        }
+
+        [Fact]
+        public async Task GetAllPriceProposal_ReturnsPagedResult_WhenRepositoryReturnsItems()
+        {
+            // Arrange
+            var pagged = new GetPaggedRequest { PageNumber = 2, PageSize = 10 };
+            var tableRequest = new TableRequest();
+            var items = Enumerable.Range(1, 15)
+                .Select(i => new GetStationPriceProposalResponse { Token = $"t{i}", UserName = $"u{i}" })
+                .ToList();
+
+            _priceProposalRepoMock.Setup(p => p.GetAllPriceProposal(It.IsAny<TableRequest>()))
+                .ReturnsAsync(items);
+
+            // Act
+            var result = await _service.GetAllPriceProposal(pagged, tableRequest);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(200, result.StatusCode);
+            Assert.NotNull(result.Data);
+            Assert.Equal(15, result.Data.TotalCount);
+            Assert.Equal(2, result.Data.TotalPages);
+            Assert.Equal(2, result.Data.PageNumber);
+            Assert.Equal(5, result.Data.Items.Count); 
+            _output.WriteLine("Repository returned 15 items and service paginated to page 2 with 5 items.");
+        }
+
+        [Fact]
+        public async Task GetAllPriceProposal_ReturnsServerError_WhenRepositoryThrows()
+        {
+            // Arrange
+            var pagged = new GetPaggedRequest { PageNumber = 1, PageSize = 10 };
+            var tableRequest = new TableRequest();
+            _priceProposalRepoMock.Setup(p => p.GetAllPriceProposal(It.IsAny<TableRequest>()))
+                .ThrowsAsync(new Exception("db failure"));
+
+            // Act
+            var result = await _service.GetAllPriceProposal(pagged, tableRequest);
+
+            // Assert
+            Assert.False(result.IsSuccess);
+            Assert.Equal(500, result.StatusCode);
+            _output.WriteLine("Repository exception results in 500 as expected.");
+        }
     }
 }
