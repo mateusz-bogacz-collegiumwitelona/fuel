@@ -221,7 +221,7 @@ export default function Login() {
 
 
           {/* --- FACEBOOK BUTTON --- */}
-          <div className="divider my-1 text-sm opacity-70">LUB</div>
+          <div className="divider my-1 text-sm opacity-70">{t("login.or")}</div>
           
           <FacebookButton 
             onLoginSuccess={handleFacebookSuccess}
@@ -235,13 +235,13 @@ export default function Login() {
               href="/forgot-password"
               className="link link-hover opacity-70 hover:opacity-100 transition-opacity"
             >
-              Zapomniałeś hasła? Kliknij tutaj
+              {t("login.forgotpassword")}
             </a>
             
             <div className="mt-1">
-              Nie masz konta?{" "}
+              {t("login.noaccount")}{" "}
               <a href="/register" className="link link-primary font-bold">
-                Zarejestruj się!
+                {t("login.register")}
               </a>
             </div>
           </div>
