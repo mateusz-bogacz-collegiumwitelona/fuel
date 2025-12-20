@@ -18,5 +18,7 @@ namespace Data.Interfaces
         Task<bool> AddNewStationAsync(AddStationRequest request);
         Task<bool> DeleteStationAsync(FindStationRequest request);
         Task<List<GetPriceProposalByStationResponse>> GetPriceProposaByStationAsync(FindStationRequest request);
+        Task<GetPriceHistoryResponse> GetFuelPriceHistoryAsync(Guid stationId, Guid fuelTypeId);
+        Task<List<GetPriceHistoryResponse>> GetFuelPriceAllHistoryAsync(Guid stationId);
     }
 }

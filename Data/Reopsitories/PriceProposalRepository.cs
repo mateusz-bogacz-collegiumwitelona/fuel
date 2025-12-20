@@ -272,14 +272,38 @@ namespace Data.Repositories
                             Price = priceProposal.ProposedPrice,
                             ValidFrom = DateTime.UtcNow,
                             CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow
+                            UpdatedAt = DateTime.UtcNow,
+                            ValidTo = null
                         };
                         _context.FuelPrices.Add(stationFuelPrice);
                     }
                     else
                     {
+                        _logger.LogInformation(
+                            "Updating fuel price for {Brand} in {City} - {FuelType}. Old: {OldPrice}, New: {NewPrice}",
+                            priceProposal.Station.Brand.Name,
+                            priceProposal.Station.Address.City,
+                            priceProposal.FuelType.Name,
+                            stationFuelPrice.Price,
+                            priceProposal.ProposedPrice);
+
+                        var historicalPrice = new FuelPrice
+                        {
+                            Id = Guid.NewGuid(),
+                            StationId = stationFuelPrice.StationId,
+                            FuelTypeId = stationFuelPrice.FuelTypeId,
+                            Price = stationFuelPrice.Price,
+                            ValidFrom = stationFuelPrice.ValidFrom,
+                            ValidTo = DateTime.UtcNow,
+                            CreatedAt = stationFuelPrice.CreatedAt,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        _context.FuelPrices.Add(historicalPrice);
+
                         stationFuelPrice.Price = priceProposal.ProposedPrice;
                         stationFuelPrice.ValidFrom = DateTime.UtcNow;
+                        stationFuelPrice.ValidTo = null;
+                        stationFuelPrice.UpdatedAt = DateTime.UtcNow;
                         stationFuelPrice.UpdatedAt = DateTime.UtcNow;
                     }
 
