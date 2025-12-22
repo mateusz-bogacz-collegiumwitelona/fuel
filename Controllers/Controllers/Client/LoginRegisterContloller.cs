@@ -74,7 +74,7 @@ namespace contlollers.Controllers.Client
         /// </remarks>
         /// <response code="200">User successfully logged in, JWT cookie set</response>
         /// <response code="401">Invalid email or password</response>
-        /// <response code="403">User has no assigned roles</response>
+        /// <response code="403">User has no assigned roles OR email not confirmed</response>
         /// <response code="404">User with the given email not found</response>
         /// <response code="423">Account locked due to multiple failed login attempts</response>
         /// <response code="500">Server error — something went wrong in the backend</response>
