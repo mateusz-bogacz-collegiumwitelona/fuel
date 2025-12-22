@@ -298,7 +298,7 @@ namespace Services.Services
 
                 var result = await _stationRepository.GetStationProfileAsync(request);
 
-                if (request == null)
+                if (result == null)
                 {
                     _logger.LogWarning("Cannot find info about this station");
                     return Result<GetStationListResponse>.Bad(
