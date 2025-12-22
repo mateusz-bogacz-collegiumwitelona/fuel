@@ -270,6 +270,132 @@ namespace contlollers.Controllers.Client
         }
 
         /// <summary>
+        /// Login a user via Google OAuth and set a secure HTTP-only cookie with JWT token.
+        /// </summary>
+        /// <remarks>
+        /// Description
+        /// Logs in a user using a Google ID token obtained from Google Identity Services SDK.
+        /// If the token is valid and the user exists, the user is automatically logged in.
+        /// 
+        /// Example request body
+        /// ```json
+        /// {
+        ///   "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6Ij..."
+        /// }
+        /// ```
+        ///
+        /// Example response
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "Login successful via Google",
+        ///   "data": {
+        ///     "message": "Login successful via Google",
+        ///     "email": "user@example.com",
+        ///     "userName": "JohnDoe",
+        ///     "roles": ["User"]
+        ///   }
+        /// }
+        /// ```
+        ///
+        /// Notes
+        /// - The `idToken` must be obtained from Google Identity Services SDK on the client side
+        /// - If the user does not exist, login will fail with a 404 error ("User not found. Please register first.")
+        /// - JWT token is automatically stored in a secure HTTP-only cookie named `jwt`
+        /// - The cookie is sent automatically with subsequent requests — no manual handling required
+        /// - The cookie expires after 3 hours
+        /// - For frontend applications, ensure `credentials: "include"` is set in HTTP client (fetch/axios)
+        /// - Google ID token is validated using `GoogleJsonWebSignature.ValidateAsync`
+        /// </remarks>
+        /// <response code="200">User successfully logged in via Google, JWT cookie set</response>
+        /// <response code="401">Invalid Google ID token</response>
+        /// <response code="404">User not found — please register first</response>
+        /// <response code="500">Server error — something went wrong in the backend</response>
+        [AllowAnonymous]
+        [HttpPost("google/login")]
+        public async Task<IActionResult> LoginWithGoogleAsync([FromBody] GoogleTokenRequest request)
+        {
+            var result = await _login.LoginWithGoogleTokenAsync(request.IdToken, HttpContext);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Register a new user via Google OAuth and set a secure HTTP-only cookie with JWT token.
+        /// </summary>
+        /// <remarks>
+        /// Description
+        /// Registers a new user using a Google ID token obtained from Google Identity Services SDK.
+        /// If the token is valid, a new account is created with email and name from Google profile.
+        /// 
+        /// Example request body
+        /// ```json
+        /// {
+        ///   "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6Ij..."
+        /// }
+        /// ```
+        ///
+        /// Example response
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "message": "Register successful via Google",
+        ///   "data": {
+        ///     "message": "Register successful via Google",
+        ///     "email": "newuser@example.com",
+        ///     "userName": "JohnDoe",
+        ///     "roles": ["User"]
+        ///   }
+        /// }
+        /// ```
+        ///
+        /// Notes
+        /// - The `idToken` must be obtained from Google Identity Services SDK on the client side
+        /// - If the user already exists, registration will return success with existing account info
+        /// - Username is automatically generated from Google name (alphanumeric characters only)
+        /// - Email is automatically confirmed (EmailConfirmed = true)
+        /// - User is automatically assigned to "User" role
+        /// - JWT token is automatically stored in a secure HTTP-only cookie named `jwt`
+        /// - The cookie is sent automatically with subsequent requests — no manual handling required
+        /// - The cookie expires after 3 hours
+        /// - For frontend applications, ensure `credentials: "include"` is set in HTTP client (fetch/axios)
+        /// - Google ID token is validated using `GoogleJsonWebSignature.ValidateAsync`
+        /// </remarks>
+        /// <response code="200">User successfully registered via Google, JWT cookie set</response>
+        /// <response code="401">Invalid Google ID token</response>
+        /// <response code="500">Server error — something went wrong in the backend or user creation failed</response>
+        [AllowAnonymous]
+        [HttpPost("google/register")]
+        public async Task<IActionResult> RegisterWithGoogleAsync([FromBody] GoogleTokenRequest request)
+        {
+            var result = await _login.RegisterWithGoogleTokenAsync(request.IdToken, HttpContext);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
         /// Refresh JWT and obtain a new access token.
         /// </summary>
         /// <remarks>

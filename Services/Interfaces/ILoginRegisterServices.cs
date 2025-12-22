@@ -17,5 +17,8 @@ namespace Services.Interfaces
         Task<Result<IdentityResult>> ForgotPasswordAsync(string email);
         Task<Result<IdentityResult>> SetNewPassowrdAsync(ResetPasswordRequest request);
         Task<Result<LoginResponse>> RegisterWithFacebookTokenAsync(string accessToken, HttpContext httpContext);
-        Task<Result<LoginResponse>> LoginWithFacebookTokenAsync(string token, HttpContext httpContext);    }
+        Task<Result<LoginResponse>> LoginWithFacebookTokenAsync(string token, HttpContext httpContext);
+        Task<Result<LoginResponse>> LoginWithGoogleTokenAsync(string idToken, HttpContext httpContext);
+        Task<Result<LoginResponse>> RegisterWithGoogleTokenAsync(string idToken, HttpContext httpContext);
+    }
 }

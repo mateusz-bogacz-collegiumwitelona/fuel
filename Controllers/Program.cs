@@ -7,8 +7,10 @@ using Data.Models;
 using Data.Reopsitories;
 using Data.Repositories;
 using Data.Seeder;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
@@ -28,7 +30,6 @@ using StackExchange.Redis;
 using System.Reflection;
 using System.Text;
 using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.HttpOverrides;
 
 //log configuration
 Log.Logger = new LoggerConfiguration()
@@ -247,6 +248,9 @@ builder.Services.AddSingleton(sp =>
     return new BlobServiceClient(blobSettings.ConnectionString);
 });
 
+//configure facebook auth settings
+builder.Services.Configure<Microsoft.AspNetCore.Authentication.Google.GoogleOptions>(
+    builder.Configuration.GetSection("Google"));
 
 //register repo 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -276,7 +280,8 @@ builder.Services.AddScoped<EmailBodys>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenFactory, TokenFactory>();
 builder.Services.AddScoped<CacheService>();
-builder.Services.AddScoped<IStorage, BlobApiHelper>();
+builder.Services.AddScoped<IStorage, BlobApiHelper>(); 
+builder.Services.AddScoped<GoogleAuthClient>();
 
 //register background services
 builder.Services.AddHostedService<BanExpirationService>();

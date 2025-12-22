@@ -227,7 +227,6 @@ export default function Login() {
             onLoginSuccess={handleFacebookSuccess}
             onLoginFailure={(msg) => setMessage(msg)}
           />
-
         
 
           <div className="mt-4 flex flex-col gap-2 text-center text-sm">
