@@ -4,6 +4,7 @@ import Footer from "../components/footer";
 import { useTranslation } from "react-i18next";
 import FacebookButton from "../components/FacebookLoginButton";
 import { API_BASE } from "../components/api";
+import GoogleLoginButto from "../components/GoogleLoginButton";
 
 function normalizeRole(raw: unknown): string | null {
   if (!raw) return null;
@@ -227,6 +228,10 @@ export default function Login() {
             onLoginSuccess={handleFacebookSuccess}
             onLoginFailure={(msg) => setMessage(msg)}
           />
+            <GoogleLoginButto
+                onLoginSuccess={handleFacebookSuccess}
+                onLoginFailure={(msg) => setMessage(msg)}
+                />
         
 
           <div className="mt-4 flex flex-col gap-2 text-center text-sm">
