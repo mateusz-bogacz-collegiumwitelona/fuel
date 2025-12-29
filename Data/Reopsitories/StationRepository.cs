@@ -408,7 +408,7 @@ namespace Data.Reopsitories
                             .Include(fp => fp.FuelType)
                             .FirstOrDefaultAsync(fp =>
                                 fp.StationId == station.Id &&
-                                fp.FuelType.Code.Equals(updatedFuel.Code, StringComparison.OrdinalIgnoreCase));
+                                fp.FuelType.Code.ToLower() == updatedFuel.Code.ToLower());
 
                         if (fuelPrice != null)
                         {
