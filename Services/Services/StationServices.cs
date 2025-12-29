@@ -3,6 +3,7 @@ using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using NRedisStack;
 using Services.Helpers;
 using Services.Interfaces;
 
@@ -561,6 +562,75 @@ namespace Services.Services
                             "price proposals",
                             CacheService.CacheExpiry.Short
                         );
+        }
+
+        public async Task<Result<object>> GetFuelPriceHistoryAsync(FindStationRequest findStation, string? fuelCode)
+        {
+            try
+            {
+                var station = await _stationRepository.FindStationByDataAsync(
+                        findStation.BrandName,
+                        findStation.Street,
+                        findStation.HouseNumber,
+                        findStation.City
+                        );
+
+                if (station == null)
+                {
+                    _logger.LogWarning("Station not found with the provided details.");
+                    return Result<object>.Bad(
+                        "Station not found.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "No station found with the provided details." });
+                }
+
+                object fuelPriceHistroy;
+
+                if (!string.IsNullOrEmpty(fuelCode))
+                {
+                    var fuelType = await _fuelTypeRepository.FindFuelTypeByCodeAsync(fuelCode);
+
+                    if (fuelType == null)
+                    {
+                        _logger.LogWarning("Invalid fuel type code: {FuelCode}", fuelCode);
+                        return Result<object>.Bad(
+                            "Validation error",
+                            StatusCodes.Status400BadRequest,
+                            new List<string> { $"Invalid fuel type code: {fuelCode}" });
+                    }
+
+                    fuelPriceHistroy = await _stationRepository.GetFuelPriceHistoryAsync(
+                        station.Id,
+                        fuelType.Id
+                        );
+                }
+                else
+                {
+                    fuelPriceHistroy = await _stationRepository.GetFuelPriceAllHistoryAsync(station.Id);
+                }
+
+                if (fuelPriceHistroy == null)
+                {
+                    _logger.LogWarning("No fuel price history found for the specified station and fuel type.");
+                    return Result<object>.Bad(
+                        "No fuel price history found.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "No fuel price history found for the specified station and fuel type." });
+                }
+
+                return Result<object>.Good(
+                    "Fuel price history retrieved successfully.",
+                    StatusCodes.Status200OK,
+                    fuelPriceHistroy);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while retrieving fuel price history: {ex.Message} | {ex.InnerException}");
+                return Result<object>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" });
+            }
         }
     }
 }

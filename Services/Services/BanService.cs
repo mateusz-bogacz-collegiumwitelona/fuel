@@ -5,6 +5,9 @@ using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using Serilog.Core;
+using Services.Event;
+using Services.Event.Interfaces;
 using Services.Helpers;
 using Services.Interfaces;
 
@@ -19,6 +22,7 @@ namespace Services.Services
         private IEmailSender _email;
         private readonly IReportRepositry _reportRepositry;
         private readonly CacheService _cache;
+        private readonly IEventDispatcher _eventDispatcher;
 
         public BanService(
             IBanRepository banRepository,
@@ -27,7 +31,8 @@ namespace Services.Services
             RoleManager<IdentityRole<Guid>> roleManager,
             IEmailSender email,
             IReportRepositry reportRepositry,
-            CacheService cache)
+            CacheService cache,
+            IEventDispatcher eventDispatcher)
         {
             _banRepository = banRepository;
             _logger = logger;
@@ -36,6 +41,7 @@ namespace Services.Services
             _email = email;
             _reportRepositry = reportRepositry;
             _cache = cache;
+            _eventDispatcher = eventDispatcher;
         }
 
         public async Task<Result<IdentityResult>> LockoutUserAsync(string adminEmail, SetLockoutForUserRequest request)
@@ -136,27 +142,15 @@ namespace Services.Services
                     );
                 }
 
+                await _eventDispatcher.PublishAsync(new UserBannedEvent(user, admin, request.Reason, request.Days));
+
                 var message = request.Days.HasValue
                     ? $"User banned successfully for {request.Days.Value} days"
                     : "User banned permanently";
 
-                var sendEmail = await _email.SendLockoutEmailAsync(
-                    user.Email,
-                    user.UserName,
-                    admin.UserName,
-                    request.Days,
-                    request.Reason
-                    );
-
-                if (!sendEmail) _logger.LogWarning("Failed to send lockout email to {Email}, but user was banned successfully", user.Email);
-
-                await _reportRepositry.ClearReports(user.Id, admin);
-
-                _logger.LogInformation("User {Email} banned successfully. {BanType}",
-                    request.Email,
-                    request.Days.HasValue ? $"Duration: {request.Days.Value} days" : "Permanent");
-
-                await _cache.RemoveByPatternAsync($"{CacheService.CacheKeys.UsersList}*");
+               _logger.LogInformation("User {Email} banned successfully. {BanType}", 
+                   request.Email,
+                   request.Days.HasValue ? $"Duration: {request.Days.Value} days" : "Permanent");
 
                 return Result<IdentityResult>.Good(
                     message,
@@ -257,18 +251,7 @@ namespace Services.Services
                     );
                 }
 
-                await _userManager.ResetAccessFailedCountAsync(user);
-
-                await _cache.RemoveByPatternAsync($"{CacheService.CacheKeys.UsersList}*");
-
-                await _email.SendUnlockEmailAsync(
-                    user.Email,
-                    user.UserName,
-                    admin.UserName
-                    );
-
-                _logger.LogInformation("User {Email} unlocked successfully by admin {AdminEmail}",
-            userEmail, adminEmail);
+                await _eventDispatcher.PublishAsync(new UserUnlockedEvent(user, admin));
 
                 return Result<IdentityResult>.Good(
                     "User unlocked successfully",

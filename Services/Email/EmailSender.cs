@@ -4,77 +4,35 @@ using Microsoft.Extensions.Logging;
 using Services.Interfaces;
 using System.Net.Mail;
 
-namespace Services.Helpers
+namespace Services.Email
 {
     public class EmailSender : IEmailSender
     {
         private readonly ILogger<EmailSender> _logger;
         private readonly IConfiguration _config;
-        private readonly Helpers.EmailBodys _emailBody;
+        private readonly EmailBodys _emailBody;
         private readonly string _frontendUrl;
+        private readonly IEmailQueue _queue;
 
         public EmailSender(
             ILogger<EmailSender> logger,
             IConfiguration config,
-            Helpers.EmailBodys emailBody
+            EmailBodys emailBody,
+            IEmailQueue queue
             )
         {
             _logger = logger;
             _config = config;
             _emailBody = emailBody;
             _frontendUrl = _config["Frontend:Url"] ?? "http://localhost:4000";
+            _queue = queue;
         }
 
         private async Task<bool> SendEmailAsync(string toEmail, string subject, string body)
         {
-            try
-            {
-                var host = _config["Mail:Host"];
-                var port = int.Parse(_config["Mail:Port"] ?? "1025");
-                var enableSsl = bool.Parse(_config["Mail:EnableSsl"] ?? "false");
-                var fromEmail = _config["Mail:From"];
-                var displayName = _config["Mail:DisplayName"] ?? "DEV";
-
-                if (string.IsNullOrEmpty(host) || string.IsNullOrEmpty(fromEmail))
-                {
-                    _logger.LogError("Email setting is missing. Check appsettings.json");
-                    return false;
-                }
-
-                using var message = new MailMessage();
-                message.From = new MailAddress(fromEmail, displayName);
-                message.To.Add(new MailAddress(toEmail));
-                message.Subject = subject;
-                message.Body = body;
-                message.IsBodyHtml = true;
-                message.Priority = MailPriority.High;
-
-                using var smtpClient = new SmtpClient(host, port);
-
-                smtpClient.EnableSsl = enableSsl;
-                smtpClient.UseDefaultCredentials = false;
-                smtpClient.Credentials = null;
-                smtpClient.Timeout = 10000; //10 sek
-
-                await smtpClient.SendMailAsync(message);
-
-                _logger.LogInformation("Email sent successfully to {Email} with subject: {Subject} via {Host}:{Port}",
-                    toEmail, subject, host, port);
-
-                return true;
-            }
-            catch (SmtpException smtpEx)
-            {
-                _logger.LogError(smtpEx, "SMTP error while sending email to {Email}. Status: {Status}",
-                    toEmail, smtpEx.StatusCode);
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error while sending email to {Email}: {Message}",
-                    toEmail, ex.Message);
-                return false;
-            }
+            _queue.QueueEmail(toEmail, subject, body);
+            _logger.LogInformation("Email queued to {Email} with subject {Subject}", toEmail, subject);
+            return await Task.FromResult(true);
         }
 
         public async Task<bool> SendRegisterConfirmEmailAsync(
