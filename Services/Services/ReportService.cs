@@ -17,19 +17,22 @@ namespace Services.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole<Guid>> _roleManager;
         private readonly IBanService _banService;
+        private readonly CacheService _cache;
 
         public ReportService(
             IReportRepositry reportRepositry,
             ILogger<ReportService> logger,
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole<Guid>> roleManager,
-            IBanService banService)
+            IBanService banService,
+            CacheService cache)
         {
             _reportRepositry = reportRepositry;
             _logger = logger;
             _userManager = userManager;
             _roleManager = roleManager;
             _banService = banService;
+            _cache = cache;
         }
 
         public async Task<Result<bool>> ReportUserAsync(string notifierEmail, ReportRequest request)
@@ -123,6 +126,8 @@ namespace Services.Services
                         new List<string> { "InternalError" }
                         );
                 }
+
+                await _cache.InvalidateUserInfoCacheAsync();
 
                 return Result<bool>.Good(
                     "User reported successfully",
@@ -338,6 +343,9 @@ namespace Services.Services
                     _logger.LogInformation("Report accepted and user '{ReportedEmail}' banned by admin '{AdminEmail}'.",
                         request.ReportedUserEmail, adminEmail);
 
+
+                    await _cache.InvalidateUserInfoCacheAsync();
+
                     return Result<IdentityResult>.Good(
                         "Report accepted and user banned successfully.",
                         StatusCodes.Status200OK,
@@ -366,6 +374,8 @@ namespace Services.Services
 
                     _logger.LogInformation("Report rejected for user '{ReportedEmail}' by admin '{AdminEmail}'.",
                         request.ReportedUserEmail, adminEmail);
+
+                    await _cache.InvalidateUserInfoCacheAsync();
 
                     return Result<IdentityResult>.Good(
                         "Report rejected successfully.",

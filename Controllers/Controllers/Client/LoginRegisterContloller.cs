@@ -86,7 +86,11 @@ namespace contlollers.Controllers.Client
             var result = await _login.HandleLoginAsync(request);
 
             return result.IsSuccess
-                ? StatusCode(result.StatusCode, result.Data)
+                ? StatusCode(result.StatusCode, new
+                {
+                    success = true,
+                    message = result.Message
+                })
                 : StatusCode(result.StatusCode, new
                 {
                     success = false,
