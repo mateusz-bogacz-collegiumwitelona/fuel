@@ -203,6 +203,18 @@ namespace Data.Reopsitories
 
             if (station == null) return null;
 
+            var currentFuelPrice = station.FuelPrice
+                .GroupBy(fp => fp.FuelTypeId)
+                .Select(g => g.OrderByDescending(fp => fp.ValidFrom)
+                    .First())
+                .Select(fp => new GetFuelPriceAndCodeResponse
+                {
+                    FuelCode = fp.FuelType.Code,
+                    Price = fp.Price,
+                    ValidFrom = fp.ValidFrom
+                })
+                .ToList();
+
             return new GetStationListResponse
             {
                 BrandName = station.Brand.Name,
@@ -212,14 +224,7 @@ namespace Data.Reopsitories
                 PostalCode = station.Address.PostalCode,
                 Latitude = station.Address.Location.Y,
                 Longitude = station.Address.Location.X,
-                FuelPrice = station.FuelPrice
-                             .Select(fp => new GetFuelPriceAndCodeResponse
-                             {
-                                 FuelCode = fp.FuelType.Code,
-                                 Price = fp.Price,
-                                 ValidFrom = fp.ValidFrom
-                             })
-                             .ToList()
+                FuelPrice = currentFuelPrice
             };
         }
 
