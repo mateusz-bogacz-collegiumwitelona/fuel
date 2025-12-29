@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router";
 import Header from "../components/header";
 import Footer from "../components/footer";
-import "leaflet/dist/leaflet.css";
 import { API_BASE } from "../components/api";
 import { useTranslation } from "react-i18next";
 import { ProposalModal } from "../components/proposal-modal";
+// 1. IMPORTUJEMY NOWY MODAL
+import { ViewProposalsModal } from "../components/view-proposals-modal";
+
+const StationMapContent = lazy(() => import("../components/StationMapContent"));
 
 type FuelPrice = {
   fuelCode: string;
@@ -39,68 +42,18 @@ export default function StationProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Stan dla modala
+  // Stan dla modala Zgłaszania (istniejący)
   const [isProposalOpen, setIsProposalOpen] = useState(false);
+  
+  // 2. NOWY STAN DLA MODALA PODGLĄDU
+  const [isViewProposalsOpen, setIsViewProposalsOpen] = useState(false);
 
-  const [MapComponents, setMapComponents] = useState<{
-    MapContainer?: any;
-    TileLayer?: any;
-    Marker?: any;
-    Popup?: any;
-  }>({});
-  const [L, setL] = useState<any>(null);
-
-  const brandColors: Record<string, string> = {
-    Default: "black",
-    Orlen: "red",
-    BP: "green",
-    Shell: "yellow",
-    "Circle K": "orange",
-    Moya: "blue",
-    Lotos: "gold",
-  };
+  // Stan dla SSR
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    (async () => {
-      const [rl, leaflet] = await Promise.all([
-        import("react-leaflet"),
-        import("leaflet"),
-      ]);
-
-      setL(leaflet);
-      setMapComponents({
-        MapContainer: rl.MapContainer,
-        TileLayer: rl.TileLayer,
-        Marker: rl.Marker,
-        Popup: rl.Popup,
-      });
-    })();
+    setIsClient(true);
   }, []);
-
-  const getMarkerIcon = (brand: string) => {
-    if (!L) return undefined;
-    const normalizedBrand = Object.keys(brandColors).find(
-      (key) => key.toLowerCase() === brand.toLowerCase(),
-    );
-    const color = normalizedBrand
-      ? brandColors[normalizedBrand]
-      : brandColors.Default;
-
-    return new L.Icon({
-      iconUrl:
-        "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-" +
-        color +
-        ".png",
-      shadowUrl:
-        "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-shadow.png",
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41],
-    });
-  };
 
   useEffect(() => {
     if (!brandName || !street || !houseNumber || !city) {
@@ -149,13 +102,9 @@ export default function StationProfilePage() {
     fetchProfile();
   }, [brandName, street, houseNumber, city, t]);
 
-  const { MapContainer, TileLayer, Marker, Popup } = MapComponents;
-
   const buildGoogleMapsUrl = (st: StationProfile) => {
-    const query = `${st.brandName} ${st.street} ${st.houseNumber}, ${st.city}`;
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-      query,
-    )}`;
+    const query = `${st.brandName}, ${st.street} ${st.houseNumber}, ${st.city}`;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
   };
 
   const buildGoogleMapsDirectionsUrl = (lat: number, lng: number) => {
@@ -163,10 +112,10 @@ export default function StationProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-base-200 text-base-content relative">
+    <div className="min-h-screen bg-base-200 text-base-content relative flex flex-col">
       <Header />
 
-      <main className="mx-auto max-w-6xl px-4 py-5">
+      <main className="mx-auto max-w-6xl px-4 py-5 flex-grow w-full">
         <div className="mb-5 flex items-center justify-between gap-4">
           <h1 className="text-2xl md:text-3xl font-bold text-right">
             {t("station.title")}
@@ -204,12 +153,22 @@ export default function StationProfilePage() {
                   </p>
                 </div>
                 
-                <button 
-                    className="btn btn-primary shadow-lg"
-                    onClick={() => setIsProposalOpen(true)}
-                >
-                    {t("proposal.form_title") || "Zgłoś aktualizację cen"}
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Nowy przycisk TRZEBA TŁUMACZENIE DOROBIĆ vvvvvvvvv*/}
+                      <button 
+                          className="btn btn-neutral shadow-sm"
+                          onClick={() => setIsViewProposalsOpen(true)}
+                      >
+                          Zobacz propozycje cen
+                      </button>
+                    {/* Nowy przycisk TRZEBA TŁUMACZENIE DOROBIĆ ^^^^^^*/}
+                    <button 
+                        className="btn btn-primary shadow-lg"
+                        onClick={() => setIsProposalOpen(true)}
+                    >
+                        {t("proposal.form_title") || "Zgłoś aktualizację cen"}
+                    </button>
+                </div>
               </div>
 
               <div className="mt-3 flex gap-2 flex-wrap">
@@ -234,35 +193,27 @@ export default function StationProfilePage() {
             </section>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <section className="bg-base-300 rounded-xl p-4 shadow-md ">
+              <section className="bg-base-300 rounded-xl p-4 shadow-md">
                 <h3 className="text-lg font-semibold mb-3">{t("station.map_title")}</h3>
-                <div className="h-72 rounded-lg overflow-hidden bg-base-100">
-                  {MapContainer && L ? (
-                    <MapContainer
-                      center={[station.latitude, station.longitude]}
-                      zoom={15}
-                      scrollWheelZoom={false}
-                      style={{ height: "100%", width: "100%" }}
-                    >
-                      <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution="© OpenStreetMap contributors"
-                      />
-                      <Marker
-                        position={[station.latitude, station.longitude]}
-                        icon={getMarkerIcon(station.brandName)}
-                      >
-                        <Popup>
-                          <strong>{station.brandName}</strong>
-                          <br />
-                          {station.city}, {station.street} {" "}
-                          {station.houseNumber}
-                        </Popup>
-                      </Marker>
-                    </MapContainer>
+                <div className="h-72 rounded-lg overflow-hidden bg-base-100 relative">
+                  {isClient ? (
+                     <Suspense fallback={
+                        <div className="flex h-full w-full items-center justify-center text-base-content/50">
+                             <span className="loading loading-spinner"></span>
+                        </div>
+                     }>
+                        <StationMapContent 
+                            brandName={station.brandName}
+                            latitude={station.latitude}
+                            longitude={station.longitude}
+                            city={station.city}
+                            street={station.street}
+                            houseNumber={station.houseNumber}
+                        />
+                     </Suspense>
                   ) : (
-                    <div className="flex items-center justify-center h-full text-sm text-base-content/70">
-                      {t("station.map_loading")}
+                    <div className="flex h-full w-full items-center justify-center text-base-content/50">
+                        {t("station.map_loading")}
                     </div>
                   )}
                 </div>
@@ -312,6 +263,12 @@ export default function StationProfilePage() {
       <ProposalModal 
         isOpen={isProposalOpen}
         onClose={() => setIsProposalOpen(false)}
+        station={station}
+      />
+
+      <ViewProposalsModal 
+        isOpen={isViewProposalsOpen}
+        onClose={() => setIsViewProposalsOpen(false)}
         station={station}
       />
 
