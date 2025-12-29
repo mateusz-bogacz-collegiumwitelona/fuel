@@ -7,6 +7,7 @@ import {
   BanUserModal,
   ReviewBanModal,
   UnlockUserModal,
+  UserReportsModal,
 } from "../components/user-admin-modals";
 
 import type {
@@ -43,16 +44,14 @@ export default function UserAdminPage() {
   const [totalPages, setTotalPages] = React.useState(1);
   const [search, setSearch] = React.useState("");
   const [sortBy, setSortBy] = React.useState("username");
-  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">(
-    "asc",
-  );
+  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("asc");
+
+  const [onlyReported, setOnlyReported] = React.useState(false);
 
   const [activeModal, setActiveModal] = React.useState<
-    "role" | "ban" | "review" | "unlock" | null
+    "role" | "ban" | "review" | "unlock" | "reports" | null
   >(null);
-  const [selectedUser, setSelectedUser] = React.useState<AdminUser | null>(
-    null,
-  );
+  const [selectedUser, setSelectedUser] = React.useState<AdminUser | null>(null);
 
   const [banInfo, setBanInfo] = React.useState<BanInfo | null>(null);
   const [banInfoLoading, setBanInfoLoading] = React.useState(false);
@@ -61,15 +60,9 @@ export default function UserAdminPage() {
   React.useEffect(() => {
     if (state !== "allowed") return;
     (async () => {
-      await loadUsersFromApi(
-        pageNumber,
-        pageSize,
-        search,
-        sortBy,
-        sortDirection,
-      );
+      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection, onlyReported);
     })();
-  }, [state, pageNumber, pageSize, search, sortBy, sortDirection]);
+  }, [state, pageNumber, pageSize, search, sortBy, sortDirection, onlyReported]);
 
   async function loadUsersFromApi(
     page: number,
@@ -77,6 +70,7 @@ export default function UserAdminPage() {
     searchValue: string,
     sort: string,
     direction: "asc" | "desc",
+    showReported: boolean
   ) {
     setLoading(true);
     setError(null);
@@ -93,13 +87,15 @@ export default function UserAdminPage() {
         params.set("Search", searchValue.trim());
       }
 
+      if (showReported) {
+        params.set("OnlyReported", "true");
+      }
+
       const res = await fetch(
         `${API_BASE}/api/admin/user/list?${params.toString()}`,
         {
           method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
+          headers: { Accept: "application/json" },
           credentials: "include",
         },
       );
@@ -111,7 +107,6 @@ export default function UserAdminPage() {
       }
 
       const json = await res.json();
-
       const data: UserListResponseData | undefined = json.data
         ? (json.data as UserListResponseData)
         : (json as UserListResponseData);
@@ -132,6 +127,13 @@ export default function UserAdminPage() {
     }
   }
 
+  const displayedUsers = React.useMemo(() => {
+    if (onlyReported) {
+      return users.filter((u) => u.hasReport);
+    }
+    return users;
+  }, [users, onlyReported]);
+
   const openRoleModal = (user: AdminUser) => {
     setSelectedUser(user);
     setActiveModal("role");
@@ -147,6 +149,11 @@ export default function UserAdminPage() {
     setActiveModal("unlock");
   };
 
+  const openReportsModal = (user: AdminUser) => {
+    setSelectedUser(user);
+    setActiveModal("reports");
+  };
+
   const openReviewModal = async (user: AdminUser) => {
     setSelectedUser(user);
     setActiveModal("review");
@@ -156,23 +163,17 @@ export default function UserAdminPage() {
 
     try {
       const res = await fetch(
-        `${API_BASE}/api/admin/user/lock-out/review?email=${encodeURIComponent(
-          user.email,
-        )}`,
+        `${API_BASE}/api/admin/user/lock-out/review?email=${encodeURIComponent(user.email)}`,
         {
           method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
+          headers: { Accept: "application/json" },
           credentials: "include",
         },
       );
 
       if (!res.ok) {
         const text = await res.text();
-        setBanInfoError(
-          t("useradmin.error_fetch_baninfo", { status: res.status, text }),
-        );
+        setBanInfoError(t("useradmin.error_fetch_baninfo", { status: res.status, text }));
         setBanInfo(null);
       } else {
         const json = await res.json();
@@ -184,9 +185,7 @@ export default function UserAdminPage() {
       }
     } catch (e: any) {
       console.error(e);
-      setBanInfoError(
-        e?.message ?? t("useradmin.error_fetch_baninfo_fallback"),
-      );
+      setBanInfoError(e?.message ?? t("useradmin.error_fetch_baninfo_fallback"));
       setBanInfo(null);
     } finally {
       setBanInfoLoading(false);
@@ -203,125 +202,70 @@ export default function UserAdminPage() {
 
   const handleChangeRoleConfirm = async (form: ChangeRoleForm) => {
     if (!selectedUser) return;
-
     try {
       const res = await fetch(
-        `${API_BASE}/api/admin/user/change-role?email=${encodeURIComponent(
-          selectedUser.email,
-        )}&newRole=${encodeURIComponent(form.newRole)}`,
+        `${API_BASE}/api/admin/user/change-role?email=${encodeURIComponent(selectedUser.email)}&newRole=${encodeURIComponent(form.newRole)}`,
         {
           method: "PATCH",
-          headers: {
-            Accept: "application/json",
-          },
+          headers: { Accept: "application/json" },
           credentials: "include",
         },
       );
-
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(
-          t("useradmin.error_change_role", { status: res.status, text }),
-        );
+        throw new Error(t("useradmin.error_change_role", { status: res.status, text }));
       }
-
-      await loadUsersFromApi(
-        pageNumber,
-        pageSize,
-        search,
-        sortBy,
-        sortDirection,
-      );
+      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection, onlyReported);
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(
-        e instanceof Error
-          ? e.message
-          : t("useradmin.error_change_role_fallback"),
-      );
+      alert(e instanceof Error ? e.message : t("useradmin.error_change_role_fallback"));
     }
   };
 
   const handleBanConfirm = async (form: BanForm) => {
     if (!selectedUser) return;
-
     try {
       const res = await fetch(`${API_BASE}/api/admin/user/lock-out`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          email: selectedUser.email,
-          reason: form.reason,
-          days: form.days,
-        }),
+        body: JSON.stringify({ email: selectedUser.email, reason: form.reason, days: form.days }),
       });
-
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(
-          t("useradmin.error_ban", { status: res.status, text }),
-        );
+        throw new Error(t("useradmin.error_ban", { status: res.status, text }));
       }
-
-      await loadUsersFromApi(
-        pageNumber,
-        pageSize,
-        search,
-        sortBy,
-        sortDirection,
-      );
+      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection, onlyReported);
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(
-        e instanceof Error ? e.message : t("useradmin.error_ban_fallback"),
-      );
+      alert(e instanceof Error ? e.message : t("useradmin.error_ban_fallback"));
     }
   };
 
   const handleUnlockConfirm = async () => {
     if (!selectedUser) return;
-
     try {
       const res = await fetch(
-        `${API_BASE}/api/admin/user/unlock?userEmail=${encodeURIComponent(
-          selectedUser.email,
-        )}`,
+        `${API_BASE}/api/admin/user/unlock?userEmail=${encodeURIComponent(selectedUser.email)}`,
         {
           method: "POST",
           headers: { Accept: "application/json" },
           credentials: "include",
         },
       );
-
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(
-          t("useradmin.error_unlock", { status: res.status, text }),
-        );
+        throw new Error(t("useradmin.error_unlock", { status: res.status, text }));
       }
-
-      await loadUsersFromApi(
-        pageNumber,
-        pageSize,
-        search,
-        sortBy,
-        sortDirection,
-      );
+      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection, onlyReported);
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(
-        e instanceof Error ? e.message : t("useradmin.error_unlock_fallback"),
-      );
+      alert(e instanceof Error ? e.message : t("useradmin.error_unlock_fallback"));
     }
   };
-
 
   const goToPage = (p: number) => {
     if (p < 1 || p > totalPages || p === pageNumber) return;
@@ -333,162 +277,80 @@ export default function UserAdminPage() {
     const windowSize = 5;
     let start = Math.max(1, pageNumber - Math.floor(windowSize / 2));
     let end = start + windowSize - 1;
-
     if (end > totalPages) {
       end = totalPages;
       start = Math.max(1, end - windowSize + 1);
     }
-
     for (let i = start; i <= end; i++) pages.push(i);
 
     return (
       <div className="flex items-center gap-2">
-        <button
-          className="btn btn-sm"
-          onClick={() => goToPage(1)}
-          disabled={pageNumber === 1}
-          type="button"
-        >
-          «1
-        </button>
-
-        <button
-          className="btn btn-sm"
-          onClick={() => goToPage(pageNumber - 1)}
-          disabled={pageNumber === 1}
-          type="button"
-        >
-          ←
-        </button>
-
+        <button className="btn btn-sm" onClick={() => goToPage(1)} disabled={pageNumber === 1} type="button">«1</button>
+        <button className="btn btn-sm" onClick={() => goToPage(pageNumber - 1)} disabled={pageNumber === 1} type="button">←</button>
         {pages.map((p) => (
-          <button
-            key={p}
-            className={`btn btn-sm ${p === pageNumber ? "btn-active" : ""}`}
-            onClick={() => goToPage(p)}
-            type="button"
-          >
-            {p}
-          </button>
+          <button key={p} className={`btn btn-sm ${p === pageNumber ? "btn-active" : ""}`} onClick={() => goToPage(p)} type="button">{p}</button>
         ))}
-
-        <button
-          className="btn btn-sm"
-          onClick={() => goToPage(pageNumber + 1)}
-          disabled={pageNumber === totalPages}
-          type="button"
-        >
-          →
-        </button>
-        <button
-          className="btn btn-sm"
-          onClick={() => goToPage(totalPages)}
-          disabled={pageNumber === totalPages}
-          type="button"
-        >
-          {totalPages} »
-        </button>
+        <button className="btn btn-sm" onClick={() => goToPage(pageNumber + 1)} disabled={pageNumber === totalPages} type="button">→</button>
+        <button className="btn btn-sm" onClick={() => goToPage(totalPages)} disabled={pageNumber === totalPages} type="button">{totalPages} »</button>
       </div>
     );
   }
 
-  if (state === "checking") {
-    return (
-      <div className="min-h-screen bg-base-200 flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg" />
-      </div>
-    );
-  }
-
-  if (state !== "allowed") {
-    return null;
-  }
+  if (state === "checking") return <div className="min-h-screen bg-base-200 flex items-center justify-center"><span className="loading loading-spinner loading-lg" /></div>;
+  if (state !== "allowed") return null;
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
       <Header />
-
       <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-10">
         <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="text-3xl font-bold">{t("useradmin.title")}</h1>
-            <p className="text-sm text-base-content/70">
-              {email
-                ? t("useradmin.logged_in_as", { email })
-                : t("useradmin.checking_session")}
-            </p>
+            <p className="text-sm text-base-content/70">{email ? t("useradmin.logged_in_as", { email }) : t("useradmin.checking_session")}</p>
           </div>
-          <a href="/admin-dashboard" className="btn btn-outline btn-sm">
-            {t("useradmin.back_to_admin")}
-          </a>
+          <a href="/admin-dashboard" className="btn btn-outline btn-sm">{t("useradmin.back_to_admin")}</a>
         </div>
-
 
         <div className="bg-base-300 rounded-xl p-4 shadow-md mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col gap-2 md:flex-row md:items-end">
             <div className="form-control">
-              <label className="label">
-                <span className="label-text">
-                  {t("useradmin.search_label")}
-                </span>
-              </label>
-              <input
-                className="input input-bordered input-sm w-full md:w-64"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPageNumber(1);
-                }}
-                placeholder={t("useradmin.search_placeholder")}
-              />
+              <label className="label"><span className="label-text">{t("useradmin.search_label")}</span></label>
+              <input className="input input-bordered input-sm w-full md:w-64" value={search} onChange={(e) => { setSearch(e.target.value); setPageNumber(1); }} placeholder={t("useradmin.search_placeholder")} />
             </div>
-
             <div className="form-control">
-              <label className="label">
-                <span className="label-text">{t("useradmin.sort_label")}</span>
-              </label>
-              <select
-                className="select select-bordered select-sm"
-                value={sortBy}
-                onChange={(e) => {
-                  setSortBy(e.target.value);
-                  setPageNumber(1);
-                }}
-              >
-                <option value="username">
-                  {t("useradmin.sort_username")}
-                </option>
+              <label className="label"><span className="label-text">{t("useradmin.sort_label")}</span></label>
+              <select className="select select-bordered select-sm" value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPageNumber(1); }}>
+                <option value="username">{t("useradmin.sort_username")}</option>
                 <option value="email">{t("useradmin.sort_email")}</option>
                 <option value="roles">{t("useradmin.sort_roles")}</option>
-                <option value="isBanned">
-                  {t("useradmin.sort_isBanned")}
-                </option>
-                <option value="createdAt">
-                  {t("useradmin.sort_createdAt")}
-                </option>
+                <option value="isBanned">{t("useradmin.sort_isBanned")}</option>
+                <option value="createdAt">{t("useradmin.sort_createdAt")}</option>
               </select>
             </div>
-
             <div className="form-control">
-              <label className="label">
-                <span className="label-text">
-                  {t("useradmin.sort_dir_label")}
-                </span>
-              </label>
-              <select
-                className="select select-bordered select-sm"
-                value={sortDirection}
-                onChange={(e) =>
-                  setSortDirection(e.target.value as "asc" | "desc")
-                }
-              >
+              <label className="label"><span className="label-text">{t("useradmin.sort_dir_label")}</span></label>
+              <select className="select select-bordered select-sm" value={sortDirection} onChange={(e) => setSortDirection(e.target.value as "asc" | "desc")}>
                 <option value="asc">{t("useradmin.sort_dir_asc")}</option>
                 <option value="desc">{t("useradmin.sort_dir_desc")}</option>
               </select>
             </div>
+
+            <div className="form-control ml-2">
+               <label className="cursor-pointer label flex flex-col items-start gap-1">
+                 <span className="label-text text-xs">{t("useradmin.filter_only_reported")}</span>
+                 <input 
+                   type="checkbox" 
+                   className="checkbox checkbox-sm checkbox-warning" 
+                   checked={onlyReported} 
+                   onChange={e => {
+                     setOnlyReported(e.target.checked); 
+                     setPageNumber(1);
+                   }} 
+                  />
+               </label>
+            </div>
           </div>
         </div>
-
 
         <div className="bg-base-300 rounded-xl p-4 shadow-md">
           {loading ? (
@@ -509,66 +371,60 @@ export default function UserAdminPage() {
                       <th>{t("useradmin.table_roles")}</th>
                       <th>{t("useradmin.table_created")}</th>
                       <th>{t("useradmin.table_status")}</th>
-                      <th className="text-right">
-                        {t("useradmin.table_actions")}
-                      </th>
+                      <th className="text-right">{t("useradmin.table_actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((u, idx) => (
+                    {displayedUsers.map((u, idx) => (
                       <tr key={`${u.email}-${idx}`}>
                         <td>{idx + 1 + (pageNumber - 1) * pageSize}</td>
-                        <td>{u.userName}</td>
+                        <td>
+                          {u.userName}
+                          {u.hasReport && (
+                            <span className="ml-2 tooltip tooltip-right text-warning" data-tip={t("useradmin.reports_modal_title")}>
+                              ⚠️
+                            </span>
+                          )}
+                        </td>
                         <td>{u.email}</td>
                         <td>{u.roles}</td>
-                        <td>
-                          {u.createdAt
-                            ? new Date(u.createdAt).toLocaleDateString()
-                            : "-"}
-                        </td>
+                        <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "-"}</td>
                         <td>
                           {u.isBanned ? (
-                            <span className="badge badge-error badge-sm">
-                              {t("useradmin.banned")}
-                            </span>
+                            <span className="badge badge-error badge-sm">{t("useradmin.banned")}</span>
                           ) : (
-                            <span className="badge badge-success badge-sm">
-                              {t("useradmin.active")}
-                            </span>
+                            <span className="badge badge-success badge-sm">{t("useradmin.active")}</span>
                           )}
                         </td>
                         <td>
                           <div className="flex justify-end gap-2 flex-wrap">
-                            <button
-                              className="btn btn-xs"
-                              type="button"
-                              onClick={() => openRoleModal(u)}
-                            >
+                            {u.hasReport && (
+                              <button
+                                className="btn btn-xs btn-warning btn-outline"
+                                type="button"
+                                onClick={() => openReportsModal(u)}
+                                title={t("useradmin.reports_button_tooltip")}
+                              >
+                                !
+                              </button>
+                            )}
+
+                            <button className="btn btn-xs" type="button" onClick={() => openRoleModal(u)}>
                               {t("useradmin.role_button")}
                             </button>
+                            
                             {!u.isBanned && (
-                              <button
-                                className="btn btn-xs btn-error"
-                                type="button"
-                                onClick={() => openBanModal(u)}
-                              >
+                              <button className="btn btn-xs btn-error" type="button" onClick={() => openBanModal(u)}>
                                 {t("useradmin.ban_button")}
                               </button>
                             )}
+                            
                             {u.isBanned && (
                               <>
-                                <button
-                                  className="btn btn-xs btn-outline"
-                                  type="button"
-                                  onClick={() => openReviewModal(u)}
-                                >
+                                <button className="btn btn-xs btn-outline" type="button" onClick={() => openReviewModal(u)}>
                                   {t("useradmin.ban_details")}
                                 </button>
-                                <button
-                                  className="btn btn-xs btn-primary"
-                                  type="button"
-                                  onClick={() => openUnlockModal(u)}
-                                >
+                                <button className="btn btn-xs btn-primary" type="button" onClick={() => openUnlockModal(u)}>
                                   {t("useradmin.unlock_button")}
                                 </button>
                               </>
@@ -577,55 +433,31 @@ export default function UserAdminPage() {
                         </td>
                       </tr>
                     ))}
+                    {displayedUsers.length === 0 && users.length > 0 && (
+                      <tr>
+                        <td colSpan={7} className="text-center text-sm py-4 text-base-content/60">
+                          {t("useradmin.reports_modal_no_reports") || "Brak zgłoszonych użytkowników na tej stronie."}
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
-
               <div className="mt-4 flex justify-between items-center text-sm">
                 {renderPageButtons()}
-                <div className="text-base-content/70">
-                  {t("useradmin.page_info", {
-                    page: pageNumber,
-                    total: totalPages,
-                  })}
-                </div>
+                <div className="text-base-content/70">{t("useradmin.page_info", { page: pageNumber, total: totalPages })}</div>
               </div>
             </>
           )}
         </div>
       </main>
-
       <Footer />
 
-      <ChangeRoleModal
-        isOpen={activeModal === "role"}
-        onClose={closeModal}
-        user={selectedUser}
-        onConfirm={handleChangeRoleConfirm}
-      />
-
-      <BanUserModal
-        isOpen={activeModal === "ban"}
-        onClose={closeModal}
-        user={selectedUser}
-        onConfirm={handleBanConfirm}
-      />
-
-      <ReviewBanModal
-        isOpen={activeModal === "review"}
-        onClose={closeModal}
-        user={selectedUser}
-        banInfo={banInfo}
-        loading={banInfoLoading}
-        error={banInfoError}
-      />
-
-      <UnlockUserModal
-        isOpen={activeModal === "unlock"}
-        onClose={closeModal}
-        user={selectedUser}
-        onConfirm={handleUnlockConfirm}
-      />
+      <ChangeRoleModal isOpen={activeModal === "role"} onClose={closeModal} user={selectedUser} onConfirm={handleChangeRoleConfirm} />
+      <BanUserModal isOpen={activeModal === "ban"} onClose={closeModal} user={selectedUser} onConfirm={handleBanConfirm} />
+      <ReviewBanModal isOpen={activeModal === "review"} onClose={closeModal} user={selectedUser} banInfo={banInfo} loading={banInfoLoading} error={banInfoError} />
+      <UnlockUserModal isOpen={activeModal === "unlock"} onClose={closeModal} user={selectedUser} onConfirm={handleUnlockConfirm} /> 
+      <UserReportsModal isOpen={activeModal === "reports"} onClose={closeModal} user={selectedUser} />
     </div>
   );
 }

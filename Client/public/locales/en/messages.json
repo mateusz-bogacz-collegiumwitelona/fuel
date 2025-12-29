@@ -325,7 +325,26 @@
   "error_ban": "Failed to ban user ({{status}}): {{text}}",
   "error_ban_fallback": "Failed to ban user",
   "error_unlock": "Failed to unlock user ({{status}}): {{text}}",
-  "error_unlock_fallback": "Failed to unlock user"
+  "error_unlock_fallback": "Failed to unlock user",
+  "reports_button_tooltip": "View reports",
+  "reports_modal_title": "User reports",
+  "reports_modal_loading": "Loading reports...",
+  "reports_modal_no_reports": "No pending reports.",
+  "reports_table_reporter": "Reporter",
+  "reports_table_reason": "Reason",
+  "reports_table_date": "Date",
+  "reports_table_status": "Status",
+  "reports_status_pending": "Pending",
+  "reports_error_fetch": "Error fetching reports ({{status}}): {{text}}",
+  "filter_only_reported": "Show reported only",
+  "report_action_accept": "Accept (Ban)",
+  "report_action_reject": "Reject",
+  "report_accept_title": "Accept Report (Ban)",
+  "report_accept_days": "Ban duration (days)",
+  "report_accept_reason": "Ban reason (for user)",
+  "report_accept_confirm": "Ban user and close report",
+  "report_action_success": "Report status changed successfully.",
+  "report_action_error": "Failed to change status: {{text}}"
 },
 
 "settings": {

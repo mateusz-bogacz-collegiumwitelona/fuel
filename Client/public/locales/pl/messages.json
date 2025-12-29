@@ -325,7 +325,26 @@
   "error_ban": "Nie udało się zbanować użytkownika ({{status}}): {{text}}",
   "error_ban_fallback": "Nie udało się zbanować",
   "error_unlock": "Nie udało się odblokować użytkownika ({{status}}): {{text}}",
-  "error_unlock_fallback": "Nie udało się odblokować"
+  "error_unlock_fallback": "Nie udało się odblokować",
+  "reports_button_tooltip": "Zobacz zgłoszenia",
+  "reports_modal_title": "Zgłoszenia użytkownika",
+  "reports_modal_loading": "Ładowanie zgłoszeń...",
+  "reports_modal_no_reports": "Brak oczekujących zgłoszeń.",
+  "reports_table_reporter": "Zgłaszający",
+  "reports_table_reason": "Powód",
+  "reports_table_date": "Data",
+  "reports_table_status": "Status",
+  "reports_status_pending": "Oczekujące",
+  "reports_error_fetch": "Błąd pobierania zgłoszeń ({{status}}): {{text}}",
+  "filter_only_reported": "Pokaż tylko zgłoszonych",
+  "report_action_accept": "Akceptuj (Banuj)",
+  "report_action_reject": "Odrzuć",
+  "report_accept_title": "Akceptacja zgłoszenia (Ban)",
+  "report_accept_days": "Dni bana",
+  "report_accept_reason": "Powód bana (dla użytkownika)",
+  "report_accept_confirm": "Nałóż bana i zamknij zgłoszenie",
+  "report_action_success": "Status zgłoszenia zmieniony pomyślnie.",
+  "report_action_error": "Błąd zmiany statusu: {{text}}"
 },
 
 "settings": {

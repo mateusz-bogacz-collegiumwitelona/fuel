@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
+import { API_BASE } from "./api";
 
 export type AdminUser = {
   userName: string;
@@ -7,6 +8,7 @@ export type AdminUser = {
   roles: string;
   createdAt: string;
   isBanned: boolean;
+  hasReport: boolean;
 };
 
 export type ChangeRoleForm = {
@@ -26,6 +28,16 @@ export type BanInfo = {
   bannedBy: string;
 };
 
+export type UserReportItem = {
+  userName: string;
+  userEmail: string;
+  reportingUserName: string;
+  reportingUserEmail: string;
+  reason: string;
+  status: string;
+  createdAt: string;
+};
+
 type BaseModalProps = {
   isOpen: boolean;
   title: string;
@@ -38,7 +50,7 @@ function BaseModal({ isOpen, title, children, onClose }: BaseModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-base-300/60">
-      <div className="bg-base-100 rounded-xl shadow-xl w-full max-w-lg p-6">
+      <div className="bg-base-100 rounded-xl shadow-xl w-full max-w-2xl p-6 relative">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">{title}</h2>
           <button
@@ -360,6 +372,331 @@ export function UnlockUserModal({
         >
           {t("user-admin.unlock_confirm_button")}
         </button>
+      </div>
+    </BaseModal>
+  );
+}
+
+
+type UserReportsModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  user: AdminUser | null;
+};
+
+// W pliku src/components/user-admin-modals.tsx podmień funkcję UserReportsModal:
+
+export function UserReportsModal({ isOpen, onClose, user }: UserReportsModalProps) {
+  const { t } = useTranslation();
+  const [reports, setReports] = React.useState<UserReportItem[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const [actionState, setActionState] = React.useState<{
+    report: UserReportItem | null;
+    type: "accept" | null;
+    days: number;
+    reason: string;
+    isProcessing: boolean;
+  }>({
+    report: null,
+    type: null,
+    days: 7,
+    reason: "",
+    isProcessing: false,
+  });
+
+  React.useEffect(() => {
+    if (isOpen && user) {
+      fetchReports(user.email);
+    } else {
+      setReports([]);
+      setError(null);
+      resetActionState();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, user]);
+
+  const resetActionState = () => {
+    setActionState({
+      report: null,
+      type: null,
+      days: 7,
+      reason: "",
+      isProcessing: false,
+    });
+  };
+
+  const fetchReports = async (email: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/admin/user/report/list?email=${encodeURIComponent(
+          email
+        )}&PageSize=100`,
+        {
+          headers: { Accept: "application/json" },
+          credentials: "include",
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(
+          t("useradmin.reports_error_fetch", {
+            status: res.status,
+            text: res.statusText,
+          })
+        );
+      }
+
+      const json = await res.json();
+      const items = json.data?.items || json.items || [];
+      setReports(items);
+    } catch (e: any) {
+      console.error(e);
+      setError(
+        e.message ||
+          t("useradmin.reports_error_fetch", { status: "Unknown", text: "" })
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRejectClick = async (report: UserReportItem) => {
+    if (!confirm(t("Are you sure you want to reject this report?"))) return;
+    await sendChangeStatus(report, false);
+  };
+
+  const handleAcceptClick = (report: UserReportItem) => {
+    setActionState({
+      report,
+      type: "accept",
+      days: 7,
+      reason: report.reason || "",
+      isProcessing: false,
+    });
+  };
+
+  const sendChangeStatus = async (
+    report: UserReportItem,
+    isAccepted: boolean,
+    banDays?: number,
+    banReason?: string
+  ) => {
+    if (isAccepted) {
+        setActionState(prev => ({ ...prev, isProcessing: true }));
+    } else {
+        setLoading(true);
+    }
+
+    try {
+      const payload: any = {
+        isAccepted: isAccepted,
+        reportedUserEmail: report.reportedUserEmail,
+        reportingUserEmail: report.reportingUserEmail,
+        reportCreatedAt: report.createdAt,
+      };
+
+      if (isAccepted) {
+        payload.reason = banReason;
+        payload.days = banDays;
+      }
+
+      const res = await fetch(`${API_BASE}/api/admin/user/report/change-status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || res.statusText);
+      }
+
+      if (user) await fetchReports(user.email);
+      resetActionState();
+
+    } catch (e: any) {
+      console.error(e);
+      alert(t("user-admin.report_action_error", { text: e.message }));
+      setActionState(prev => ({ ...prev, isProcessing: false }));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!user) return null;
+
+  return (
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t("user-admin.reports_modal_title")}
+    >
+      <div className="space-y-4 relative">
+        <p className="text-sm text-base-content/70">
+          {t("user-admin.user_label")}:{" "}
+          <span className="font-semibold text-base-content">{user.userName}</span>
+        </p>
+
+        {loading ? (
+          <div className="flex justify-center py-4">
+            <span className="loading loading-spinner"></span>
+            <span className="ml-2 text-sm">
+              {t("useradmin.reports_modal_loading")}
+            </span>
+          </div>
+        ) : error ? (
+          <div className="alert alert-error text-sm">{error}</div>
+        ) : reports.length === 0 ? (
+          <div className="alert alert-success text-sm">
+            {t("useradmin.reports_modal_no_reports")}
+          </div>
+        ) : (
+          <div className="overflow-x-auto max-h-80">
+            <table className="table table-xs table-pin-rows">
+              <thead>
+                <tr>
+                  <th>{t("useradmin.reports_table_date")}</th>
+                  <th>{t("useradmin.reports_table_reporter")}</th>
+                  <th>{t("useradmin.reports_table_reason")}</th>
+                  <th>{t("useradmin.reports_table_status")}</th>
+                  <th className="text-right">{t("useradmin.table_actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reports.map((r, idx) => (
+                  <tr key={idx}>
+                    <td>
+                      {new Date(r.createdAt).toLocaleDateString()} <br />
+                      <span className="text-xs opacity-50">
+                        {new Date(r.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </td>
+                    <td className="font-medium">
+                      {r.reportingUserName}
+                      {r.reportingUserEmail && (
+                        <div className="text-[10px] opacity-60 font-normal">
+                          {r.reportingUserEmail}
+                        </div>
+                      )}
+                    </td>
+                    <td className="whitespace-normal min-w-[150px] max-w-xs">
+                      {r.reason}
+                    </td>
+                    <td>
+                      <span className="badge badge-warning badge-xs">
+                        {r.status === "Pending"
+                          ? t("useradmin.reports_status_pending")
+                          : r.status}
+                      </span>
+                    </td>
+                    <td className="text-right">
+                      {r.status === "Pending" && (
+                        <div className="flex flex-col gap-1 items-end">
+                          <button
+                            className="btn btn-xs btn-success text-white"
+                            onClick={() => handleAcceptClick(r)}
+                          >
+                            {t("user-admin.report_action_accept")}
+                          </button>
+                          <button
+                            className="btn btn-xs btn-error btn-outline"
+                            onClick={() => handleRejectClick(r)}
+                          >
+                            {t("user-admin.report_action_reject")}
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {actionState.type === "accept" && actionState.report && (
+          <div className="absolute inset-0 bg-base-100/95 z-20 flex items-center justify-center rounded-xl">
+            <div className="w-full max-w-sm p-4 bg-base-200 shadow-xl rounded-xl border border-base-300">
+              <h3 className="font-bold text-lg mb-4">
+                {t("user-admin.report_accept_title")}
+              </h3>
+              
+              <div className="form-control mb-2">
+                <label className="label">
+                  <span className="label-text">{t("user-admin.report_accept_days")}</span>
+                </label>
+                <input
+                  type="number"
+                  className="input input-sm input-bordered"
+                  value={actionState.days}
+                  onChange={(e) =>
+                    setActionState({ ...actionState, days: Math.max(1, parseInt(e.target.value) || 1) })
+                  }
+                  min={1}
+                />
+              </div>
+
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text">{t("user-admin.report_accept_reason")}</span>
+                </label>
+                <textarea
+                  className="textarea textarea-bordered h-24"
+                  value={actionState.reason}
+                  onChange={(e) =>
+                    setActionState({ ...actionState, reason: e.target.value })
+                  }
+                  placeholder="Wpisz powód bana..."
+                ></textarea>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={resetActionState}
+                  disabled={actionState.isProcessing}
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  className="btn btn-sm btn-error"
+                  disabled={actionState.isProcessing || !actionState.reason || actionState.days < 1}
+                  onClick={() =>
+                    sendChangeStatus(
+                      actionState.report!,
+                      true,
+                      actionState.days,
+                      actionState.reason
+                    )
+                  }
+                >
+                  {actionState.isProcessing ? (
+                    <span className="loading loading-spinner loading-xs"></span>
+                  ) : (
+                    t("user-admin.report_accept_confirm")
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end pt-2">
+          <button className="btn btn-primary btn-sm" onClick={onClose}>
+            {t("common.close")}
+          </button>
+        </div>
       </div>
     </BaseModal>
   );

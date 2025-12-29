@@ -5,7 +5,6 @@ import Footer from "../components/footer";
 import { API_BASE } from "../components/api";
 import { useTranslation } from "react-i18next";
 import { ProposalModal } from "../components/proposal-modal";
-// 1. IMPORTUJEMY NOWY MODAL
 import { ViewProposalsModal } from "../components/view-proposals-modal";
 
 const StationMapContent = lazy(() => import("../components/StationMapContent"));
@@ -41,14 +40,9 @@ export default function StationProfilePage() {
   const [station, setStation] = useState<StationProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Stan dla modala Zgłaszania (istniejący)
   const [isProposalOpen, setIsProposalOpen] = useState(false);
-  
-  // 2. NOWY STAN DLA MODALA PODGLĄDU
   const [isViewProposalsOpen, setIsViewProposalsOpen] = useState(false);
 
-  // Stan dla SSR
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
