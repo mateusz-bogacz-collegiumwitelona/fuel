@@ -66,7 +66,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -h ${POSTGRES_HOST} -d ${POSTGRES_DB}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -h ${POSTGRES_HOST} -d ${POSTGRES_DB}",
+        ]
       interval: 10s
       retries: 5
       start_period: 10s
@@ -112,14 +116,16 @@ services:
     container_name: nginx-dev
     volumes:
       - ./templates/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./cert:/etc/nginx/certs:ro
     ports:
-      - "${NGINX_PORT:-8080}:80"
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
     environment:
-      - NGINX_HOST=foobar.com
-      - NGINX_PORT=80
+      - NGINX_HOST=localhost
     depends_on:
       - controllers
       - azurite
+      - client
     networks:
       - dev
     restart: unless-stopped
@@ -130,19 +136,18 @@ services:
       dockerfile: Dockerfile
       args:
         BUILD_CONFIGURATION: Debug
-    ports:
-      - "${CLIENT_PORT:-4000}:4000"
     volumes:
       - ./Client:/app
       - /app/node_modules
       - shared-volume:/shared/volume
     environment:
       NODE_ENV: development
+      HMR_HOST: "localhost"
+      HMR_PORT: "443"
     stdin_open: true
     tty: true
     networks:
       - dev
-
 
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite

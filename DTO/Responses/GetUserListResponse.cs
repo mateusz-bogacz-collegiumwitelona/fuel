@@ -7,5 +7,6 @@
         public string Roles { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsBanned { get; set; }
+        public bool? HasReport { get; set; }
     }
 }

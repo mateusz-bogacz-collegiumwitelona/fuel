@@ -56,6 +56,10 @@ export function ReviewProposalModal({
   const formatDate = (iso?: string) =>
     iso ? new Date(iso).toLocaleString() : "-";
 
+  const hasPendingItems = group?.items.some(
+    (it) => it.status === "Pending" || it.status === "pending"
+  );
+
   return (
     <div className={`modal modal-open`}>
       <div className="modal-box max-w-4xl">
@@ -129,15 +133,15 @@ export function ReviewProposalModal({
                       <td>{it.fuelCode}</td>
                       <td>{it.proposedPrice.toFixed(2)}</td>
                       <td>
-                        {it.status === "Pending" ? (
+                        {it.status === "Pending" || it.status === "pending" ? (
                           <span className="badge badge-warning badge-sm">
                             {t("proposal-admin.status.pending")}
                           </span>
-                        ) : it.status === "Accepted" ? (
+                        ) : it.status === "Accepted" || it.status === "accepted" ? (
                           <span className="badge badge-success badge-sm">
                             {t("proposal-admin.status.accepted")}
                           </span>
-                        ) : it.status === "Rejected" ? (
+                        ) : it.status === "Rejected" || it.status === "rejected" ? (
                           <span className="badge badge-error badge-sm">
                             {t("proposal-admin.status.rejected")}
                           </span>
@@ -153,7 +157,7 @@ export function ReviewProposalModal({
                             type="button"
                             className="btn btn-xs btn-success"
                             onClick={() => onAcceptSingle(it.token)}
-                            disabled={loading || it.status !== "Pending"}
+                            disabled={loading || (it.status !== "Pending" && it.status !== "pending")}
                           >
                             {t("proposal-admin.btn.accept")}
                           </button>
@@ -161,7 +165,7 @@ export function ReviewProposalModal({
                             type="button"
                             className="btn btn-xs btn-error"
                             onClick={() => onRejectSingle(it.token)}
-                            disabled={loading || it.status !== "Pending"}
+                            disabled={loading || (it.status !== "Pending" && it.status !== "pending")}
                           >
                             {t("proposal-admin.btn.reject")}
                           </button>
@@ -207,7 +211,7 @@ export function ReviewProposalModal({
                   type="button"
                   className="btn btn-sm btn-success"
                   onClick={onAcceptAll}
-                  disabled={loading || !group.items.length}
+                  disabled={loading || !hasPendingItems}
                 >
                   {t("proposal-admin.btn.accept_all")}
                 </button>
@@ -215,7 +219,7 @@ export function ReviewProposalModal({
                   type="button"
                   className="btn btn-sm btn-error"
                   onClick={onRejectAll}
-                  disabled={loading || !group.items.length}
+                  disabled={loading || !hasPendingItems}
                 >
                   {t("proposal-admin.btn.reject_all")}
                 </button>

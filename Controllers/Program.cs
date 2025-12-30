@@ -7,8 +7,10 @@ using Data.Models;
 using Data.Reopsitories;
 using Data.Repositories;
 using Data.Seeder;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
@@ -61,7 +63,7 @@ builder.Services.AddCors(op =>
 {
     op.AddPolicy("AllowClient", p =>
     {
-        p.WithOrigins("http://localhost:4000")
+        p.WithOrigins("http://localhost:4000", "https://localhost")
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials();
@@ -203,6 +205,27 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
+//identity cookie config
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Events.OnRedirectToLogin = context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return Task.CompletedTask;
+    };
+});
+
+//nginx header config
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
+
 // add connection to redis
 var redisHost = builder.Configuration["Redis:Host"] ?? "redis";
 var redisPort = builder.Configuration["Redis:Port"] ?? "6379";
@@ -225,6 +248,9 @@ builder.Services.AddSingleton(sp =>
     return new BlobServiceClient(blobSettings.ConnectionString);
 });
 
+//configure facebook auth settings
+builder.Services.Configure<Microsoft.AspNetCore.Authentication.Google.GoogleOptions>(
+    builder.Configuration.GetSection("Google"));
 
 //register repo 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -254,7 +280,8 @@ builder.Services.AddScoped<EmailBodys>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenFactory, TokenFactory>();
 builder.Services.AddScoped<CacheService>();
-builder.Services.AddScoped<IStorage, BlobApiHelper>();
+builder.Services.AddScoped<IStorage, BlobApiHelper>(); 
+builder.Services.AddScoped<GoogleAuthClient>();
 
 //register background services
 builder.Services.AddHostedService<BanExpirationService>();
@@ -324,6 +351,8 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 var cliArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
 if (cliArgs.Length > 0)

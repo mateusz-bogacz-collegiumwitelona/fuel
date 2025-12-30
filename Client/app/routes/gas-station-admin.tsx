@@ -171,7 +171,7 @@ export default function GasStationAdminPage() {
     }
   };
 
-  const handleEditConfirm = async (values: Partial<StationFormValues>) => {
+const handleEditConfirm = async (values: Partial<StationFormValues>) => {
     if (!selectedStation) return;
 
     try {
@@ -194,6 +194,7 @@ export default function GasStationAdminPage() {
         body.newLongitude = values.longitude;
       if (values.fuelTypes && values.fuelTypes.length > 0) {
         body.fuelType = values.fuelTypes.map((f) => ({
+          name: f.code,
           code: f.code,
           price: f.price,
         }));

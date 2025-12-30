@@ -2,6 +2,7 @@
 using Data.Models;
 using DTO.Requests;
 using DTO.Responses;
+using Google.Apis.Auth;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -29,6 +30,7 @@ namespace Services.Services
         private readonly IHttpContextAccessor _httpContext;
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly ITokenFactory _tokenFactory;
+        private readonly GoogleAuthClient _googleAuthClient;
 
         public LoginRegisterServices(
             UserManager<ApplicationUser> userManager,
@@ -712,6 +714,7 @@ namespace Services.Services
 
         //Social logins and registrations
 
+        //Facebook
         public async Task<Result<LoginResponse>> RegisterWithFacebookTokenAsync(string accessToken, HttpContext httpContext)
         {
             try
@@ -916,5 +919,147 @@ namespace Services.Services
                 );
             }
         }
+
+        //Google
+        public async Task<Result<LoginResponse>> LoginWithGoogleTokenAsync(string idToken, HttpContext httpContext)
+        {
+            try
+            {
+                var payload = await GoogleJsonWebSignature.ValidateAsync(idToken);
+                if (payload == null || string.IsNullOrEmpty(payload.Email))
+                    return Result<LoginResponse>.Bad("Invalid Google token", StatusCodes.Status401Unauthorized);
+
+                string email = payload.Email;
+
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user == null)
+                    return Result<LoginResponse>.Bad(
+                        "User not found. Please register first.", 
+                        StatusCodes.Status404NotFound);
+
+                await _signInManager.SignInAsync(user, isPersistent: false);
+
+                var roles = (await _userManager.GetRolesAsync(user)).ToList();
+                var jwtToken = _tokenFactory.CreateJwtToken(user, roles);
+                var jwtString = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+
+                var refreshToken = _tokenFactory.CreateRefreshToken(
+                    user.Id, 
+                    httpContext.Connection.RemoteIpAddress?.ToString(), 
+                    httpContext.Request.Headers["User-Agent"].ToString()
+                    );
+
+                await _refreshTokenRepository.AddAsync(refreshToken);
+                await _refreshTokenRepository.SaveChangesAsync();
+
+                SetAuthCookie(httpContext, jwtString, jwtToken.ValidTo, refreshToken);
+
+                var responseDto = new LoginResponse
+                {
+                    Message = "Login successful via Google",
+                    Email = user.Email,
+                    UserName = user.UserName,
+                    Roles = roles
+                };
+
+                return Result<LoginResponse>.Good(
+                    "Login successful via Google", 
+                    StatusCodes.Status200OK, 
+                    responseDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception during Google login");
+                return Result<LoginResponse>.Bad(
+                    "An error occurred during Google login", 
+                    StatusCodes.Status500InternalServerError, 
+                    new List<string> { ex.Message }
+                    );
+            }
+        }
+
+        public async Task<Result<LoginResponse>> RegisterWithGoogleTokenAsync(string idToken, HttpContext httpContext)
+        {
+            try
+            {
+                var payload = await GoogleJsonWebSignature.ValidateAsync(idToken);
+                if (payload == null || string.IsNullOrEmpty(payload.Email))
+                    return Result<LoginResponse>.Bad(
+                        "Invalid Google token", 
+                        StatusCodes.Status401Unauthorized);
+
+                string email = payload.Email;
+                string name = payload.Name ?? "GoogleUser";
+                var safeUserName = new string(name.Where(char.IsLetterOrDigit).ToArray());
+
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user == null)
+                {
+                    user = new ApplicationUser
+                    {
+                        Id = Guid.NewGuid(),
+                        UserName = safeUserName,
+                        NormalizedUserName = safeUserName.ToUpper(),
+                        Email = email,
+                        NormalizedEmail = email.ToUpper(),
+                        EmailConfirmed = true,
+                        SecurityStamp = Guid.NewGuid().ToString(),
+                        ConcurrencyStamp = Guid.NewGuid().ToString(),
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    var createResult = await _userManager.CreateAsync(user);
+                    if (!createResult.Succeeded)
+                    {
+                        var errors = createResult.Errors.Select(e => e.Description).ToList();
+                        return Result<LoginResponse>.Bad(
+                            "Error creating user", 
+                            StatusCodes.Status500InternalServerError, errors);
+                    }
+
+                    const string defaultRole = "User";
+                    if (!await _roleManager.RoleExistsAsync(defaultRole))
+                        return Result<LoginResponse>.Bad(
+                            $"Role '{defaultRole}' does not exist", 
+                            StatusCodes.Status500InternalServerError);
+
+                    await _userManager.AddToRoleAsync(user, defaultRole);
+                    await _proposalStatisticRepository.AddProposalStatisticRecordAsync(user);
+                }
+
+                var roles = (await _userManager.GetRolesAsync(user)).ToList();
+                var jwtToken = _tokenFactory.CreateJwtToken(user, roles);
+                var jwtString = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+
+                var refreshToken = _tokenFactory.CreateRefreshToken(
+                    user.Id, 
+                    httpContext.Connection.RemoteIpAddress?.ToString(), 
+                    httpContext.Request.Headers["User-Agent"].ToString());
+
+                await _refreshTokenRepository.AddAsync(refreshToken);
+                await _refreshTokenRepository.SaveChangesAsync();
+
+                SetAuthCookie(httpContext, jwtString, jwtToken.ValidTo, refreshToken);
+
+                var responseDto = new LoginResponse
+                {
+                    Message = "Register successful via Google",
+                    Email = user.Email,
+                    UserName = user.UserName,
+                    Roles = roles
+                };
+
+                return Result<LoginResponse>.Good("Register successful via Google", StatusCodes.Status200OK, responseDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during Google login/register");
+                return Result<LoginResponse>.Bad(
+                    "An error occurred during Google login/register", 
+                    StatusCodes.Status500InternalServerError, 
+                    new List<string> { ex.Message });
+            }
+        }
+
     }
 }

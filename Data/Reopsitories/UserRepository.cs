@@ -1,13 +1,13 @@
 ﻿using Data.Context;
+using Data.Enums;
 using Data.Helpers;
 using Data.Interfaces;
 using Data.Models;
-using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System.Linq.Expressions;
+using System.Linq;
 
 namespace Data.Reopsitories
 {
@@ -114,15 +114,22 @@ namespace Data.Reopsitories
             }
 
             var users = await query.AsNoTracking().ToListAsync();
-
             var userIds = users.Select(u => u.UserId).ToList();
+
             var bannedUserIds = await _context.BanRecords
                 .Where(b => userIds.Contains(b.UserId) && b.IsActive)
                 .Select(b => b.UserId)
                 .Distinct()
                 .ToListAsync();
 
+            var reportedUserIds = await _context.ReportUserRecords
+                .Where(r => userIds.Contains(r.ReportedUserId) && r.Status == ReportStatusEnum.Pending)
+                .Select(r => r.ReportedUserId)
+                .Distinct()
+                .ToListAsync();
+
             var bannedUsersSet = new HashSet<Guid>(bannedUserIds);
+            var reportedUsersSet = new HashSet<Guid>(reportedUserIds);
 
             var list = users.Select(u => new GetUserListResponse
             {
@@ -130,16 +137,14 @@ namespace Data.Reopsitories
                 Email = u.Email,
                 Roles = u.Role,
                 CreatedAt = u.CreatedAt,
-                IsBanned = bannedUsersSet.Contains(u.UserId)
+                IsBanned = bannedUsersSet.Contains(u.UserId),
+                HasReport = reportedUsersSet.Contains(u.UserId)
             }).ToList();
 
             list = _filters.ApplySorting(list, request.SortBy, request.SortDirection, rolePriority);
 
             return list;
         }
-
-        
-        
 
         public async Task<bool> ReportUserAsync(
             ApplicationUser reported, 

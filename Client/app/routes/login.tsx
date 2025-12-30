@@ -1,10 +1,10 @@
 import * as React from "react";
-import Header from "../Components/header";
-import Footer from "../Components/footer";
-
-const API_BASE = "http://localhost:5111";
-
+import Header from "../components/header";
+import Footer from "../components/footer";
 import { useTranslation } from "react-i18next";
+import FacebookButton from "../components/FacebookLoginButton";
+import { API_BASE } from "../components/api";
+import GoogleLoginButto from "../components/GoogleLoginButton";
 
 function normalizeRole(raw: unknown): string | null {
   if (!raw) return null;
@@ -32,7 +32,6 @@ function normalizeRole(raw: unknown): string | null {
 function extractRoleLoose(obj: any): string | null {
   if (!obj || typeof obj !== "object") return null;
 
-  // typowy przypadek dla /api/auth/me: roles: ["User"]
   if ("roles" in obj) {
     const maybe = normalizeRole(obj.roles);
     if (maybe) return maybe;
@@ -57,7 +56,6 @@ function redirectByRole(role: string | null) {
   else window.location.href = "/dashboard";
 }
 
-// pomocnik do pobrania danych zalogowanego usera z nowego endpointu
 async function fetchMe(): Promise<any | null> {
   try {
     const res = await fetch(`${API_BASE}/api/me`, {
@@ -78,6 +76,28 @@ export default function Login() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [message, setMessage] = React.useState("");
+
+
+  const handleFacebookSuccess = (data: any) => {
+    if (data?.email) localStorage.setItem("email", data.email);
+    if (data?.token) localStorage.setItem("token", data.token);
+
+    const roleFromBody = extractRoleLoose(data);
+    if (roleFromBody) {
+      setMessage(t("login.success") || "Zalogowano pomyślnie!");
+      redirectByRole(roleFromBody);
+      return;
+    }
+
+    fetchMe().then((me) => {
+        if (me) {
+             const meRole = extractRoleLoose(me);
+             redirectByRole(meRole);
+        } else {
+             redirectByRole("User");
+        }
+    });
+  };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -110,16 +130,14 @@ export default function Login() {
         return;
       }
 
-      // zapamiętaj email (opcjonalne)
       if (data?.email) {
         try {
           localStorage.setItem("email", data.email);
         } catch {
-          // ignore
+
         }
       }
 
-      // 1. rolę spróbuj wyciągnąć bezpośrednio z odpowiedzi logowania
       const roleFromBody = extractRoleLoose(data);
       if (roleFromBody) {
         setMessage(t("login.success"));
@@ -127,7 +145,6 @@ export default function Login() {
         return;
       }
 
-      // 2. jeśli backend nie zwrócił roli w /api/login → użyj /api/auth/me
       const me = await fetchMe();
       if (me) {
         const meRole = extractRoleLoose(me);
@@ -137,7 +154,7 @@ export default function Login() {
           try {
             localStorage.setItem("email", String(meEmail));
           } catch {
-            // ignore
+
           }
         }
 
@@ -146,7 +163,6 @@ export default function Login() {
         return;
       }
 
-      // 3. ostateczny fallback – brak roli, traktuj jako zwykłego usera
       setMessage(t("login.success"));
       redirectByRole(null);
     } catch (error) {
@@ -155,7 +171,6 @@ export default function Login() {
     }
   };
 
-  // auto-redirect jeśli ktoś już jest zalogowany (na podstawie /api/auth/me)
   React.useEffect(() => {
     (async () => {
       const me = await fetchMe();
@@ -164,7 +179,6 @@ export default function Login() {
         redirectByRole(meRole);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -176,6 +190,7 @@ export default function Login() {
           onSubmit={handleLogin}
           className="bg-base-300 p-8 rounded-2xl shadow-lg flex flex-col gap-4 w-full max-w-sm"
         >
+
           <h2 className="text-2xl font-bold text-center mb-2">{t("login.title")}</h2>
 
           <input
@@ -199,10 +214,42 @@ export default function Login() {
           <button type="submit" className="btn btn-info">
             {t("login.submit")}
           </button>
+          
 
-          {message && (
-            <p className="text-center text-sm text-gray-300 mt-2">{message}</p>
+            {message && (
+            <p className="text-center text-sm text-base mt-2">{message}</p>
           )}
+
+
+          {/* --- FACEBOOK BUTTON --- */}
+          <div className="divider my-1 text-sm opacity-70">LUB</div>
+          
+          <FacebookButton 
+            onLoginSuccess={handleFacebookSuccess}
+            onLoginFailure={(msg) => setMessage(msg)}
+          />
+            <GoogleLoginButto
+                onLoginSuccess={handleFacebookSuccess}
+                onLoginFailure={(msg) => setMessage(msg)}
+                />
+        
+
+          <div className="mt-4 flex flex-col gap-2 text-center text-sm">
+            <a
+              href="/forgot-password"
+              className="link link-hover opacity-70 hover:opacity-100 transition-opacity"
+            >
+              Zapomniałeś hasła? Kliknij tutaj
+            </a>
+            
+            <div className="mt-1">
+              Nie masz konta?{" "}
+              <a href="/register" className="link link-primary font-bold">
+                Zarejestruj się!
+              </a>
+            </div>
+          </div>
+
         </form>
       </div>
 
