@@ -537,7 +537,7 @@ export function UserReportsModal({ isOpen, onClose, user }: UserReportsModalProp
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      title={t("user-admin.reports_modal_title")}
+      title={t("useradmin.reports_modal_title")}
     >
       <div className="space-y-4 relative">
         <p className="text-sm text-base-content/70">
@@ -604,16 +604,16 @@ export function UserReportsModal({ isOpen, onClose, user }: UserReportsModalProp
                       {r.status === "Pending" && (
                         <div className="flex flex-col gap-1 items-end">
                           <button
-                            className="btn btn-xs btn-success text-white"
+                            className="btn btn-xs btn-success text-white w-15"
                             onClick={() => handleAcceptClick(r)}
                           >
-                            {t("user-admin.report_action_accept")}
+                            {t("useradmin.report_action_accept")}
                           </button>
                           <button
-                            className="btn btn-xs btn-error btn-outline"
+                            className="btn btn-xs btn-error btn-outline w-15"
                             onClick={() => handleRejectClick(r)}
                           >
-                            {t("user-admin.report_action_reject")}
+                            {t("useradmin.report_action_reject")}
                           </button>
                         </div>
                       )}
@@ -629,12 +629,12 @@ export function UserReportsModal({ isOpen, onClose, user }: UserReportsModalProp
           <div className="absolute inset-0 bg-base-100/95 z-20 flex items-center justify-center rounded-xl">
             <div className="w-full max-w-sm p-4 bg-base-200 shadow-xl rounded-xl border border-base-300">
               <h3 className="font-bold text-lg mb-4">
-                {t("user-admin.report_accept_title")}
+                {t("useradmin.report_accept_title")}
               </h3>
               
               <div className="form-control mb-2">
                 <label className="label">
-                  <span className="label-text">{t("user-admin.report_accept_days")}</span>
+                  <span className="label-text">{t("useradmin.report_accept_days")}</span>
                 </label>
                 <input
                   type="number"
@@ -649,7 +649,7 @@ export function UserReportsModal({ isOpen, onClose, user }: UserReportsModalProp
 
               <div className="form-control mb-4">
                 <label className="label">
-                  <span className="label-text">{t("user-admin.report_accept_reason")}</span>
+                  <span className="label-text">{t("useradmin.report_accept_reason")}</span>
                 </label>
                 <textarea
                   className="textarea textarea-bordered h-24"
@@ -684,7 +684,7 @@ export function UserReportsModal({ isOpen, onClose, user }: UserReportsModalProp
                   {actionState.isProcessing ? (
                     <span className="loading loading-spinner loading-xs"></span>
                   ) : (
-                    t("user-admin.report_accept_confirm")
+                    t("useradmin.report_accept_confirm")
                   )}
                 </button>
               </div>

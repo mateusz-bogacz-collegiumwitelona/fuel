@@ -148,14 +148,12 @@ export default function StationProfilePage() {
                 </div>
                 
                 <div className="flex flex-col sm:flex-row gap-3">
-                    {/* Nowy przycisk TRZEBA TŁUMACZENIE DOROBIĆ vvvvvvvvv*/}
-                      <button 
-                          className="btn btn-neutral shadow-sm"
-                          onClick={() => setIsViewProposalsOpen(true)}
-                      >
-                          Zobacz propozycje cen
-                      </button>
-                    {/* Nowy przycisk TRZEBA TŁUMACZENIE DOROBIĆ ^^^^^^*/}
+                    <button 
+                        className="btn btn-neutral shadow-sm"
+                        onClick={() => setIsViewProposalsOpen(true)}
+                    >
+                        {t("station.view_proposals_button")}
+                    </button>
                     <button 
                         className="btn btn-primary shadow-lg"
                         onClick={() => setIsProposalOpen(true)}

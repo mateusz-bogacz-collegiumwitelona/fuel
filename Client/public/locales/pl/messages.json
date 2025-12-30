@@ -205,7 +205,16 @@
   "fuel_code": "Kod paliwa",
   "price_pln": "Cena [zł]",
   "valid_from": "Ważne od",
-  "no_price_data": "Brak danych o cenach paliw dla tej stacji."
+  "no_price_data": "Brak danych o cenach paliw dla tej stacji.",
+  "view_proposals_button": "Zobacz propozycje cen",
+  "history_button": "Historia cen",
+  "history_title": "Historia cen paliw",
+  "history_loading": "Ładowanie historii cen...",
+  "history_error": "Nie udało się pobrać historii cen.",
+  "history_no_data": "Brak historii cen dla tej stacji.",
+  "history_chart_price": "Cena",
+  "history_note": "* Wykres typu \"step\" pokazuje okres obowiązywania danej ceny."
+}
 },
 
 "admin": {
@@ -337,7 +346,7 @@
   "reports_status_pending": "Oczekujące",
   "reports_error_fetch": "Błąd pobierania zgłoszeń ({{status}}): {{text}}",
   "filter_only_reported": "Pokaż tylko zgłoszonych",
-  "report_action_accept": "Akceptuj (Banuj)",
+  "report_action_accept": "Akceptuj",
   "report_action_reject": "Odrzuć",
   "report_accept_title": "Akceptacja zgłoszenia (Ban)",
   "report_accept_days": "Dni bana",

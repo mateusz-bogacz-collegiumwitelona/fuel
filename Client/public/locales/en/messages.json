@@ -205,7 +205,15 @@
   "fuel_code": "Fuel code",
   "price_pln": "Price [PLN]",
   "valid_from": "Valid from",
-  "no_price_data": "No fuel price data available for this station."
+  "no_price_data": "No fuel price data available for this station.",
+  "view_proposals_button": "View price proposals",
+  "history_button": "Price history",
+  "history_title": "Fuel price history",
+  "history_loading": "Loading price history...",
+  "history_error": "Failed to fetch price history.",
+  "history_no_data": "No price history for this station.",
+  "history_chart_price": "Price",
+  "history_note": "* The step chart shows the validity period of a given price."
 },
 
 "admin": {
@@ -337,7 +345,7 @@
   "reports_status_pending": "Pending",
   "reports_error_fetch": "Error fetching reports ({{status}}): {{text}}",
   "filter_only_reported": "Show reported only",
-  "report_action_accept": "Accept (Ban)",
+  "report_action_accept": "Accept",
   "report_action_reject": "Reject",
   "report_accept_title": "Accept Report (Ban)",
   "report_accept_days": "Ban duration (days)",
