@@ -6,7 +6,6 @@ import { API_BASE } from "../components/api";
 import { useTranslation } from "react-i18next";
 import { ProposalModal } from "../components/proposal-modal";
 import { ViewProposalsModal } from "../components/view-proposals-modal";
-// Dodano import modala historii
 import { StationPriceHistoryModal } from "../components/station-price-history-modal";
 
 const StationMapContent = lazy(() => import("../components/StationMapContent"));
@@ -45,7 +44,6 @@ export default function StationProfilePage() {
   const [isProposalOpen, setIsProposalOpen] = useState(false);
   const [isViewProposalsOpen, setIsViewProposalsOpen] = useState(false);
   
-  // Nowy stan dla modala historii
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const [isClient, setIsClient] = useState(false);
@@ -160,7 +158,6 @@ export default function StationProfilePage() {
                         {t("station.view_proposals_button")}
                     </button>
                     
-                    {/* Przycisk historii cen */}
                     <button 
                         className="btn btn-outline shadow-sm"
                         onClick={() => setIsHistoryOpen(true)}
@@ -278,7 +275,6 @@ export default function StationProfilePage() {
         station={station}
       />
 
-      {/* Nowy modal historii */}
       <StationPriceHistoryModal 
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
