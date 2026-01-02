@@ -26,6 +26,8 @@ type ViewProposalsModalProps = {
   } | null;
 };
 
+const MIN_REPORT_LENGTH = 3;
+
 export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsModalProps) {
   const [items, setItems] = React.useState<ProposalItem[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -47,6 +49,7 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
       setItems([]);
       closeReportModal();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, station]);
 
   const fetchProposals = async (pageNumber: number) => {
@@ -125,8 +128,8 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
   const handleSendReport = async () => {
     if (!userToReport) return;
     
-    if (reportReason.length < 50) {
-      setReportMessage({ type: 'error', text: "Powód zgłoszenia musi mieć co najmniej 50 znaków." });
+    if (reportReason.length < MIN_REPORT_LENGTH) {
+      setReportMessage({ type: 'error', text: `Powód zgłoszenia musi mieć co najmniej ${MIN_REPORT_LENGTH} znaków.` });
       return;
     }
 
@@ -150,7 +153,8 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok || json.success === false) {
-        const msg = json.message || "Wystąpił błąd podczas wysyłania zgłoszenia.";
+        // Jeśli backend nadal wymusza 50 znaków, błąd pojawi się tutaj w 'message' lub 'errors'
+        const msg = json.message || (json.errors ? JSON.stringify(json.errors) : "Wystąpił błąd podczas wysyłania zgłoszenia.");
         throw new Error(msg);
       }
 
@@ -213,7 +217,6 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
                       <td className="text-xs text-base-content/70">{formatDate(item.createdAt)}</td>
                       <td className="font-medium flex items-center gap-2">
                         {item.userName}
-
                         <button 
                           className="btn btn-xs btn-circle btn-ghost text-error tooltip tooltip-right" 
                           data-tip="Zgłoś użytkownika"
@@ -267,19 +270,19 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
             <div className="bg-base-200 p-6 rounded-xl shadow-xl w-full max-w-md border border-base-300">
               <h4 className="text-lg font-bold mb-2 text-error">Zgłoś użytkownika: {userToReport}</h4>
               <p className="text-sm text-base-content/70 mb-4">
-                Opisz dlaczego zgłaszasz tego użytkownika. Twoje zgłoszenie zostanie zweryfikowane przez administratora.
+                Opisz dlaczego zgłaszasz tego użytkownika.
               </p>
               
               <div className="form-control">
                 <textarea 
                   className="textarea textarea-bordered h-24 w-full" 
-                  placeholder="Powód zgłoszenia (min. 50 znaków)..."
+                  placeholder="Powód zgłoszenia (np. spam, wulgaryzmy)..."
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value)}
                 ></textarea>
                 <label className="label">
-                  <span className={`label-text-alt ${reportReason.length < 50 ? 'text-error' : 'text-success'}`}>
-                    {reportReason.length} / 1000 znaków (min. 50)
+                  <span className={`label-text-alt ${reportReason.length < MIN_REPORT_LENGTH ? 'text-error' : 'text-success'}`}>
+                    {reportReason.length} / 1000 (min. {MIN_REPORT_LENGTH})
                   </span>
                 </label>
               </div>
@@ -301,7 +304,7 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
                 <button 
                   className="btn btn-sm btn-error"
                   onClick={handleSendReport}
-                  disabled={reportLoading || reportReason.length < 50}
+                  disabled={reportLoading || reportReason.length < MIN_REPORT_LENGTH}
                 >
                   {reportLoading ? <span className="loading loading-spinner loading-xs"></span> : "Wyślij zgłoszenie"}
                 </button>
