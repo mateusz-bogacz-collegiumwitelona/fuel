@@ -134,25 +134,10 @@ export default function UserAdminPage() {
     return users;
   }, [users, onlyReported]);
 
-  const openRoleModal = (user: AdminUser) => {
-    setSelectedUser(user);
-    setActiveModal("role");
-  };
-
-  const openBanModal = (user: AdminUser) => {
-    setSelectedUser(user);
-    setActiveModal("ban");
-  };
-
-  const openUnlockModal = (user: AdminUser) => {
-    setSelectedUser(user);
-    setActiveModal("unlock");
-  };
-
-  const openReportsModal = (user: AdminUser) => {
-    setSelectedUser(user);
-    setActiveModal("reports");
-  };
+  const openRoleModal = (user: AdminUser) => { setSelectedUser(user); setActiveModal("role"); };
+  const openBanModal = (user: AdminUser) => { setSelectedUser(user); setActiveModal("ban"); };
+  const openUnlockModal = (user: AdminUser) => { setSelectedUser(user); setActiveModal("unlock"); };
+  const openReportsModal = (user: AdminUser) => { setSelectedUser(user); setActiveModal("reports"); };
 
   const openReviewModal = async (user: AdminUser) => {
     setSelectedUser(user);
@@ -274,7 +259,7 @@ export default function UserAdminPage() {
 
   function renderPageButtons() {
     const pages: number[] = [];
-    const windowSize = 5;
+    const windowSize = 3;
     let start = Math.max(1, pageNumber - Math.floor(windowSize / 2));
     let end = start + windowSize - 1;
     if (end > totalPages) {
@@ -284,14 +269,14 @@ export default function UserAdminPage() {
     for (let i = start; i <= end; i++) pages.push(i);
 
     return (
-      <div className="flex items-center gap-2">
-        <button className="btn btn-sm" onClick={() => goToPage(1)} disabled={pageNumber === 1} type="button">«1</button>
+      <div className="flex items-center gap-1 sm:gap-2">
+        <button className="btn btn-sm" onClick={() => goToPage(1)} disabled={pageNumber === 1} type="button">«</button>
         <button className="btn btn-sm" onClick={() => goToPage(pageNumber - 1)} disabled={pageNumber === 1} type="button">←</button>
         {pages.map((p) => (
           <button key={p} className={`btn btn-sm ${p === pageNumber ? "btn-active" : ""}`} onClick={() => goToPage(p)} type="button">{p}</button>
         ))}
         <button className="btn btn-sm" onClick={() => goToPage(pageNumber + 1)} disabled={pageNumber === totalPages} type="button">→</button>
-        <button className="btn btn-sm" onClick={() => goToPage(totalPages)} disabled={pageNumber === totalPages} type="button">{totalPages} »</button>
+        <button className="btn btn-sm" onClick={() => goToPage(totalPages)} disabled={pageNumber === totalPages} type="button">»</button>
       </div>
     );
   }
@@ -302,24 +287,34 @@ export default function UserAdminPage() {
   return (
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
       <Header />
-      <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-10">
-        <div className="flex justify-between items-center mb-4">
+      <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-6 sm:py-10">
+        
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <div>
-            <h1 className="text-3xl font-bold">{t("useradmin.title")}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">{t("useradmin.title")}</h1>
             <p className="text-sm text-base-content/70">{email ? t("useradmin.logged_in_as", { email }) : t("useradmin.checking_session")}</p>
           </div>
           <a href="/admin-dashboard" className="btn btn-outline btn-sm">{t("useradmin.back_to_admin")}</a>
         </div>
 
         <div className="bg-base-300 rounded-xl p-4 shadow-md mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div className="flex flex-col gap-2 md:flex-row md:items-end">
-            <div className="form-control">
+          <div className="flex flex-col gap-2 w-full md:w-auto md:flex-row md:items-end">
+            <div className="form-control w-full md:w-auto">
               <label className="label"><span className="label-text">{t("useradmin.search_label")}</span></label>
-              <input className="input input-bordered input-sm w-full md:w-64" value={search} onChange={(e) => { setSearch(e.target.value); setPageNumber(1); }} placeholder={t("useradmin.search_placeholder")} />
+              <input
+                className="input input-bordered input-sm w-full md:w-64"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPageNumber(1); }}
+                placeholder={t("useradmin.search_placeholder")}
+              />
             </div>
-            <div className="form-control">
+            <div className="form-control w-full md:w-auto">
               <label className="label"><span className="label-text">{t("useradmin.sort_label")}</span></label>
-              <select className="select select-bordered select-sm" value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPageNumber(1); }}>
+              <select
+                className="select select-bordered select-sm w-full md:w-auto"
+                value={sortBy}
+                onChange={(e) => { setSortBy(e.target.value); setPageNumber(1); }}
+              >
                 <option value="username">{t("useradmin.sort_username")}</option>
                 <option value="email">{t("useradmin.sort_email")}</option>
                 <option value="roles">{t("useradmin.sort_roles")}</option>
@@ -327,20 +322,24 @@ export default function UserAdminPage() {
                 <option value="createdAt">{t("useradmin.sort_createdAt")}</option>
               </select>
             </div>
-            <div className="form-control">
+            <div className="form-control w-full md:w-auto">
               <label className="label"><span className="label-text">{t("useradmin.sort_dir_label")}</span></label>
-              <select className="select select-bordered select-sm" value={sortDirection} onChange={(e) => setSortDirection(e.target.value as "asc" | "desc")}>
+              <select
+                className="select select-bordered select-sm w-full md:w-auto"
+                value={sortDirection}
+                onChange={(e) => setSortDirection(e.target.value as "asc" | "desc")}
+              >
                 <option value="asc">{t("useradmin.sort_dir_asc")}</option>
                 <option value="desc">{t("useradmin.sort_dir_desc")}</option>
               </select>
             </div>
 
-            <div className="form-control ml-2">
+            <div className="form-control ml-2 mt-2 md:mt-0">
                <label className="cursor-pointer label flex flex-col items-start gap-1">
                  <span className="label-text text-xs">{t("useradmin.filter_only_reported")}</span>
                  <input 
                    type="checkbox" 
-                   className="checkbox checkbox-sm checkbox-warning" 
+                   className="checkbox checkbox-sm checkbox-base" 
                    checked={onlyReported} 
                    onChange={e => {
                      setOnlyReported(e.target.checked); 
@@ -378,7 +377,7 @@ export default function UserAdminPage() {
                     {displayedUsers.map((u, idx) => (
                       <tr key={`${u.email}-${idx}`}>
                         <td>{idx + 1 + (pageNumber - 1) * pageSize}</td>
-                        <td>
+                        <td className="font-semibold">
                           {u.userName}
                           {u.hasReport && (
                             <span className="ml-2 tooltip tooltip-right text-warning" data-tip={t("useradmin.reports_modal_title")}>
@@ -386,9 +385,9 @@ export default function UserAdminPage() {
                             </span>
                           )}
                         </td>
-                        <td>{u.email}</td>
+                        <td className="whitespace-nowrap">{u.email}</td>
                         <td>{u.roles}</td>
-                        <td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "-"}</td>
+                        <td className="whitespace-nowrap">{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "-"}</td>
                         <td>
                           {u.isBanned ? (
                             <span className="badge badge-error badge-sm">{t("useradmin.banned")}</span>
@@ -443,7 +442,7 @@ export default function UserAdminPage() {
                   </tbody>
                 </table>
               </div>
-              <div className="mt-4 flex justify-between items-center text-sm">
+              <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
                 {renderPageButtons()}
                 <div className="text-base-content/70">{t("useradmin.page_info", { page: pageNumber, total: totalPages })}</div>
               </div>

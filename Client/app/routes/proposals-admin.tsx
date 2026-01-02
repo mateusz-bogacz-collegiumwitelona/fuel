@@ -36,13 +36,11 @@ type ProposalListResponseData = {
   hasNextPage?: boolean;
 };
 
-// --- STATYSTYKI ---
 type StatsData = {
   acceptedRate: number;
   rejectedRate: number;
   pendingRate: number;
 };
-// ------------------
 
 export default function ProposalAdminPage() {
   const { t } = useTranslation();
@@ -62,36 +60,22 @@ export default function ProposalAdminPage() {
   const [sortDirection, setSortDirection] =
     React.useState<"asc" | "desc">("desc");
 
-  const [activeGroup, setActiveGroup] = React.useState<ProposalGroup | null>(
-    null,
-  );
+  const [activeGroup, setActiveGroup] = React.useState<ProposalGroup | null>(null);
   const [modalLoading, setModalLoading] = React.useState(false);
   const [modalError, setModalError] = React.useState<string | null>(null);
   const [photosLoading, setPhotosLoading] = React.useState(false);
 
-  // --- STATYSTYKI STATE ---
   const [stats, setStats] = React.useState<StatsData | null>(null);
   const [statsLoading, setStatsLoading] = React.useState(false);
-  // ------------------------
 
   React.useEffect(() => {
     if (state !== "allowed") return;
     (async () => {
-      await loadProposalsFromApi(
-        pageNumber,
-        pageSize,
-        search,
-        sortBy,
-        sortDirection,
-      );
-      // Ładujemy statystyki przy okazji odświeżania listy (np. po zmianie strony)
-      // lub można to wywołać tylko raz przy montowaniu - zależy od potrzeb.
-      // Tutaj wywołuję przy każdej zmianie filtrów/strony, żeby były w miarę aktualne.
+      await loadProposalsFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
       loadStats(); 
     })();
   }, [state, pageNumber, pageSize, search, sortBy, sortDirection]);
 
-  // --- FUNKCJA ŁADOWANIA STATYSTYK ---
   async function loadStats() {
     setStatsLoading(true);
     try {
@@ -110,7 +94,6 @@ export default function ProposalAdminPage() {
       setStatsLoading(false);
     }
   }
-  // -----------------------------------
 
   async function loadProposalsFromApi(
     page: number,
@@ -138,18 +121,14 @@ export default function ProposalAdminPage() {
         `${API_BASE}/api/admin/proposal/list?${params.toString()}`,
         {
           method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
+          headers: { Accept: "application/json" },
           credentials: "include",
         },
       );
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new Error(
-          t("proposaladmin.error_fetch", { status: res.status, text }),
-        );
+        throw new Error(t("proposaladmin.error_fetch", { status: res.status, text }));
       }
 
       const json = await res.json();
@@ -180,14 +159,7 @@ export default function ProposalAdminPage() {
     const map = new Map<string, ProposalGroup>();
 
     for (const it of items) {
-      const key = [
-        it.userName,
-        it.brandName,
-        it.street,
-        it.houseNumber,
-        it.city,
-      ].join("|");
-
+      const key = [it.userName, it.brandName, it.street, it.houseNumber, it.city].join("|");
       let group = map.get(key);
       if (!group) {
         group = {
@@ -202,7 +174,6 @@ export default function ProposalAdminPage() {
         };
         map.set(key, group);
       }
-
       const item: ProposalGroupItem = {
         token: it.token,
         fuelName: it.fuelName,
@@ -210,10 +181,8 @@ export default function ProposalAdminPage() {
         proposedPrice: it.proposedPrice,
         status: it.status,
       };
-
       group.items.push(item);
     }
-
     return Array.from(map.values());
   }
 
@@ -227,7 +196,6 @@ export default function ProposalAdminPage() {
     setActiveGroup(null);
     setModalError(null);
     setModalLoading(false);
-    // Po zamknięciu modala odświeżamy statystyki, bo mogły się zmienić
     loadStats();
   };
 
@@ -252,13 +220,7 @@ export default function ProposalAdminPage() {
 
       setActiveGroup((prev) =>
         prev && prev.id === group.id
-          ? {
-              ...prev,
-              items: prev.items.map((it) => ({
-                ...it,
-                photoUrl,
-              })),
-            }
+          ? { ...prev, items: prev.items.map((it) => ({ ...it, photoUrl })) }
           : prev,
       );
     } catch (err) {
@@ -268,47 +230,28 @@ export default function ProposalAdminPage() {
     }
   }
 
-  async function changeStatusForToken(
-    token: string,
-    isAccepted: boolean,
-  ): Promise<void> {
+  async function changeStatusForToken(token: string, isAccepted: boolean): Promise<void> {
     const res = await fetch(
-      `${API_BASE}/api/admin/proposal/change-status?token=${encodeURIComponent(
-        token,
-      )}&isAccepted=${isAccepted}`,
+      `${API_BASE}/api/admin/proposal/change-status?token=${encodeURIComponent(token)}&isAccepted=${isAccepted}`,
       {
         method: "PATCH",
-        headers: {
-          Accept: "application/json",
-        },
+        headers: { Accept: "application/json" },
         credentials: "include",
       },
     );
 
     const text = await res.text().catch(() => "");
     let json: any = null;
-    try {
-      json = text ? JSON.parse(text) : null;
-    } catch {
-      json = null;
-    }
+    try { json = text ? JSON.parse(text) : null; } catch { json = null; }
 
     if (!res.ok || (json && json.success === false)) {
-      const msg =
-        (json && (json.message || json.error)) ||
-        t("proposaladmin.error_change_status", { status: res.status });
+      const msg = (json && (json.message || json.error)) || t("proposaladmin.error_change_status", { status: res.status });
       throw new Error(msg);
     }
   }
 
   const reloadList = async () => {
-    await loadProposalsFromApi(
-      pageNumber,
-      pageSize,
-      search,
-      sortBy,
-      sortDirection,
-    );
+    await loadProposalsFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
   };
 
   const handleAcceptSingle = async (token: string) => {
@@ -317,24 +260,11 @@ export default function ProposalAdminPage() {
     setModalError(null);
     try {
       await changeStatusForToken(token, true);
-
-      setActiveGroup((prev) =>
-        prev
-          ? {
-              ...prev,
-              items: prev.items.map((it) =>
-                it.token === token ? { ...it, status: "Accepted" } : it,
-              ),
-            }
-          : prev,
-      );
-
+      setActiveGroup((prev) => prev ? { ...prev, items: prev.items.map((it) => it.token === token ? { ...it, status: "Accepted" } : it) } : prev);
       await reloadList();
     } catch (e: any) {
       console.error(e);
-      setModalError(
-        e?.message ?? t("proposaladmin.modal_error_update"),
-      );
+      setModalError(e?.message ?? t("proposaladmin.modal_error_update"));
     } finally {
       setModalLoading(false);
     }
@@ -346,24 +276,11 @@ export default function ProposalAdminPage() {
     setModalError(null);
     try {
       await changeStatusForToken(token, false);
-
-      setActiveGroup((prev) =>
-        prev
-          ? {
-              ...prev,
-              items: prev.items.map((it) =>
-                it.token === token ? { ...it, status: "Rejected" } : it,
-              ),
-            }
-          : prev,
-      );
-
+      setActiveGroup((prev) => prev ? { ...prev, items: prev.items.map((it) => it.token === token ? { ...it, status: "Rejected" } : it) } : prev);
       await reloadList();
     } catch (e: any) {
       console.error(e);
-      setModalError(
-        e?.message ?? t("proposaladmin.modal_error_update"),
-      );
+      setModalError(e?.message ?? t("proposaladmin.modal_error_update"));
     } finally {
       setModalLoading(false);
     }
@@ -374,21 +291,13 @@ export default function ProposalAdminPage() {
     setModalLoading(true);
     setModalError(null);
     try {
-      const pendingItems = activeGroup.items.filter(
-        (it) => it.status === "Pending" || it.status === "pending"
-      );
-
-      for (const it of pendingItems) {
-        await changeStatusForToken(it.token, true);
-      }
-      
+      const pendingItems = activeGroup.items.filter((it) => it.status === "Pending" || it.status === "pending");
+      for (const it of pendingItems) { await changeStatusForToken(it.token, true); }
       await reloadList();
       closeReview();
     } catch (e: any) {
       console.error(e);
-      setModalError(
-        e?.message ?? "Nie udało się zaakceptować wszystkich propozycji.",
-      );
+      setModalError(e?.message ?? "Nie udało się zaakceptować wszystkich propozycji.");
     } finally {
       setModalLoading(false);
     }
@@ -399,21 +308,13 @@ export default function ProposalAdminPage() {
     setModalLoading(true);
     setModalError(null);
     try {
-      const pendingItems = activeGroup.items.filter(
-        (it) => it.status === "Pending" || it.status === "pending"
-      );
-
-      for (const it of pendingItems) {
-        await changeStatusForToken(it.token, false);
-      }
-      
+      const pendingItems = activeGroup.items.filter((it) => it.status === "Pending" || it.status === "pending");
+      for (const it of pendingItems) { await changeStatusForToken(it.token, false); }
       await reloadList();
       closeReview();
     } catch (e: any) {
       console.error(e);
-      setModalError(
-        e?.message ?? "Nie udało się odrzucić wszystkich propozycji.",
-      );
+      setModalError(e?.message ?? "Nie udało się odrzucić wszystkich propozycji.");
     } finally {
       setModalLoading(false);
     }
@@ -426,7 +327,7 @@ export default function ProposalAdminPage() {
 
   function renderPageButtons() {
     const pages: number[] = [];
-    const windowSize = 5;
+    const windowSize = 3; 
     let start = Math.max(1, pageNumber - Math.floor(windowSize / 2));
     let end = start + windowSize - 1;
 
@@ -434,82 +335,37 @@ export default function ProposalAdminPage() {
       end = totalPages;
       start = Math.max(1, end - windowSize + 1);
     }
-
     for (let i = start; i <= end; i++) pages.push(i);
 
     return (
-      <div className="flex items-center gap-2">
-        <button
-          className="btn btn-sm"
-          onClick={() => goToPage(1)}
-          disabled={pageNumber === 1}
-        >
-          «1
-        </button>
-
-        <button
-          className="btn btn-sm"
-          onClick={() => goToPage(pageNumber - 1)}
-          disabled={pageNumber === 1}
-        >
-          ←
-        </button>
-
+      <div className="flex items-center gap-1 sm:gap-2">
+        <button className="btn btn-sm" onClick={() => goToPage(1)} disabled={pageNumber === 1}>«</button>
+        <button className="btn btn-sm" onClick={() => goToPage(pageNumber - 1)} disabled={pageNumber === 1}>←</button>
         {pages.map((p) => (
-          <button
-            key={p}
-            className={`btn btn-sm ${p === pageNumber ? "btn-active" : ""}`}
-            onClick={() => goToPage(p)}
-          >
-            {p}
-          </button>
+          <button key={p} className={`btn btn-sm ${p === pageNumber ? "btn-active" : ""}`} onClick={() => goToPage(p)}>{p}</button>
         ))}
-
-        <button
-          className="btn btn-sm"
-          onClick={() => goToPage(pageNumber + 1)}
-          disabled={pageNumber === totalPages}
-        >
-          →
-        </button>
-        <button
-          className="btn btn-sm"
-          onClick={() => goToPage(totalPages)}
-          disabled={pageNumber === totalPages}
-        >
-          {totalPages} »
-        </button>
+        <button className="btn btn-sm" onClick={() => goToPage(pageNumber + 1)} disabled={pageNumber === totalPages}>→</button>
+        <button className="btn btn-sm" onClick={() => goToPage(totalPages)} disabled={pageNumber === totalPages}>»</button>
       </div>
     );
   }
 
-  const formatDate = (iso?: string) =>
-    iso ? new Date(iso).toLocaleString() : "-";
+  const formatDate = (iso?: string) => iso ? new Date(iso).toLocaleString() : "-";
 
-  if (state === "checking") {
-    return (
-      <div className="min-h-screen bg-base-200 flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg" />
-      </div>
-    );
-  }
-
-  if (state !== "allowed") {
-    return null;
-  }
+  if (state === "checking") return <div className="min-h-screen bg-base-200 flex items-center justify-center"><span className="loading loading-spinner loading-lg" /></div>;
+  if (state !== "allowed") return null;
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
       <Header />
 
-      <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-10">
-        <div className="flex justify-between items-center mb-4">
+      <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-6 sm:py-10">
+        
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <div>
-            <h1 className="text-3xl font-bold">{t("proposaladmin.title")}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">{t("proposaladmin.title")}</h1>
             <p className="text-sm text-base-content/70">
-              {email
-                ? t("proposaladmin.logged_in_as", { email })
-                : t("proposaladmin.checking_session")}
+              {email ? t("proposaladmin.logged_in_as", { email }) : t("proposaladmin.checking_session")}
             </p>
           </div>
           <a href="/admin-dashboard" className="btn btn-outline btn-sm">
@@ -538,36 +394,25 @@ export default function ProposalAdminPage() {
               )}
            </div>
         </div>
-        {/* ---------------------------------------- */}
 
         <div className="bg-base-300 rounded-xl p-4 shadow-md mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div className="flex flex-col gap-2 md:flex-row md:items-end">
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">{t("proposaladmin.search_label")}</span>
-              </label>
+          <div className="flex flex-col gap-2 w-full md:w-auto md:flex-row md:items-end">
+            <div className="form-control w-full md:w-auto">
+              <label className="label"><span className="label-text">{t("proposaladmin.search_label")}</span></label>
               <input
                 className="input input-bordered input-sm w-full md:w-72"
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPageNumber(1);
-                }}
+                onChange={(e) => { setSearch(e.target.value); setPageNumber(1); }}
                 placeholder={t("proposaladmin.search_placeholder")}
               />
             </div>
 
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">{t("proposaladmin.sort_label")}</span>
-              </label>
+            <div className="form-control w-full md:w-auto">
+              <label className="label"><span className="label-text">{t("proposaladmin.sort_label")}</span></label>
               <select
-                className="select select-bordered select-sm"
+                className="select select-bordered select-sm w-full md:w-auto"
                 value={sortBy}
-                onChange={(e) => {
-                  setSortBy(e.target.value);
-                  setPageNumber(1);
-                }}
+                onChange={(e) => { setSortBy(e.target.value); setPageNumber(1); }}
               >
                 <option value="createdat">{t("proposaladmin.sort_option_createdat")}</option>
                 <option value="username">{t("proposaladmin.sort_option_username")}</option>
@@ -579,16 +424,12 @@ export default function ProposalAdminPage() {
               </select>
             </div>
 
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">{t("proposaladmin.sort_dir_label")}</span>
-              </label>
+            <div className="form-control w-full md:w-auto">
+              <label className="label"><span className="label-text">{t("proposaladmin.sort_dir_label")}</span></label>
               <select
-                className="select select-bordered select-sm"
+                className="select select-bordered select-sm w-full md:w-auto"
                 value={sortDirection}
-                onChange={(e) =>
-                  setSortDirection(e.target.value as "asc" | "desc")
-                }
+                onChange={(e) => setSortDirection(e.target.value as "asc" | "desc")}
               >
                 <option value="desc">{t("proposaladmin.sort_dir_desc")}</option>
                 <option value="asc">{t("proposaladmin.sort_dir_asc")}</option>
@@ -596,7 +437,6 @@ export default function ProposalAdminPage() {
             </div>
           </div>
         </div>
-
 
         <div className="bg-base-300 rounded-xl p-4 shadow-md">
           {loading ? (
@@ -625,18 +465,14 @@ export default function ProposalAdminPage() {
                     {groups.map((g, idx) => (
                       <tr key={g.id}>
                         <td>{idx + 1 + (pageNumber - 1) * pageSize}</td>
-                        <td>{g.userName}</td>
+                        <td className="font-semibold">{g.userName}</td>
                         <td>{g.brandName}</td>
-                        <td>
-                          {g.street} {g.houseNumber}, {g.city}
-                        </td>
+                        <td className="whitespace-normal min-w-[150px]">{g.street} {g.houseNumber}, {g.city}</td>
                         <td>{g.items.length}</td>
-                        <td>
-                          {g.items
-                            .map((it) => `${it.fuelName} (${it.fuelCode})`)
-                            .join(", ")}
+                        <td className="whitespace-normal min-w-[150px]">
+                          {g.items.map((it) => `${it.fuelName} (${it.fuelCode})`).join(", ")}
                         </td>
-                        <td>{formatDate(g.createdAt)}</td>
+                        <td className="whitespace-nowrap">{formatDate(g.createdAt)}</td>
                         <td>
                           <div className="flex justify-end">
                             <button
@@ -654,7 +490,7 @@ export default function ProposalAdminPage() {
                 </table>
               </div>
 
-              <div className="mt-4 flex justify-between items-center text-sm">
+              <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
                 {renderPageButtons()}
                 <div className="text-base-content/70">
                   {t("proposaladmin.page_info", { page: pageNumber, total: totalPages })}
@@ -663,9 +499,6 @@ export default function ProposalAdminPage() {
             </>
           )}
         </div>
-
-
-
       </main>
 
       <Footer />

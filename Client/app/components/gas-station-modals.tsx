@@ -47,20 +47,22 @@ function BaseModal({ isOpen, title, children, onClose }: BaseModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-base-300/60">
-      <div className="bg-base-100 rounded-xl shadow-xl w-full max-w-lg p-6">
-        <div className="flex justify-between items-center mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-base-300/60 p-4">
+      <div className="bg-base-100 rounded-xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-center p-6 pb-2 flex-shrink-0">
           <h2 className="text-xl font-semibold">{title}</h2>
           <button
             className="btn btn-sm btn-ghost"
             onClick={onClose}
             type="button"
-            aria-label={title}
+            aria-label="Close"
           >
             ✕
           </button>
         </div>
-        {children}
+        <div className="p-6 pt-2 overflow-y-auto">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -213,7 +215,7 @@ export function AddStationModal({
             </label>
             <input
               name="brandName"
-              className="input input-bordered input-sm"
+              className="input input-bordered input-sm w-full"
               value={form.brandName}
               onChange={handleChange}
               required
@@ -226,7 +228,7 @@ export function AddStationModal({
             </label>
             <input
               name="city"
-              className="input input-bordered input-sm"
+              className="input input-bordered input-sm w-full"
               value={form.city}
               onChange={handleChange}
               required
@@ -239,7 +241,7 @@ export function AddStationModal({
             </label>
             <input
               name="street"
-              className="input input-bordered input-sm"
+              className="input input-bordered input-sm w-full"
               value={form.street}
               onChange={handleChange}
               required
@@ -252,7 +254,7 @@ export function AddStationModal({
             </label>
             <input
               name="houseNumber"
-              className="input input-bordered input-sm"
+              className="input input-bordered input-sm w-full"
               value={form.houseNumber}
               onChange={handleChange}
               required
@@ -265,7 +267,7 @@ export function AddStationModal({
             </label>
             <input
               name="postalCode"
-              className="input input-bordered input-sm"
+              className="input input-bordered input-sm w-full"
               value={form.postalCode}
               onChange={handleChange}
             />
@@ -281,7 +283,7 @@ export function AddStationModal({
                   name="latitude"
                   type="number"
                   step="0.000001"
-                  className="input input-bordered input-sm"
+                  className="input input-bordered input-sm w-full"
                   value={form.latitude}
                   onChange={handleChange}
                   required
@@ -296,7 +298,7 @@ export function AddStationModal({
                   name="longitude"
                   type="number"
                   step="0.000001"
-                  className="input input-bordered input-sm"
+                  className="input input-bordered input-sm w-full"
                   value={form.longitude}
                   onChange={handleChange}
                   required
@@ -329,7 +331,7 @@ export function AddStationModal({
                   <span className="label-text">{t("station-admin.fuel_code_label")}</span>
                 </label>
                 <input
-                  className="input input-bordered input-sm"
+                  className="input input-bordered input-sm w-full"
                   value={fuel.code}
                   onChange={(e) =>
                     handleFuelChange(index, "code", e.target.value)
@@ -345,7 +347,7 @@ export function AddStationModal({
                 <input
                   type="number"
                   step="0.01"
-                  className="input input-bordered input-sm"
+                  className="input input-bordered input-sm w-full"
                   value={fuel.price}
                   onChange={(e) =>
                     handleFuelChange(index, "price", e.target.value)
@@ -666,7 +668,6 @@ export function EditStationModal({
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* fields (same as in Add) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="form-control">
               <label className="label">
@@ -674,7 +675,7 @@ export function EditStationModal({
               </label>
               <input
                 name="brandName"
-                className="input input-bordered input-sm"
+                className="input input-bordered input-sm w-full"
                 value={form.brandName ?? ""}
                 onChange={handleChange}
               />
@@ -686,7 +687,7 @@ export function EditStationModal({
               </label>
               <input
                 name="city"
-                className="input input-bordered input-sm"
+                className="input input-bordered input-sm w-full"
                 value={form.city ?? ""}
                 onChange={handleChange}
               />
@@ -698,7 +699,7 @@ export function EditStationModal({
               </label>
               <input
                 name="street"
-                className="input input-bordered input-sm"
+                className="input input-bordered input-sm w-full"
                 value={form.street ?? ""}
                 onChange={handleChange}
               />
@@ -710,7 +711,7 @@ export function EditStationModal({
               </label>
               <input
                 name="houseNumber"
-                className="input input-bordered input-sm"
+                className="input input-bordered input-sm w-full"
                 value={form.houseNumber ?? ""}
                 onChange={handleChange}
               />
@@ -722,7 +723,7 @@ export function EditStationModal({
               </label>
               <input
                 name="postalCode"
-                className="input input-bordered input-sm"
+                className="input input-bordered input-sm w-full"
                 value={form.postalCode ?? ""}
                 onChange={handleChange}
               />
@@ -738,7 +739,7 @@ export function EditStationModal({
                     name="latitude"
                     type="number"
                     step="0.000001"
-                    className="input input-bordered input-sm"
+                    className="input input-bordered input-sm w-full"
                     value={
                       typeof form.latitude === "number"
                         ? form.latitude
@@ -756,7 +757,7 @@ export function EditStationModal({
                     name="longitude"
                     type="number"
                     step="0.000001"
-                    className="input input-bordered input-sm"
+                    className="input input-bordered input-sm w-full"
                     value={
                       typeof form.longitude === "number"
                         ? form.longitude
@@ -792,7 +793,7 @@ export function EditStationModal({
                     <span className="label-text">{t("station-admin.fuel_code_label")}</span>
                   </label>
                   <input
-                    className="input input-bordered input-sm"
+                    className="input input-bordered input-sm w-full"
                     value={fuel.code}
                     onChange={(e) =>
                       handleFuelChange(index, "code", e.target.value)
@@ -807,7 +808,7 @@ export function EditStationModal({
                   <input
                     type="number"
                     step="0.01"
-                    className="input input-bordered input-sm"
+                    className="input input-bordered input-sm w-full"
                     value={fuel.price}
                     onChange={(e) =>
                       handleFuelChange(index, "price", e.target.value)
@@ -885,7 +886,7 @@ export function DeleteStationModal({
         {t("station-admin.delete_irreversible")}
       </p>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 pt-2">
         <button
           className="btn btn-ghost btn-sm"
           type="button"

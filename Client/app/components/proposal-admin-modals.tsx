@@ -62,7 +62,7 @@ export function ReviewProposalModal({
 
   return (
     <div className={`modal modal-open`}>
-      <div className="modal-box max-w-4xl">
+      <div className="modal-box w-11/12 max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-4">
           <div>
             <h2 className="text-xl font-semibold mb-1">
