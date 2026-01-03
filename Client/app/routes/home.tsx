@@ -5,7 +5,7 @@ import ThemeController from "../components/ThemeController";
 import { useTheme } from "../context/ThemeContext";
 
 
-function HeaderHome() {
+function Header() {
   const { i18n, t } = useTranslation();
   const { theme, setTheme } = useTheme();
 
@@ -48,19 +48,29 @@ function HeaderHome() {
 
           <ThemeController theme={theme} setTheme={setTheme} />
 
-          <Link to="/login" className="btn btn-sm btn-outline text-base-content">
-            {t ? t("home.ctaLogin", { defaultValue: "Login" }) : "Login"}
-          </Link>
-          <Link to="/register" className="btn btn-sm btn-outline text-base-content">
-            {t ? t("home.ctaRegister", { defaultValue: "Register" }) : "Register"}
-          </Link>
+          <div className="dropdown dropdown-end">
+              <label tabIndex={0} className="btn btn-ghost btn-square" aria-haspopup="true">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </label>
+
+            <ul tabIndex={0} className="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52">
+              <Link to="/login" className="btn btn-sm btn-outline text-base-content">
+                {t ? t("home.ctaLogin", { defaultValue: "Login" }) : "Login"}
+              </Link>
+              <Link to="/register" className="btn btn-sm btn-outline text-base-content">
+                {t ? t("home.ctaRegister", { defaultValue: "Register" }) : "Register"}
+              </Link>
+            </ul>
+          </div>
         </div>
       </div>
     </header>
   );
 }
 
-function FooterHome() {
+function Footer() {
   const { t } = useTranslation();
   return (
     <footer className="w-full bg-base-300 text-base-content py-8 mt-12">
@@ -127,7 +137,7 @@ export default function Home(): JSX.Element {
 
   return (
     <div className="min-h-screen bg-base-100 text-base-content">
-      <HeaderHome />
+      <Header/>
 
       <main className="mx-auto max-w-6xl px-4 py-12">
         {/* Hero */}
@@ -214,7 +224,7 @@ export default function Home(): JSX.Element {
         </section>
       </main>
 
-      <FooterHome />
+      <Footer/>
 
       {/* small style for floating animation */}
       <style>{`

@@ -590,7 +590,7 @@
 
   "featuresTitle": "Funkcje",
   "features": {
-    "map": "Interaktywna mapa stacji paliw z aktualnymi cenami",
+    "map": "Interaktywna mapa stacji paliw",
     "list": "Lista stacji z sortowaniem i filtrowaniem",
     "dashboard": "Panel statystyk i historii cen",
     "mapDesc": "Mogła być lepsza, ale jest dobra",
