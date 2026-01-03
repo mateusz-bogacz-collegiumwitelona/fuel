@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import React, { useEffect, useState, lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router";
 import Header from "../components/header";
 import Footer from "../components/footer";
