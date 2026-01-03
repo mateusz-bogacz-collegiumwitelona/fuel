@@ -294,7 +294,7 @@ export default function UserAdminPage() {
             <h1 className="text-2xl sm:text-3xl font-bold">{t("useradmin.title")}</h1>
             <p className="text-sm text-base-content/70">{email ? t("useradmin.logged_in_as", { email }) : t("useradmin.checking_session")}</p>
           </div>
-          <a href="/admin-dashboard" className="btn btn-outline btn-sm">{t("useradmin.back_to_admin")}</a>
+          <a href="/admin" className="btn btn-outline btn-sm">{t("useradmin.back_to_admin")}</a>
         </div>
 
         <div className="bg-base-300 rounded-xl p-4 shadow-md mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">

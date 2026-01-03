@@ -368,7 +368,7 @@ export default function ProposalAdminPage() {
               {email ? t("proposaladmin.logged_in_as", { email }) : t("proposaladmin.checking_session")}
             </p>
           </div>
-          <a href="/admin-dashboard" className="btn btn-outline btn-sm">
+          <a href="/admin" className="btn btn-outline btn-sm">
             {t("proposaladmin.back_to_admin")}
           </a>
         </div>

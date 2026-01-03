@@ -266,7 +266,7 @@ export default function GasStationAdminPage() {
             </p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto justify-end">
-            <a href="/admin-dashboard" className="btn btn-outline btn-sm">
+            <a href="/admin" className="btn btn-outline btn-sm">
               {t("stationadmin.back_to_admin")}
             </a>
             <button className="btn btn-primary btn-sm" onClick={openAdd} type="button">
