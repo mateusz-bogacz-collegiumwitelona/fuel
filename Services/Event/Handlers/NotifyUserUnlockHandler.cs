@@ -9,6 +9,14 @@ namespace Services.Event.Handlers
         private readonly IEmailSender _emailSender;
         private readonly ILogger<NotifyUserUnlockHandler> _logger;
 
+        public NotifyUserUnlockHandler(
+            IEmailSender emailSender,
+            ILogger<NotifyUserUnlockHandler> logger)
+        {
+            _emailSender = emailSender;
+            _logger = logger;
+        }
+
         public async Task HandleAsync(UserUnlockedEvent @event)
         {
             var result = await _emailSender.SendUnlockEmailAsync(
