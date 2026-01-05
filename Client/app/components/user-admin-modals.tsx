@@ -108,10 +108,10 @@ export function ChangeRoleModal({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t("user-admin.change_role_title")}>
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("useradmin.change_role_title")}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm">
-          {t("user-admin.user_label")}:{" "}
+          {t("useradmin.user_label")}:{" "}
           <span className="font-semibold">
             {user.userName} ({user.email})
           </span>
@@ -119,7 +119,7 @@ export function ChangeRoleModal({
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text">{t("user-admin.change_role_new_label")}</span>
+            <span className="label-text">{t("useradmin.change_role_new_label")}</span>
           </label>
           <select
             className="select select-bordered select-sm w-full"
@@ -128,8 +128,8 @@ export function ChangeRoleModal({
               setForm({ newRole: e.target.value as "User" | "Admin" })
             }
           >
-            <option value="User">{t("user-admin.role_user")}</option>
-            <option value="Admin">{t("user-admin.role_admin")}</option>
+            <option value="User">{t("useradmin.role_user")}</option>
+            <option value="Admin">{t("useradmin.role_admin")}</option>
           </select>
         </div>
 
@@ -189,15 +189,15 @@ export function BanUserModal({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t("user-admin.ban_title")}>
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("useradmin.ban_title")}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm">
-          {t("user-admin.ban_confirm_user", { user: `${user.userName} (${user.email})` })}
+          {t("useradmin.ban_confirm_user", { user: `${user.userName} (${user.email})` })}
         </p>
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text">{t("user-admin.ban_reason_label")}</span>
+            <span className="label-text">{t("useradmin.ban_reason_label")}</span>
           </label>
           <textarea
             className="textarea textarea-bordered textarea-sm w-full"
@@ -217,14 +217,14 @@ export function BanUserModal({
               checked={permanent}
               onChange={(e) => setPermanent(e.target.checked)}
             />
-            <span className="label-text">{t("user-admin.ban_permanent_label")}</span>
+            <span className="label-text">{t("useradmin.ban_permanent_label")}</span>
           </label>
         </div>
 
         {!permanent && (
           <div className="form-control">
             <label className="label">
-              <span className="label-text">{t("user-admin.ban_days_label")}</span>
+              <span className="label-text">{t("useradmin.ban_days_label")}</span>
             </label>
             <input
               type="number"
@@ -243,7 +243,7 @@ export function BanUserModal({
         )}
 
         <p className="text-xs text-warning">
-          {t("user-admin.ban_note")}
+          {t("useradmin.ban_note")}
         </p>
 
         <div className="flex justify-end gap-2 pt-2">
@@ -255,7 +255,7 @@ export function BanUserModal({
             {t("common.cancel")}
           </button>
           <button type="submit" className="btn btn-error btn-sm">
-            {t("user-admin.ban_submit")}
+            {t("useradmin.ban_submit")}
           </button>
         </div>
       </form>
@@ -289,35 +289,35 @@ export function ReviewBanModal({
     until === "9999-12-31T23:59:59.9999999Z" || until === "9999-12-31T23:59:59Z";
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t("user-admin.review_ban_title")}>
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("useradmin.review_ban_title")}>
       <div className="space-y-3 text-sm">
         <p>
-          {t("user-admin.user_label")}:{" "}
+          {t("useradmin.user_label")}:{" "}
           <span className="font-semibold">
             {user.userName} ({user.email})
           </span>
         </p>
 
         {loading ? (
-          <p>{t("user-admin.review_ban_loading")}</p>
+          <p>{t("useradmin.review_ban_loading")}</p>
         ) : error ? (
           <p className="text-error">{error}</p>
         ) : !banInfo ? (
-          <p>{t("user-admin.review_ban_no_ban")}</p>
+          <p>{t("useradmin.review_ban_no_ban")}</p>
         ) : (
           <>
             <p>
-              <span className="font-semibold">{t("user-admin.review_ban_reason_label")}: </span> {banInfo.reason}
+              <span className="font-semibold">{t("useradmin.review_ban_reason_label")}: </span> {banInfo.reason}
             </p>
             <p>
-              <span className="font-semibold">{t("user-admin.review_ban_banned_at_label")}: </span> {formatDate(banInfo.bannedAt)}
+              <span className="font-semibold">{t("useradmin.review_ban_banned_at_label")}: </span> {formatDate(banInfo.bannedAt)}
             </p>
             <p>
-              <span className="font-semibold">{t("user-admin.review_ban_banned_until_label")}: </span>{" "}
-              {isPermanent(banInfo.bannedUntil) ? t("user-admin.review_ban_permanent") : formatDate(banInfo.bannedUntil)}
+              <span className="font-semibold">{t("useradmin.review_ban_banned_until_label")}: </span>{" "}
+              {isPermanent(banInfo.bannedUntil) ? t("useradmin.review_ban_permanent") : formatDate(banInfo.bannedUntil)}
             </p>
             <p>
-              <span className="font-semibold">{t("user-admin.review_ban_by_label")}: </span> {banInfo.bannedBy}
+              <span className="font-semibold">{t("useradmin.review_ban_by_label")}: </span> {banInfo.bannedBy}
             </p>
           </>
         )}
@@ -354,9 +354,9 @@ export function UnlockUserModal({
   if (!user) return null;
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t("user-admin.unlock_title")}>
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("useradmin.unlock_title")}>
       <p className="mb-4">
-        {t("user-admin.unlock_confirm", { user: `${user.userName} (${user.email})` })}
+        {t("useradmin.unlock_confirm", { user: `${user.userName} (${user.email})` })}
       </p>
 
       <div className="flex justify-end gap-2 pt-2">
@@ -372,7 +372,7 @@ export function UnlockUserModal({
           type="button"
           onClick={onConfirm}
         >
-          {t("user-admin.unlock_confirm_button")}
+          {t("useradmin.unlock_confirm_button")}
         </button>
       </div>
     </BaseModal>
@@ -523,7 +523,7 @@ export function UserReportsModal({ isOpen, onClose, user }: UserReportsModalProp
 
     } catch (e: any) {
       console.error(e);
-      alert(t("user-admin.report_action_error", { text: e.message }));
+      alert(t("useradmin.report_action_error", { text: e.message }));
       setActionState(prev => ({ ...prev, isProcessing: false }));
     } finally {
       setLoading(false);
@@ -540,7 +540,7 @@ export function UserReportsModal({ isOpen, onClose, user }: UserReportsModalProp
     >
       <div className="space-y-4 relative">
         <div className="mb-2">
-          <span className="text-sm text-base-content/70">{t("user-admin.user_label")}: </span>
+          <span className="text-sm text-base-content/70">{t("useradmin.user_label")}: </span>
           <span className="font-semibold text-base-content">{user.userName}</span>
           <div className="text-[10px] opacity-60 font-normal">{user.email}</div>
         </div>

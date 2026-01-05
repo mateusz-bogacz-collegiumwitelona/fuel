@@ -66,26 +66,26 @@ export function ReviewProposalModal({
         <div className="flex justify-between items-start mb-4">
           <div>
             <h2 className="text-xl font-semibold mb-1">
-              {t("proposal-admin.review_title")}
+              {t("proposaladmin.review_title")}
             </h2>
             {group ? (
               <>
                 <p className="text-sm text-base-content/70">
-                  {t("proposal-admin.user_label")}:{" "}
+                  {t("proposaladmin.user_label")}:{" "}
                   <span className="font-mono">{group.userName}</span>
                 </p>
                 <p className="text-sm text-base-content/70">
-                  {t("proposal-admin.station_label")}:{" "}
+                  {t("proposaladmin.station_label")}:{" "}
                   <span className="font-semibold">{group.brandName}</span>,{" "}
                   {group.street} {group.houseNumber}, {group.city}
                 </p>
                 <p className="text-xs text-base-content/60">
-                  {t("proposal-admin.submitted_label")}: {formatDate(group.createdAt)}
+                  {t("proposaladmin.submitted_label")}: {formatDate(group.createdAt)}
                 </p>
               </>
             ) : (
               <p className="text-sm text-base-content/70">
-                {t("proposal-admin.loading_details")}
+                {t("proposaladmin.loading_details")}
               </p>
             )}
           </div>
@@ -95,7 +95,7 @@ export function ReviewProposalModal({
             className="btn btn-sm btn-ghost"
             onClick={onClose}
             disabled={loading}
-            title={t("proposal-admin.close")}
+            title={t("proposaladmin.close")}
           >
             ✕
           </button>
@@ -117,12 +117,12 @@ export function ReviewProposalModal({
               <table className="table table-sm w-full">
                 <thead>
                   <tr>
-                    <th>{t("proposal-admin.table.th_hash")}</th>
-                    <th>{t("proposal-admin.table.th_fuel")}</th>
-                    <th>{t("proposal-admin.table.th_code")}</th>
-                    <th>{t("proposal-admin.table.th_price")}</th>
-                    <th>{t("proposal-admin.table.th_status")}</th>
-                    <th className="text-right">{t("proposal-admin.table.th_actions")}</th>
+                    <th>{t("proposaladmin.table.th_hash")}</th>
+                    <th>{t("proposaladmin.table.th_fuel")}</th>
+                    <th>{t("proposaladmin.table.th_code")}</th>
+                    <th>{t("proposaladmin.table.th_price")}</th>
+                    <th>{t("proposaladmin.table.th_status")}</th>
+                    <th className="text-right">{t("proposaladmin.table.th_actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -135,15 +135,15 @@ export function ReviewProposalModal({
                       <td>
                         {it.status === "Pending" || it.status === "pending" ? (
                           <span className="badge badge-warning badge-sm">
-                            {t("proposal-admin.status.pending")}
+                            {t("proposaladmin.status.pending")}
                           </span>
                         ) : it.status === "Accepted" || it.status === "accepted" ? (
                           <span className="badge badge-success badge-sm">
-                            {t("proposal-admin.status.accepted")}
+                            {t("proposaladmin.status.accepted")}
                           </span>
                         ) : it.status === "Rejected" || it.status === "rejected" ? (
                           <span className="badge badge-error badge-sm">
-                            {t("proposal-admin.status.rejected")}
+                            {t("proposaladmin.status.rejected")}
                           </span>
                         ) : (
                           <span className="badge badge-ghost badge-sm">
@@ -159,7 +159,7 @@ export function ReviewProposalModal({
                             onClick={() => onAcceptSingle(it.token)}
                             disabled={loading || (it.status !== "Pending" && it.status !== "pending")}
                           >
-                            {t("proposal-admin.btn.accept")}
+                            {t("proposaladmin.btn.accept")}
                           </button>
                           <button
                             type="button"
@@ -167,7 +167,7 @@ export function ReviewProposalModal({
                             onClick={() => onRejectSingle(it.token)}
                             disabled={loading || (it.status !== "Pending" && it.status !== "pending")}
                           >
-                            {t("proposal-admin.btn.reject")}
+                            {t("proposaladmin.btn.reject")}
                           </button>
                         </div>
                       </td>
@@ -184,20 +184,20 @@ export function ReviewProposalModal({
               return (
                 <div className="mt-4">
                   <h3 className="text-sm font-semibold mb-2">
-                    {t("proposal-admin.photo_title")}
+                    {t("proposaladmin.photo_title")}
                   </h3>
 
                   {photosLoading && (
                     <div className="flex items-center gap-2 text-xs text-base-content/70 mb-2">
                       <span className="loading loading-spinner loading-xs" />
-                      <span>{t("proposal-admin.photo_loading")}</span>
+                      <span>{t("proposaladmin.photo_loading")}</span>
                     </div>
                   )}
 
                   <div className="w-full flex justify-center">
                     <img
                       src={photoItem.photoUrl!}
-                      alt={t("proposal-admin.photo_alt")}
+                      alt={t("proposaladmin.photo_alt")}
                       className="rounded-md max-h-64 object-contain"
                     />
                   </div>
@@ -213,7 +213,7 @@ export function ReviewProposalModal({
                   onClick={onAcceptAll}
                   disabled={loading || !hasPendingItems}
                 >
-                  {t("proposal-admin.btn.accept_all")}
+                  {t("proposaladmin.btn.accept_all")}
                 </button>
                 <button
                   type="button"
@@ -221,14 +221,14 @@ export function ReviewProposalModal({
                   onClick={onRejectAll}
                   disabled={loading || !hasPendingItems}
                 >
-                  {t("proposal-admin.btn.reject_all")}
+                  {t("proposaladmin.btn.reject_all")}
                 </button>
               </div>
 
               {loading && (
                 <div className="flex items-center gap-2 text-sm text-base-content/70">
                   <span className="loading loading-spinner loading-sm" />
-                  <span>{t("proposal-admin.processing")}</span>
+                  <span>{t("proposaladmin.processing")}</span>
                 </div>
               )}
             </div>
@@ -237,7 +237,7 @@ export function ReviewProposalModal({
       </div>
 
       <label className="modal-backdrop" onClick={loading ? undefined : onClose}>
-        {t("proposal-admin.close")}
+        {t("proposaladmin.close")}
       </label>
     </div>
   );

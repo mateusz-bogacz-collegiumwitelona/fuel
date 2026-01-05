@@ -373,22 +373,21 @@ export default function ProposalAdminPage() {
           </a>
         </div>
 
-        {/* --- STATYSTYKI --- */}
         <div className="mt-6 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
            <div className="bg-base-300 rounded-xl p-4 shadow-md flex flex-col items-center">
-              <h3 className="text-lg font-semibold mb-1">Zgłoszenia Zaakceptowane</h3>
+              <h3 className="text-lg font-semibold mb-1">{t("proposaladmin.stats_accepted")}</h3>
               {statsLoading ? <span className="loading loading-dots"/> : (
                  <span className="text-3xl font-bold text-success">{stats?.acceptedRate ?? "-"}</span>
               )}
            </div>
            <div className="bg-base-300 rounded-xl p-4 shadow-md flex flex-col items-center">
-              <h3 className="text-lg font-semibold mb-1">Zgłoszenia Oczekujące</h3>
+              <h3 className="text-lg font-semibold mb-1">{t("proposaladmin.stats_pending")}</h3>
               {statsLoading ? <span className="loading loading-dots"/> : (
                  <span className="text-3xl font-bold text-warning">{stats?.pendingRate ?? "-"}</span>
               )}
            </div>
            <div className="bg-base-300 rounded-xl p-4 shadow-md flex flex-col items-center">
-              <h3 className="text-lg font-semibold mb-1">Zgłoszenia Odrzucone</h3>
+              <h3 className="text-lg font-semibold mb-1">{t("proposaladmin.stats_rejected")}</h3>
               {statsLoading ? <span className="loading loading-dots"/> : (
                  <span className="text-3xl font-bold text-error">{stats?.rejectedRate ?? "-"}</span>
               )}

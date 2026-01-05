@@ -137,7 +137,7 @@ export function AddStationModal({
     const { city, street, houseNumber, postalCode } = form;
 
     if (!city.trim() || !street.trim() || !houseNumber.trim()) {
-      alert(t("station-admin.geocode_missing_address"));
+      alert(t("stationadmin.geocode_missing_address"));
       return;
     }
 
@@ -164,8 +164,8 @@ export function AddStationModal({
       if (!res.ok) {
         const text = await res.text();
         throw new Error(
-          `${t("station-admin.geocode_error")} (${res.status}): ${text || t(
-            "station-admin.no_content",
+          `${t("stationadmin.geocode_error")} (${res.status}): ${text || t(
+            "stationadmin.no_content",
           )}`,
         );
       }
@@ -173,7 +173,7 @@ export function AddStationModal({
       const data: Array<{ lat: string; lon: string }> = await res.json();
 
       if (!data.length) {
-        alert(t("station-admin.geocode_not_found"));
+        alert(t("stationadmin.geocode_not_found"));
         return;
       }
 
@@ -186,7 +186,7 @@ export function AddStationModal({
       }));
     } catch (err) {
       console.error(err);
-      alert(t("station-admin.geocode_failed"));
+      alert(t("stationadmin.geocode_failed"));
     } finally {
       setGeoLoading(false);
     }
@@ -206,12 +206,12 @@ export function AddStationModal({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t("station-admin.add_title")}>
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("stationadmin.add_title")}>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="form-control">
             <label className="label">
-              <span className="label-text">{t("station-admin.brand_label")}</span>
+              <span className="label-text">{t("stationadmin.brand_label")}</span>
             </label>
             <input
               name="brandName"
@@ -224,7 +224,7 @@ export function AddStationModal({
 
           <div className="form-control">
             <label className="label">
-              <span className="label-text">{t("station-admin.city_label")}</span>
+              <span className="label-text">{t("stationadmin.city_label")}</span>
             </label>
             <input
               name="city"
@@ -237,7 +237,7 @@ export function AddStationModal({
 
           <div className="form-control">
             <label className="label">
-              <span className="label-text">{t("station-admin.street_label")}</span>
+              <span className="label-text">{t("stationadmin.street_label")}</span>
             </label>
             <input
               name="street"
@@ -250,7 +250,7 @@ export function AddStationModal({
 
           <div className="form-control">
             <label className="label">
-              <span className="label-text">{t("station-admin.house_label")}</span>
+              <span className="label-text">{t("stationadmin.house_label")}</span>
             </label>
             <input
               name="houseNumber"
@@ -263,7 +263,7 @@ export function AddStationModal({
 
           <div className="form-control">
             <label className="label">
-              <span className="label-text">{t("station-admin.postal_label")}</span>
+              <span className="label-text">{t("stationadmin.postal_label")}</span>
             </label>
             <input
               name="postalCode"
@@ -277,7 +277,7 @@ export function AddStationModal({
             <div className="grid grid-cols-2 gap-3">
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">{t("station-admin.lat_label")}</span>
+                  <span className="label-text">{t("stationadmin.lat_label")}</span>
                 </label>
                 <input
                   name="latitude"
@@ -292,7 +292,7 @@ export function AddStationModal({
 
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">{t("station-admin.lng_label")}</span>
+                  <span className="label-text">{t("stationadmin.lng_label")}</span>
                 </label>
                 <input
                   name="longitude"
@@ -314,21 +314,21 @@ export function AddStationModal({
                 disabled={geoLoading}
               >
                 {geoLoading
-                  ? t("station-admin.geocode_loading")
-                  : t("station-admin.geocode_button")}
+                  ? t("stationadmin.geocode_loading")
+                  : t("stationadmin.geocode_button")}
               </button>
             </div>
           </div>
         </div>
 
         <div className="mt-2 border-t border-base-300 pt-3">
-          <h3 className="text-sm font-semibold mb-2">{t("station-admin.fuel_section_title")}</h3>
+          <h3 className="text-sm font-semibold mb-2">{t("stationadmin.fuel_section_title")}</h3>
 
           {form.fuelTypes.map((fuel, index) => (
             <div key={index} className="grid grid-cols-12 gap-2 mb-2">
               <div className="form-control col-span-5">
                 <label className="label">
-                  <span className="label-text">{t("station-admin.fuel_code_label")}</span>
+                  <span className="label-text">{t("stationadmin.fuel_code_label")}</span>
                 </label>
                 <input
                   className="input input-bordered input-sm w-full"
@@ -342,7 +342,7 @@ export function AddStationModal({
 
               <div className="form-control col-span-5">
                 <label className="label">
-                  <span className="label-text">{t("station-admin.fuel_price_label")}</span>
+                  <span className="label-text">{t("stationadmin.fuel_price_label")}</span>
                 </label>
                 <input
                   type="number"
@@ -363,7 +363,7 @@ export function AddStationModal({
                     className="btn btn-xs btn-ghost text-error"
                     onClick={() => handleRemoveFuelRow(index)}
                   >
-                    {t("station-admin.remove_button")}
+                    {t("stationadmin.remove_button")}
                   </button>
                 )}
               </div>
@@ -375,7 +375,7 @@ export function AddStationModal({
             className="btn btn-xs mt-1"
             onClick={handleAddFuelRow}
           >
-            {t("station-admin.fuel_add_button")}
+            {t("stationadmin.fuel_add_button")}
           </button>
         </div>
 
@@ -454,7 +454,7 @@ export function EditStationModal({
         if (!res.ok) {
           const text = await res.text();
           throw new Error(
-            `${t("station-admin.details_error")} (${res.status}): ${text}`,
+            `${t("stationadmin.details_error")} (${res.status}): ${text}`,
           );
         }
 
@@ -513,7 +513,7 @@ export function EditStationModal({
         console.error(err);
         if (cancelled) return;
         setDetailsError(
-          err?.message ?? t("station-admin.details_error_fallback"),
+          err?.message ?? t("stationadmin.details_error_fallback"),
         );
       } finally {
         if (!cancelled) setDetailsLoading(false);
@@ -576,7 +576,7 @@ export function EditStationModal({
     const postalCode = form.postalCode ?? station?.postalCode ?? "";
 
     if (!city.trim() || !street.trim() || !houseNumber.trim()) {
-      alert(t("station-admin.geocode_missing_address"));
+      alert(t("stationadmin.geocode_missing_address"));
       return;
     }
 
@@ -603,8 +603,8 @@ export function EditStationModal({
       if (!res.ok) {
         const text = await res.text();
         throw new Error(
-          `${t("station-admin.geocode_error")} (${res.status}): ${text || t(
-            "station-admin.no_content",
+          `${t("stationadmin.geocode_error")} (${res.status}): ${text || t(
+            "stationadmin.no_content",
           )}`,
         );
       }
@@ -612,7 +612,7 @@ export function EditStationModal({
       const data: Array<{ lat: string; lon: string }> = await res.json();
 
       if (!data.length) {
-        alert(t("station-admin.geocode_not_found"));
+        alert(t("stationadmin.geocode_not_found"));
         return;
       }
 
@@ -625,7 +625,7 @@ export function EditStationModal({
       }));
     } catch (err) {
       console.error(err);
-      alert(t("station-admin.geocode_failed"));
+      alert(t("stationadmin.geocode_failed"));
     } finally {
       setGeoLoading(false);
     }
@@ -647,9 +647,9 @@ export function EditStationModal({
   if (!station) return null;
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t("station-admin.edit_title")}>
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("stationadmin.edit_title")}>
       <p className="text-xs mb-2">
-        {t("station-admin.edit_editing_label")}{" "}
+        {t("stationadmin.edit_editing_label")}{" "}
         <span className="font-semibold">
           {station.brandName} – {station.city}, {station.street}{" "}
           {station.houseNumber}
@@ -671,7 +671,7 @@ export function EditStationModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="form-control">
               <label className="label">
-                <span className="label-text">{t("station-admin.brand_label")}</span>
+                <span className="label-text">{t("stationadmin.brand_label")}</span>
               </label>
               <input
                 name="brandName"
@@ -683,7 +683,7 @@ export function EditStationModal({
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">{t("station-admin.city_label")}</span>
+                <span className="label-text">{t("stationadmin.city_label")}</span>
               </label>
               <input
                 name="city"
@@ -695,7 +695,7 @@ export function EditStationModal({
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">{t("station-admin.street_label")}</span>
+                <span className="label-text">{t("stationadmin.street_label")}</span>
               </label>
               <input
                 name="street"
@@ -707,7 +707,7 @@ export function EditStationModal({
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">{t("station-admin.house_label")}</span>
+                <span className="label-text">{t("stationadmin.house_label")}</span>
               </label>
               <input
                 name="houseNumber"
@@ -719,7 +719,7 @@ export function EditStationModal({
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">{t("station-admin.postal_label")}</span>
+                <span className="label-text">{t("stationadmin.postal_label")}</span>
               </label>
               <input
                 name="postalCode"
@@ -733,7 +733,7 @@ export function EditStationModal({
               <div className="grid grid-cols-2 gap-3">
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">{t("station-admin.lat_label")}</span>
+                    <span className="label-text">{t("stationadmin.lat_label")}</span>
                   </label>
                   <input
                     name="latitude"
@@ -751,7 +751,7 @@ export function EditStationModal({
 
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">{t("station-admin.lng_label")}</span>
+                    <span className="label-text">{t("stationadmin.lng_label")}</span>
                   </label>
                   <input
                     name="longitude"
@@ -776,21 +776,21 @@ export function EditStationModal({
                   disabled={geoLoading}
                 >
                   {geoLoading
-                    ? t("station-admin.geocode_loading")
-                    : t("station-admin.geocode_button")}
+                    ? t("stationadmin.geocode_loading")
+                    : t("stationadmin.geocode_button")}
                 </button>
               </div>
             </div>
           </div>
 
           <div className="mt-2 border-t border-base-300 pt-3">
-            <h3 className="text-sm font-semibold mb-2">{t("station-admin.fuel_section_title")}</h3>
+            <h3 className="text-sm font-semibold mb-2">{t("stationadmin.fuel_section_title")}</h3>
 
             {(form.fuelTypes ?? []).map((fuel, index) => (
               <div key={index} className="grid grid-cols-12 gap-2 mb-2">
                 <div className="form-control col-span-5">
                   <label className="label">
-                    <span className="label-text">{t("station-admin.fuel_code_label")}</span>
+                    <span className="label-text">{t("stationadmin.fuel_code_label")}</span>
                   </label>
                   <input
                     className="input input-bordered input-sm w-full"
@@ -803,7 +803,7 @@ export function EditStationModal({
 
                 <div className="form-control col-span-5">
                   <label className="label">
-                    <span className="label-text">{t("station-admin.fuel_price_label")}</span>
+                    <span className="label-text">{t("stationadmin.fuel_price_label")}</span>
                   </label>
                   <input
                     type="number"
@@ -823,7 +823,7 @@ export function EditStationModal({
                       className="btn btn-xs btn-ghost text-error"
                       onClick={() => handleRemoveFuelRow(index)}
                     >
-                      {t("station-admin.remove_button")}
+                      {t("stationadmin.remove_button")}
                     </button>
                   )}
                 </div>
@@ -835,7 +835,7 @@ export function EditStationModal({
               className="btn btn-xs mt-1"
               onClick={handleAddFuelRow}
             >
-              {t("station-admin.fuel_add_button")}
+              {t("stationadmin.fuel_add_button")}
             </button>
           </div>
 
@@ -848,7 +848,7 @@ export function EditStationModal({
               {t("common.cancel")}
             </button>
             <button type="submit" className="btn btn-primary btn-sm">
-              {t("station-admin.save_changes")}
+              {t("stationadmin.save_changes")}
             </button>
           </div>
         </form>
@@ -875,15 +875,15 @@ export function DeleteStationModal({
   if (!station) return null;
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t("station-admin.delete_title")}>
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("stationadmin.delete_title")}>
       <p className="mb-4">
-        {t("station-admin.delete_confirm", {
+        {t("stationadmin.delete_confirm", {
           station: `${station.brandName} – ${station.city}, ${station.street} ${station.houseNumber}`,
         })}
       </p>
 
       <p className="text-xs text-error mb-4">
-        {t("station-admin.delete_irreversible")}
+        {t("stationadmin.delete_irreversible")}
       </p>
 
       <div className="flex justify-end gap-2 pt-2">
@@ -899,7 +899,7 @@ export function DeleteStationModal({
           type="button"
           onClick={onConfirm}
         >
-          {t("station-admin.delete_button")}
+          {t("stationadmin.delete_button")}
         </button>
       </div>
     </BaseModal>

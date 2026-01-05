@@ -540,7 +540,10 @@
     "processing": "Przetwarzanie…",
     "photo_title": "Zdjęcie potwierdzające",
     "photo_loading": "Ładowanie zdjęcia…",
-    "photo_alt": "Zdjęcie potwierdzające"
+    "photo_alt": "Zdjęcie potwierdzające",
+	"stats_accepted": "Zgłoszenia zaakceptowane",
+    "stats_pending": "Zgłoszenia oczekujące",
+    "stats_rejected": "Zgłoszenia odrzucone"
   },
 
   "login": {
