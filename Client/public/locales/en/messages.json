@@ -213,7 +213,23 @@
   "history_error": "Failed to fetch price history.",
   "history_no_data": "No price history for this station.",
   "history_chart_price": "Price",
-  "history_note": "* The step chart shows the validity period of a given price."
+  "history_note": "* The step chart shows the validity period of a given price.",
+  "proposals_modal_title": "Submitted price proposals (pending)",
+    "proposals_fetch_error": "Failed to fetch proposals.",
+    "proposals_none": "No proposals submitted for this station.",
+    "proposals_date": "Submission date",
+    "proposals_user": "User",
+    "proposals_fuel": "Fuel",
+    "proposals_price": "Price",
+    "proposals_report_tooltip": "Report user",
+    "report_modal_title": "Report user: {{user}}",
+    "report_modal_desc": "Describe why you are reporting this user.",
+    "report_reason_placeholder": "Reason for report (e.g. spam, profanity)...",
+    "report_length_validation": "{{current}} / 1000 (min. {{min}})",
+    "report_error_min_len": "The report reason must be at least {{min}} characters long.",
+    "report_success": "User reported successfully.",
+    "report_submit": "Submit report",
+    "report_cancel": "Cancel"
 },
 
 "admin": {

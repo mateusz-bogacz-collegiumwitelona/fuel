@@ -213,7 +213,23 @@
     "history_error": "Nie udało się pobrać historii cen.",
     "history_no_data": "Brak historii cen dla tej stacji.",
     "history_chart_price": "Cena",
-    "history_note": "* Wykres typu \"step\" pokazuje okres obowiązywania danej ceny."
+    "history_note": "* Wykres typu \"step\" pokazuje okres obowiązywania danej ceny.",
+    "proposals_modal_title": "Zgłoszone propozycje cen (oczekujące)",
+    "proposals_fetch_error": "Nie udało się pobrać propozycji.",
+    "proposals_none": "Brak zgłoszonych propozycji dla tej stacji.",
+    "proposals_date": "Data zgłoszenia",
+    "proposals_user": "Użytkownik",
+    "proposals_fuel": "Paliwo",
+    "proposals_price": "Cena",
+    "proposals_report_tooltip": "Zgłoś użytkownika",
+    "report_modal_title": "Zgłoś użytkownika: {{user}}",
+    "report_modal_desc": "Opisz dlaczego zgłaszasz tego użytkownika.",
+    "report_reason_placeholder": "Powód zgłoszenia (np. spam, wulgaryzmy)...",
+    "report_length_validation": "{{current}} / 1000 (min. {{min}})",
+    "report_error_min_len": "Powód zgłoszenia musi mieć co najmniej {{min}} znaków.",
+    "report_success": "Użytkownik został zgłoszony pomyślnie.",
+    "report_submit": "Wyślij zgłoszenie",
+    "report_cancel": "Anuluj"
   },
 
   "admin": {
