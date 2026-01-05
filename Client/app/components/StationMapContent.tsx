@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -33,16 +33,17 @@ type StationMapProps = {
   houseNumber: string;
 };
 
-const StationMapContent = ({ 
+export default function StationMapContent({ 
   brandName, 
   latitude, 
   longitude,
   city,
   street,
   houseNumber 
-}: StationMapProps) => {
-  const mapContainerRef = React.useRef<HTMLDivElement>(null);
-  const mapInstanceRef = React.useRef<L.Map | null>(null);
+}: StationMapProps) {
+  
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
 
   function getMarkerIcon(brand: string) {
     const normalizedBrand = Object.keys(brandColors).find(
@@ -67,7 +68,7 @@ const StationMapContent = ({
       const map = L.map(mapContainerRef.current).setView([latitude, longitude], 15);
       
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; OpenStreetMap contributors'
+        attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
       mapInstanceRef.current = map;
@@ -95,11 +96,7 @@ const StationMapContent = ({
     `;
     marker.bindPopup(popupContent);
 
-    return () => {
-    };
   }, [latitude, longitude, brandName, city, street, houseNumber]); 
 
   return <div ref={mapContainerRef} style={{ height: "100%", width: "100%", zIndex: 0 }} />;
-};
-
-export default StationMapContent;
+}
