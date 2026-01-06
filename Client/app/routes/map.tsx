@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router";
-import "leaflet/dist/leaflet.css";
+import { useEffect, useState, lazy, Suspense } from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { API_BASE } from "../components/api";
 import { useTranslation } from "react-i18next";
+
+const GlobalMapContent = lazy(() => import("../components/GlobalMapContent"));
 
 type Station = {
   brandName: string;
@@ -16,48 +16,17 @@ type Station = {
   longitude: number;
 };
 
-export default function MapView(): JSX.Element | null {
+export default function MapView(): JSX.Element {
   const { t } = useTranslation();
 
   const [stations, setStations] = useState<Station[]>([]);
   const [allStations, setAllStations] = useState<Station[]>([]);
-  const [MapComponents, setMapComponents] = useState<{
-    MapContainer?: any;
-    TileLayer?: any;
-    Marker?: any;
-    Popup?: any;
-  }>({});
-  const [L, setL] = useState<any>(null);
-
   const [searchTerm, setSearchTerm] = useState("");
-
-  const brandColors: Record<string, string> = {
-    Default: "black",
-    Orlen: "red",
-    BP: "green",
-    Shell: "yellow",
-    "Circle K": "orange",
-    Moya: "blue",
-    Lotos: "gold",
-  };
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    (async () => {
-      const [rl, leaflet] = await Promise.all([
-        import("react-leaflet"),
-        import("leaflet"),
-      ]);
-
-      setL(leaflet);
-      setMapComponents({
-        MapContainer: rl.MapContainer,
-        TileLayer: rl.TileLayer,
-        Marker: rl.Marker,
-        Popup: rl.Popup,
-      });
-    })();
+    setIsClient(true);
+    fetchStations();
   }, []);
 
   const fetchStations = async () => {
@@ -90,10 +59,6 @@ export default function MapView(): JSX.Element | null {
     }
   };
 
-  useEffect(() => {
-    fetchStations();
-  }, []);
-
   const handleSearch = () => {
     const q = searchTerm.trim().toLowerCase();
 
@@ -108,30 +73,11 @@ export default function MapView(): JSX.Element | null {
     setStations(filtered);
   };
 
-  const { MapContainer, TileLayer, Marker, Popup } = MapComponents;
-  if (!MapContainer || !L) return null;
-
-  const getMarkerIcon = (brand: string) => {
-    const normalizedBrand = Object.keys(brandColors).find(
-      (key) => key.toLowerCase() === (brand ?? "").toLowerCase(),
-    );
-    const color = normalizedBrand ? brandColors[normalizedBrand] : brandColors.Default;
-    return new L.Icon({
-      iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
-      shadowUrl:
-        "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-shadow.png",
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41],
-    });
-  };
-
   return (
-    <div className="min-h-screen bg-base-200 text-base-content">
+    <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
       <Header />
 
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      <main className="mx-auto max-w-6xl px-4 py-8 flex-grow w-full">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl md:text-3xl font-bold">{t("map.fuelstationmap")}</h1>
           <a href="/dashboard" className="btn btn-outline">
@@ -153,34 +99,26 @@ export default function MapView(): JSX.Element | null {
           </button>
         </div>
 
-        <div className="bg-base-800 rounded-xl shadow-lg overflow-hidden border border-base-700">
-          <div className="h-[70vh] w-full">
-            <MapContainer center={[52.2297, 21.0122]} zoom={7} style={{ height: "100%", width: "100%" }}>
-              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
-              {stations.map((s, i) => (
-                <Marker key={i} position={[s.latitude, s.longitude]} icon={getMarkerIcon(s.brandName)}>
-                  <Popup>
-                    <div className="space-y-1">
-                      <div>
-                        <strong>{s.brandName}</strong>
-                        <br />
-                        <strong>
-                          {s.city}, {s.street} {s.houseNumber}
-                        </strong>
-                      </div>
-                      <Link
-                        to={`/station/${encodeURIComponent(s.brandName)}/${encodeURIComponent(s.city)}/${encodeURIComponent(
-                          s.street
-                        )}/${encodeURIComponent(s.houseNumber)}`}
-                        className="btn btn-outline btn-secondary"
-                      >
-                        {t("map.seedetails")}
-                      </Link>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
+        <div className="bg-base-300 rounded-xl shadow-lg overflow-hidden border border-base-content/10">
+          <div className="h-[70vh] w-full relative">
+            {isClient ? (
+              <Suspense
+                fallback={
+                  <div className="flex h-full w-full items-center justify-center bg-base-200 text-base-content/50">
+                    <span className="loading loading-spinner loading-lg"></span>
+                  </div>
+                }
+              >
+                <GlobalMapContent 
+                    stations={stations} 
+                    searchLabel={t("map.seedetails")} 
+                />
+              </Suspense>
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-base-200 text-base-content/50">
+                Ładowanie mapy...
+              </div>
+            )}
           </div>
         </div>
       </main>

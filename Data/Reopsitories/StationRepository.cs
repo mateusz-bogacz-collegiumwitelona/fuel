@@ -72,8 +72,8 @@ namespace Data.Reopsitories
                 HouseNumber = s.Address?.HouseNumber ?? string.Empty,
                 City = s.Address?.City ?? string.Empty,
                 PostalCode = s.Address?.PostalCode ?? string.Empty,
-                Latitude = s.Address?.Location?.Y ?? 0,   
-                Longitude = s.Address?.Location?.X ?? 0   
+                Latitude = s.Address?.Location?.Y ?? 0,
+                Longitude = s.Address?.Location?.X ?? 0
             }).ToList();
 
             return result;
@@ -135,7 +135,7 @@ namespace Data.Reopsitories
 
             if (!string.IsNullOrEmpty(request.BrandName))
                 stations = _filters.FilterByBrand(stations, request.BrandName);
-            
+
             if (request.PriceUpdatedAfter.HasValue || request.PriceUpdatedBefore.HasValue)
                 stations = _filters.FilterByPriceUpdateDate(stations, request.PriceUpdatedAfter, request.PriceUpdatedBefore);
 
@@ -276,7 +276,7 @@ namespace Data.Reopsitories
                 });
 
         public async Task<bool> IsStationExistAsync(string brandName, string street, string houseNumber, string city)
-            => await _context.Stations.AnyAsync( s => 
+            => await _context.Stations.AnyAsync(s =>
                 s.Brand.Name.ToLower() == brandName &&
                 s.Address.Street.ToLower() == street &&
                 s.Address.HouseNumber.ToLower() == houseNumber &&
@@ -292,7 +292,7 @@ namespace Data.Reopsitories
                     .Include(s => s.Address)
                     .Include(s => s.Brand)
                     .FirstOrDefaultAsync(s =>
-                        s.Brand != null &&  s.Brand != null && 
+                        s.Brand != null && s.Brand != null &&
                         s.Brand.Name.ToLower() == request.FindStation.BrandName.ToLower() &&
                         s.Address.Street.ToLower() == request.FindStation.Street.ToLower() &&
                         s.Address.HouseNumber.ToLower() == request.FindStation.HouseNumber.ToLower() &&
@@ -567,8 +567,8 @@ namespace Data.Reopsitories
                 _logger.LogError(ex, "Error deleting station: {request}", request);
                 throw;
             }
-        } 
-        
+        }
+
 
         public async Task<List<GetPriceProposalByStationResponse>> GetPriceProposaByStationAsync(FindStationRequest request)
         {
@@ -600,6 +600,54 @@ namespace Data.Reopsitories
 
             return pendingProposals;
         }
-            
+
+        public async Task<GetPriceHistoryResponse> GetFuelPriceHistoryAsync(Guid stationId, Guid fuelTypeId)
+        {
+            var fuelType = await _context.FuelTypes
+                .FirstOrDefaultAsync(ft => ft.Id == fuelTypeId);
+
+            var priceHistory = await _context.FuelPrices
+                .Where(fp => fp.StationId == stationId && fp.FuelTypeId == fuelTypeId)
+                .OrderBy(fp => fp.ValidFrom)
+                .Select(fp => new
+                {
+                    fp.Price,
+                    fp.ValidFrom,
+                    fp.ValidTo
+                })
+                .ToListAsync();
+
+            if (!priceHistory.Any()) return null;
+
+            return new GetPriceHistoryResponse
+            {
+                FuelType = fuelType.Name,
+                FuelCode = fuelType.Code,
+                ValidFrom = priceHistory.Select(p => p.ValidFrom).ToList(),
+                ValidTo = priceHistory.Select(p => p.ValidTo).ToList(),
+                Price = priceHistory.Select(p => p.Price).ToList()
+            };
+        }
+
+        public async Task<List<GetPriceHistoryResponse>> GetFuelPriceAllHistoryAsync(Guid stationId)
+        {
+            var fuelTypeIds = await _context.FuelPrices
+                .Where(fp => fp.StationId == stationId)
+                .Select(fp => fp.FuelTypeId)
+                .Distinct()
+                .ToListAsync();
+
+
+            var priceHistories = new List<GetPriceHistoryResponse>();
+
+            foreach (var fuelTypeId in fuelTypeIds)
+            {
+                var history = await GetFuelPriceHistoryAsync(stationId, fuelTypeId);
+
+                if (history != null) priceHistories.Add(history);
+            }
+
+            return priceHistories;
+        }
     }
 }

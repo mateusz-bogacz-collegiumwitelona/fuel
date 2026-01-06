@@ -40,24 +40,21 @@ export default function AdminDashboard() {
               </p>
             )}
           </div>
-          <button className="btn btn-outline btn-sm" onClick={handleLogout}>
-            {t("admin.logout")}
-          </button>
         </div>
 
         <div className="bg-base-300 rounded-xl p-6 shadow-md mb-8">
           <p className="mb-4 text-lg">{t("admin.welcome")}</p>
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-            <a href="/brand_admin" className="btn btn-primary w-full">
+            <a href="/admin/brands" className="btn btn-primary w-full">
               {t("admin.brand_panel")}
             </a>
-            <a href="/user_admin" className="btn btn-primary w-full">
+            <a href="/admin/users" className="btn btn-primary w-full">
               {t("admin.user_panel")}
             </a>
-            <a href="/gas_station_admin" className="btn btn-primary w-full">
+            <a href="/admin/stations" className="btn btn-primary w-full">
               {t("admin.gas_station_panel")}
             </a>
-            <a href="/proposals_admin" className="btn btn-primary w-full">
+            <a href="/admin/proposals" className="btn btn-primary w-full">
               {t("admin.proposal_panel")}
             </a>
           </div>

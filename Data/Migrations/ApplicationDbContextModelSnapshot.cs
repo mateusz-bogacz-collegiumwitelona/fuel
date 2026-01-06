@@ -197,6 +197,9 @@ namespace Data.Migrations
                     b.Property<DateTime>("ValidFrom")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("ValidTo")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("FuelTypeId");

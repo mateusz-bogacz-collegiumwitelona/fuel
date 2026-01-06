@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import { API_BASE } from "./api";
 
 type ProposalItem = {
@@ -6,13 +7,6 @@ type ProposalItem = {
   fuelCode: string;
   proposedPrice: number;
   createdAt: string;
-};
-
-type ProposalResponse = {
-  items: ProposalItem[];
-  pageNumber: number;
-  totalPages: number;
-  totalCount: number;
 };
 
 type ViewProposalsModalProps = {
@@ -26,7 +20,11 @@ type ViewProposalsModalProps = {
   } | null;
 };
 
+const MIN_REPORT_LENGTH = 3;
+
 export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsModalProps) {
+  const { t, i18n } = useTranslation();
+
   const [items, setItems] = React.useState<ProposalItem[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -47,6 +45,7 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
       setItems([]);
       closeReportModal();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, station]);
 
   const fetchProposals = async (pageNumber: number) => {
@@ -96,7 +95,7 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
 
     } catch (err) {
       console.error(err);
-      setError("Nie udało się pobrać propozycji.");
+      setError(t("station.proposals_fetch_error"));
     } finally {
       setLoading(false);
     }
@@ -125,8 +124,11 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
   const handleSendReport = async () => {
     if (!userToReport) return;
     
-    if (reportReason.length < 50) {
-      setReportMessage({ type: 'error', text: "Powód zgłoszenia musi mieć co najmniej 50 znaków." });
+    if (reportReason.length < MIN_REPORT_LENGTH) {
+      setReportMessage({ 
+        type: 'error', 
+        text: t("station.report_error_min_len", { min: MIN_REPORT_LENGTH }) 
+      });
       return;
     }
 
@@ -150,11 +152,11 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok || json.success === false) {
-        const msg = json.message || "Wystąpił błąd podczas wysyłania zgłoszenia.";
+        const msg = json.message || (json.errors ? JSON.stringify(json.errors) : t("station.proposals_fetch_error")); // fallback error
         throw new Error(msg);
       }
 
-      setReportMessage({ type: 'success', text: "Użytkownik został zgłoszony pomyślnie." });
+      setReportMessage({ type: 'success', text: t("station.report_success") });
       
       setTimeout(() => {
         closeReportModal();
@@ -162,7 +164,7 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
 
     } catch (err: any) {
       console.error(err);
-      setReportMessage({ type: 'error', text: err.message || "Błąd połączenia." });
+      setReportMessage({ type: 'error', text: err.message || t("login.connection_error") });
     } finally {
       setReportLoading(false);
     }
@@ -170,7 +172,7 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleString("pl-PL");
+    return new Date(dateStr).toLocaleString(i18n.language);
   };
 
   if (!isOpen) return null;
@@ -180,7 +182,7 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
       <div className="modal-box w-11/12 max-w-3xl relative">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-lg">
-            Zgłoszone propozycje cen (oczekujące)
+            {t("station.proposals_modal_title")}
           </h3>
           <button className="btn btn-sm btn-ghost" onClick={onClose}>✕</button>
         </div>
@@ -193,7 +195,7 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
           </div>
         ) : items.length === 0 ? (
           <div className="py-8 text-center text-base-content/60">
-            Brak zgłoszonych propozycji dla tej stacji.
+            {t("station.proposals_none")}
           </div>
         ) : (
           <>
@@ -201,10 +203,10 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
               <table className="table table-zebra w-full text-sm">
                 <thead>
                   <tr>
-                    <th>Data zgłoszenia</th>
-                    <th>Użytkownik</th>
-                    <th>Paliwo</th>
-                    <th className="text-right">Cena</th>
+                    <th>{t("station.proposals_date")}</th>
+                    <th>{t("station.proposals_user")}</th>
+                    <th>{t("station.proposals_fuel")}</th>
+                    <th className="text-right">{t("station.proposals_price")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -213,10 +215,9 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
                       <td className="text-xs text-base-content/70">{formatDate(item.createdAt)}</td>
                       <td className="font-medium flex items-center gap-2">
                         {item.userName}
-
                         <button 
                           className="btn btn-xs btn-circle btn-ghost text-error tooltip tooltip-right" 
-                          data-tip="Zgłoś użytkownika"
+                          data-tip={t("station.proposals_report_tooltip")}
                           onClick={() => openReportModal(item.userName)}
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
@@ -244,7 +245,7 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
                   «
                 </button>
                 <button className="btn btn-sm btn-disabled">
-                  Strona {page} z {totalPages}
+                  {t("list.page")} {page} / {totalPages}
                 </button>
                 <button 
                   className="btn btn-sm" 
@@ -259,27 +260,29 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
         )}
 
         <div className="modal-action">
-          <button className="btn" onClick={onClose}>Zamknij</button>
+          <button className="btn" onClick={onClose}>{t("common.close")}</button>
         </div>
 
         {reportModalOpen && (
           <div className="absolute inset-0 bg-base-100/90 flex items-center justify-center z-50 rounded-2xl p-4">
             <div className="bg-base-200 p-6 rounded-xl shadow-xl w-full max-w-md border border-base-300">
-              <h4 className="text-lg font-bold mb-2 text-error">Zgłoś użytkownika: {userToReport}</h4>
+              <h4 className="text-lg font-bold mb-2 text-error">
+                {t("station.report_modal_title", { user: userToReport })}
+              </h4>
               <p className="text-sm text-base-content/70 mb-4">
-                Opisz dlaczego zgłaszasz tego użytkownika. Twoje zgłoszenie zostanie zweryfikowane przez administratora.
+                {t("station.report_modal_desc")}
               </p>
               
               <div className="form-control">
                 <textarea 
                   className="textarea textarea-bordered h-24 w-full" 
-                  placeholder="Powód zgłoszenia (min. 50 znaków)..."
+                  placeholder={t("station.report_reason_placeholder")}
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value)}
                 ></textarea>
                 <label className="label">
-                  <span className={`label-text-alt ${reportReason.length < 50 ? 'text-error' : 'text-success'}`}>
-                    {reportReason.length} / 1000 znaków (min. 50)
+                  <span className={`label-text-alt ${reportReason.length < MIN_REPORT_LENGTH ? 'text-error' : 'text-success'}`}>
+                    {t("station.report_length_validation", { current: reportReason.length, min: MIN_REPORT_LENGTH })}
                   </span>
                 </label>
               </div>
@@ -296,14 +299,14 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
                   onClick={closeReportModal}
                   disabled={reportLoading}
                 >
-                  Anuluj
+                  {t("station.report_cancel")}
                 </button>
                 <button 
                   className="btn btn-sm btn-error"
                   onClick={handleSendReport}
-                  disabled={reportLoading || reportReason.length < 50}
+                  disabled={reportLoading || reportReason.length < MIN_REPORT_LENGTH}
                 >
-                  {reportLoading ? <span className="loading loading-spinner loading-xs"></span> : "Wyślij zgłoszenie"}
+                  {reportLoading ? <span className="loading loading-spinner loading-xs"></span> : t("station.report_submit")}
                 </button>
               </div>
             </div>
@@ -311,7 +314,7 @@ export function ViewProposalsModal({ isOpen, onClose, station }: ViewProposalsMo
         )}
 
       </div>
-      <label className="modal-backdrop" onClick={onClose}>Zamknij</label>
+      <label className="modal-backdrop" onClick={onClose}>{t("common.close")}</label>
     </div>
   );
 }

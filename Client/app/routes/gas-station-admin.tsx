@@ -109,35 +109,16 @@ export default function GasStationAdminPage() {
     }
   }
 
-  const openAdd = () => {
-    setSelectedStation(null);
-    setActiveModal("add");
-  };
-
-  const openEdit = (station: AdminStation) => {
-    setSelectedStation(station);
-    setActiveModal("edit");
-  };
-
-  const openDelete = (station: AdminStation) => {
-    setSelectedStation(station);
-    setActiveModal("delete");
-  };
-
-  const closeModal = () => {
-    setActiveModal(null);
-    setSelectedStation(null);
-  };
-
+  const openAdd = () => { setSelectedStation(null); setActiveModal("add"); };
+  const openEdit = (station: AdminStation) => { setSelectedStation(station); setActiveModal("edit"); };
+  const openDelete = (station: AdminStation) => { setSelectedStation(station); setActiveModal("delete"); };
+  const closeModal = () => { setActiveModal(null); setSelectedStation(null); };
 
   const handleAddConfirm = async (values: StationFormValues) => {
     try {
       const res = await fetch(`${API_BASE}/api/admin/station/add`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         credentials: "include",
         body: JSON.stringify({
           brandName: values.brandName,
@@ -147,11 +128,7 @@ export default function GasStationAdminPage() {
           postalCode: values.postalCode,
           latitude: values.latitude,
           longitude: values.longitude,
-          fuelTypes: values.fuelTypes.map((f) => ({
-            name: f.code,
-            code: f.code,
-            price: f.price,
-          })),
+          fuelTypes: values.fuelTypes.map((f) => ({ name: f.code, code: f.code, price: f.price })),
         }),
       });
 
@@ -165,15 +142,12 @@ export default function GasStationAdminPage() {
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(
-        e instanceof Error ? e.message : t("stationadmin.error_add_fallback"),
-      );
+      alert(e instanceof Error ? e.message : t("stationadmin.error_add_fallback"));
     }
   };
 
-const handleEditConfirm = async (values: Partial<StationFormValues>) => {
+  const handleEditConfirm = async (values: Partial<StationFormValues>) => {
     if (!selectedStation) return;
-
     try {
       const body: any = {
         findStation: {
@@ -190,22 +164,14 @@ const handleEditConfirm = async (values: Partial<StationFormValues>) => {
       if (values.city) body.newCity = values.city;
       if (values.postalCode) body.newPostalCode = values.postalCode;
       if (typeof values.latitude === "number") body.newLatitude = values.latitude;
-      if (typeof values.longitude === "number")
-        body.newLongitude = values.longitude;
+      if (typeof values.longitude === "number") body.newLongitude = values.longitude;
       if (values.fuelTypes && values.fuelTypes.length > 0) {
-        body.fuelType = values.fuelTypes.map((f) => ({
-          name: f.code,
-          code: f.code,
-          price: f.price,
-        }));
+        body.fuelType = values.fuelTypes.map((f) => ({ name: f.code, code: f.code, price: f.price }));
       }
 
       const res = await fetch(`${API_BASE}/api/admin/station/edit`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         credentials: "include",
         body: JSON.stringify(body),
       });
@@ -220,24 +186,16 @@ const handleEditConfirm = async (values: Partial<StationFormValues>) => {
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(
-        e instanceof Error
-          ? e.message
-          : t("stationadmin.error_edit_fallback"),
-      );
+      alert(e instanceof Error ? e.message : t("stationadmin.error_edit_fallback"));
     }
   };
 
   const handleDeleteConfirm = async () => {
     if (!selectedStation) return;
-
     try {
       const res = await fetch(`${API_BASE}/api/admin/station/delete`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         credentials: "include",
         body: JSON.stringify({
           brandName: selectedStation.brandName,
@@ -249,10 +207,7 @@ const handleEditConfirm = async (values: Partial<StationFormValues>) => {
 
       if (!res.ok) {
         const text = await res.text();
-        const msg = t("stationadmin.error_delete", {
-          status: res.status,
-          text,
-        });
+        const msg = t("stationadmin.error_delete", { status: res.status, text });
         throw new Error(msg);
       }
 
@@ -260,14 +215,9 @@ const handleEditConfirm = async (values: Partial<StationFormValues>) => {
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(
-        e instanceof Error
-          ? e.message
-          : t("stationadmin.error_delete_fallback"),
-      );
+      alert(e instanceof Error ? e.message : t("stationadmin.error_delete_fallback"));
     }
   };
-
 
   const goToPage = (p: number) => {
     if (p < 1 || p > totalPages || p === pageNumber) return;
@@ -276,7 +226,7 @@ const handleEditConfirm = async (values: Partial<StationFormValues>) => {
 
   function renderPageButtons() {
     const pages: number[] = [];
-    const windowSize = 5;
+    const windowSize = 3; 
     let start = Math.max(1, pageNumber - Math.floor(windowSize / 2));
     let end = start + windowSize - 1;
 
@@ -284,107 +234,51 @@ const handleEditConfirm = async (values: Partial<StationFormValues>) => {
       end = totalPages;
       start = Math.max(1, end - windowSize + 1);
     }
-
     for (let i = start; i <= end; i++) pages.push(i);
 
     return (
-      <div className="flex items-center gap-2">
-        <button
-          className="btn btn-sm"
-          onClick={() => goToPage(1)}
-          disabled={pageNumber === 1}
-          type="button"
-        >
-          «1
-        </button>
-
-        <button
-          className="btn btn-sm"
-          onClick={() => goToPage(pageNumber - 1)}
-          disabled={pageNumber === 1}
-          type="button"
-        >
-          ←
-        </button>
-
+      <div className="flex items-center gap-1 sm:gap-2">
+        <button className="btn btn-sm" onClick={() => goToPage(1)} disabled={pageNumber === 1} type="button">«</button>
+        <button className="btn btn-sm" onClick={() => goToPage(pageNumber - 1)} disabled={pageNumber === 1} type="button">←</button>
         {pages.map((p) => (
-          <button
-            key={p}
-            className={`btn btn-sm ${p === pageNumber ? "btn-active" : ""}`}
-            onClick={() => goToPage(p)}
-            type="button"
-          >
-            {p}
-          </button>
+          <button key={p} className={`btn btn-sm ${p === pageNumber ? "btn-active" : ""}`} onClick={() => goToPage(p)} type="button">{p}</button>
         ))}
-
-        <button
-          className="btn btn-sm"
-          onClick={() => goToPage(pageNumber + 1)}
-          disabled={pageNumber === totalPages}
-          type="button"
-        >
-          →
-        </button>
-        <button
-          className="btn btn-sm"
-          onClick={() => goToPage(totalPages)}
-          disabled={pageNumber === totalPages}
-          type="button"
-        >
-          {totalPages} »
-        </button>
+        <button className="btn btn-sm" onClick={() => goToPage(pageNumber + 1)} disabled={pageNumber === totalPages} type="button">→</button>
+        <button className="btn btn-sm" onClick={() => goToPage(totalPages)} disabled={pageNumber === totalPages} type="button">»</button>
       </div>
     );
   }
 
-
-  if (state === "checking") {
-    return (
-      <div className="min-h-screen bg-base-200 flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg" />
-      </div>
-    );
-  }
-
-  if (state !== "allowed") {
-    return null;
-  }
+  if (state === "checking") return <div className="min-h-screen bg-base-200 flex items-center justify-center"><span className="loading loading-spinner loading-lg" /></div>;
+  if (state !== "allowed") return null;
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
       <Header />
 
-      <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-10">
-        <div className="flex justify-between items-center mb-4">
+      <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-6 sm:py-10">
+        
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <div>
-            <h1 className="text-3xl font-bold">{t("stationadmin.title")}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">{t("stationadmin.title")}</h1>
             <p className="text-sm text-base-content/70">
-              {email
-                ? t("stationadmin.logged_in_as", { email })
-                : t("stationadmin.checking_session")}
+              {email ? t("stationadmin.logged_in_as", { email }) : t("stationadmin.checking_session")}
             </p>
           </div>
-          <div className="flex gap-2">
-            <a href="/admin-dashboard" className="btn btn-outline btn-sm">
+          <div className="flex gap-2 w-full sm:w-auto justify-end">
+            <a href="/admin" className="btn btn-outline btn-sm">
               {t("stationadmin.back_to_admin")}
             </a>
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={openAdd}
-              type="button"
-            >
+            <button className="btn btn-primary btn-sm" onClick={openAdd} type="button">
               {t("stationadmin.add_station_button")}
             </button>
           </div>
         </div>
 
         <div className="bg-base-300 rounded-xl p-4 shadow-md mb-4">
-          <div className="form-control w-full max-w-xs">
+          <div className="form-control w-full">
             <label className="label">
-              <span className="label-text">
-                {t("stationadmin.search_label")}
-              </span>
+              <span className="label-text">{t("stationadmin.search_label")}</span>
             </label>
             <input
               type="text"
@@ -419,47 +313,25 @@ const handleEditConfirm = async (values: Partial<StationFormValues>) => {
                       <th>{t("stationadmin.table_postal")}</th>
                       <th>{t("stationadmin.table_created")}</th>
                       <th>{t("stationadmin.table_updated")}</th>
-                      <th className="text-right">
-                        {t("stationadmin.table_actions")}
-                      </th>
+                      <th className="text-right">{t("stationadmin.table_actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {stations.map((s, idx) => (
-                      <tr
-                        key={`${s.brandName}-${s.city}-${s.street}-${s.houseNumber}-${idx}`}
-                      >
-                        <td>{idx + 1}</td>
-                        <td>{s.brandName}</td>
+                      <tr key={`${s.brandName}-${s.city}-${s.street}-${s.houseNumber}-${idx}`}>
+                        <td>{idx + 1 + (pageNumber - 1) * pageSize}</td>
+                        <td className="font-semibold">{s.brandName}</td>
                         <td>{s.city}</td>
-                        <td>
-                          {s.street} {s.houseNumber}
-                        </td>
+                        <td className="whitespace-nowrap">{s.street} {s.houseNumber}</td>
                         <td>{s.postalCode}</td>
-                        <td>
-                          {s.createdAt
-                            ? new Date(s.createdAt).toLocaleDateString()
-                            : "-"}
-                        </td>
-                        <td>
-                          {s.updatedAt
-                            ? new Date(s.updatedAt).toLocaleDateString()
-                            : "-"}
-                        </td>
+                        <td className="whitespace-nowrap">{s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "-"}</td>
+                        <td className="whitespace-nowrap">{s.updatedAt ? new Date(s.updatedAt).toLocaleDateString() : "-"}</td>
                         <td>
                           <div className="flex justify-end gap-2">
-                            <button
-                              className="btn btn-xs"
-                              type="button"
-                              onClick={() => openEdit(s)}
-                            >
+                            <button className="btn btn-xs" type="button" onClick={() => openEdit(s)}>
                               {t("stationadmin.edit_button")}
                             </button>
-                            <button
-                              className="btn btn-xs btn-error"
-                              type="button"
-                              onClick={() => openDelete(s)}
-                            >
+                            <button className="btn btn-xs btn-error" type="button" onClick={() => openDelete(s)}>
                               {t("stationadmin.delete_button")}
                             </button>
                           </div>
@@ -470,13 +342,10 @@ const handleEditConfirm = async (values: Partial<StationFormValues>) => {
                 </table>
               </div>
 
-              <div className="mt-4 flex justify-between items-center text-sm">
+              <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
                 {renderPageButtons()}
                 <div className="text-base-content/70">
-                  {t("stationadmin.page_info", {
-                    page: pageNumber,
-                    total: totalPages,
-                  })}
+                  {t("stationadmin.page_info", { page: pageNumber, total: totalPages })}
                 </div>
               </div>
             </>
@@ -486,25 +355,9 @@ const handleEditConfirm = async (values: Partial<StationFormValues>) => {
 
       <Footer />
 
-      <AddStationModal
-        isOpen={activeModal === "add"}
-        onClose={closeModal}
-        onConfirm={handleAddConfirm}
-      />
-
-      <EditStationModal
-        isOpen={activeModal === "edit"}
-        onClose={closeModal}
-        station={selectedStation}
-        onConfirm={handleEditConfirm}
-      />
-
-      <DeleteStationModal
-        isOpen={activeModal === "delete"}
-        onClose={closeModal}
-        station={selectedStation}
-        onConfirm={handleDeleteConfirm}
-      />
+      <AddStationModal isOpen={activeModal === "add"} onClose={closeModal} onConfirm={handleAddConfirm} />
+      <EditStationModal isOpen={activeModal === "edit"} onClose={closeModal} station={selectedStation} onConfirm={handleEditConfirm} />
+      <DeleteStationModal isOpen={activeModal === "delete"} onClose={closeModal} station={selectedStation} onConfirm={handleDeleteConfirm} />
     </div>
   );
 }

@@ -23,6 +23,10 @@ using Serilog.Sinks.PeriodicBatching;
 using Services.BackgroundServices;
 using Services.BackgrounServices;
 using Services.Commands;
+using Services.Email;
+using Services.Event;
+using Services.Event.Handlers;
+using Services.Event.Interfaces;
 using Services.Helpers;
 using Services.Interfaces;
 using Services.Services;
@@ -274,6 +278,9 @@ builder.Services.AddScoped<IBrandServices, BrandServices>();
 builder.Services.AddScoped<IBanService, BanService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 
+//singleton email queue
+builder.Services.AddSingleton<IEmailQueue, InMemoryEmailQueue>();
+
 //register helpers
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<EmailBodys>();
@@ -286,7 +293,24 @@ builder.Services.AddScoped<GoogleAuthClient>();
 //register background services
 builder.Services.AddHostedService<BanExpirationService>();
 builder.Services.AddHostedService<ProposalExpirationService>();
+builder.Services.AddHostedService<EmailBackgroundWorker>();
 
+//register dispacher
+builder.Services.AddTransient<IEventDispatcher, EventDispatcher>();
+
+//register observers
+builder.Services.AddTransient<IEventHandler<PriceProposalEvaluatedEvent>, UpdateUserStatisticsHandler>();
+builder.Services.AddTransient<IEventHandler<PriceProposalEvaluatedEvent>, ProposalEmailNotificationHandler>();
+builder.Services.AddTransient<IEventHandler<PriceProposalEvaluatedEvent>, ProposalCacheInvalidationHandler>();
+builder.Services.AddTransient<IEventHandler<UserRegisteredEvent>, InitializeUserStatsHandler>();
+builder.Services.AddTransient<IEventHandler<UserRegisteredEvent>, SendRegistrationEmailHandler>();
+builder.Services.AddTransient<IEventHandler<UserBannedEvent>, ClearUserReportsHandler>();
+builder.Services.AddTransient<IEventHandler<UserBannedEvent>, NotifyUserBanHandler>();
+builder.Services.AddTransient<IEventHandler<UserBannedEvent>, InvalidateBannedUserCacheHandler>();
+builder.Services.AddTransient<IEventHandler<UserUnlockedEvent>, NotifyUserUnlockHandler>();
+builder.Services.AddTransient<IEventHandler<UserUnlockedEvent>, InvalidateUnlockedUserCacheHandler>();
+
+//controllers and swagger
 builder.Services.AddControllers(op =>
 {
     var policy = new AuthorizationPolicyBuilder()

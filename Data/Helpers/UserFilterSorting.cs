@@ -26,6 +26,7 @@ namespace Data.Helpers
                 "roles" or "role" => Order(list, u => rolePriority.GetValueOrDefault(u.Roles.ToLower(), 0), isDescending),
                 "createdat" or "created" => Order(list, u => u.CreatedAt, isDescending),
                 "isbanned" or "banned" or "ban" => OrderWithSecondary(list, u => u.IsBanned, u => u.UserName, isDescending),
+                "hasreport" or "report" => OrderWithSecondary(list, u => u.HasReport, u => u.UserName, isDescending),
                 _ => list.OrderByDescending(u => rolePriority.GetValueOrDefault(u.Roles.ToLower(), 0))
                          .ThenBy(u => u.UserName)
                          .ToList()

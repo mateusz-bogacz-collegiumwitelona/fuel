@@ -41,6 +41,7 @@ export default function StationMapContent({
   street,
   houseNumber 
 }: StationMapProps) {
+  
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
 
@@ -67,7 +68,7 @@ export default function StationMapContent({
       const map = L.map(mapContainerRef.current).setView([latitude, longitude], 15);
       
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; OpenStreetMap contributors'
+        attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
       mapInstanceRef.current = map;
@@ -95,13 +96,7 @@ export default function StationMapContent({
     `;
     marker.bindPopup(popupContent);
 
-    return () => {
-      if (mapInstanceRef.current) {
-          mapInstanceRef.current.remove();
-          mapInstanceRef.current = null;
-      }
-    };
-  }, [latitude, longitude, brandName]); 
+  }, [latitude, longitude, brandName, city, street, houseNumber]); 
 
   return <div ref={mapContainerRef} style={{ height: "100%", width: "100%", zIndex: 0 }} />;
 }

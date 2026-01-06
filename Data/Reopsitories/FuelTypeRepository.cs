@@ -156,21 +156,54 @@ namespace Data.Reopsitories
 
         public async Task<bool> ChangeFuelPriceAsync(Guid stationId, Guid fuelTypeId, decimal price)
         {
-            var fuelPrice = await _context.FuelPrices.FirstOrDefaultAsync(fp => fp.StationId == stationId && fp.FuelTypeId == fuelTypeId);
-            
-            if (fuelPrice == null)
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
             {
-                _logger.LogWarning("Fuel price not found for Station ID {StationId} and FuelType ID {FuelTypeId}.", stationId, fuelTypeId);
-                return false;
+                var fuelPrice = await _context.FuelPrices
+                    .FirstOrDefaultAsync(fp => fp.StationId == stationId && fp.FuelTypeId == fuelTypeId);
+
+                if (fuelPrice == null)
+                {
+                    _logger.LogWarning("Fuel price not found for Station ID {StationId} and FuelType ID {FuelTypeId}.", stationId, fuelTypeId);
+                    return false;
+                }
+
+                _logger.LogInformation(
+                    "Changing fuel price for Station ID {StationId} and FuelType ID {FuelTypeId}. Old: {OldPrice}, New: {NewPrice}",
+                    stationId, fuelTypeId, fuelPrice.Price, price);
+
+                var historicalPrice = new FuelPrice
+                {
+                    Id = Guid.NewGuid(),
+                    StationId = fuelPrice.StationId,
+                    FuelTypeId = fuelPrice.FuelTypeId,
+                    Price = fuelPrice.Price,
+                    ValidFrom = fuelPrice.ValidFrom,
+                    ValidTo = DateTime.UtcNow,
+                    CreatedAt = fuelPrice.CreatedAt,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                _context.FuelPrices.Add(historicalPrice);
+
+                fuelPrice.Price = price;
+                fuelPrice.ValidFrom = DateTime.UtcNow;
+                fuelPrice.ValidTo = null;
+                fuelPrice.UpdatedAt = DateTime.UtcNow;
+
+                var result = await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return result > 0;
             }
-            
-            fuelPrice.Price = price;
-            fuelPrice.UpdatedAt = DateTime.UtcNow;
-            fuelPrice.ValidFrom = DateTime.UtcNow;
-            
-            var result = await _context.SaveChangesAsync();
-            
-            return result > 0;
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex,
+                    "Error changing fuel price for Station ID {StationId} and FuelType ID {FuelTypeId}",
+                    stationId, fuelTypeId);
+                throw;
+            }
         }
 
     }

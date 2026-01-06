@@ -52,7 +52,7 @@ function extractRoleLoose(obj: any): string | null {
 
 function redirectByRole(role: string | null) {
   if (typeof window === "undefined") return;
-  if (role === "Admin") window.location.href = "/admin-dashboard";
+  if (role === "Admin") window.location.href = "/admin";
   else window.location.href = "/dashboard";
 }
 
