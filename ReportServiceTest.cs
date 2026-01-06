@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -48,7 +48,7 @@ namespace Tests.ServicesTests
 
             _banServiceMock = new Mock<IBanService>();
 
-            
+            // CacheService has no parameterless ctor; create a mock IConnectionMultiplexer and ILogger
             var redisMock = new Mock<StackExchange.Redis.IConnectionMultiplexer>() { DefaultValue = DefaultValue.Mock };
             var cacheLogger = new Mock<ILogger<CacheService>>();
             _cacheMock = new Mock<CacheService>(redisMock.Object, cacheLogger.Object) { DefaultValue = DefaultValue.Mock };
