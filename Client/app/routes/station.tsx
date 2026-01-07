@@ -1,14 +1,15 @@
-import React, { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
+
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { API_BASE } from "../components/api";
-import { useTranslation } from "react-i18next";
 import { ProposalModal } from "../components/proposal-modal";
 import { ViewProposalsModal } from "../components/view-proposals-modal";
 import { StationPriceHistoryModal } from "../components/station-price-history-modal";
 
-const StationMapContent = lazy(() => import("../components/StationMapContent"));
+import GlobalMapContent from "../components/GlobalMapContent";
 
 type FuelPrice = {
   fuelCode: string;
@@ -43,7 +44,6 @@ export default function StationProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [isProposalOpen, setIsProposalOpen] = useState(false);
   const [isViewProposalsOpen, setIsViewProposalsOpen] = useState(false);
-  
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const [isClient, setIsClient] = useState(false);
@@ -199,21 +199,22 @@ export default function StationProfilePage() {
               <section className="bg-base-300 rounded-xl p-4 shadow-md">
                 <h3 className="text-lg font-semibold mb-3">{t("station.map_title")}</h3>
                 <div className="h-72 rounded-lg overflow-hidden bg-base-100 relative">
+                  
                   {isClient ? (
-                     <Suspense fallback={
-                        <div className="flex h-full w-full items-center justify-center text-base-content/50">
-                             <span className="loading loading-spinner"></span>
-                        </div>
-                     }>
-                        <StationMapContent 
-                            brandName={station.brandName}
-                            latitude={station.latitude}
-                            longitude={station.longitude}
-                            city={station.city}
-                            street={station.street}
-                            houseNumber={station.houseNumber}
+                        <GlobalMapContent 
+                            stations={[{
+                                brandName: station.brandName,
+                                street: station.street,
+                                houseNumber: station.houseNumber,
+                                city: station.city,
+                                postcode: station.postalCode, 
+                                latitude: station.latitude,
+                                longitude: station.longitude
+                            }]}
+                      searchLabel={t("station.open_google_maps") || "Zobacz"}
+                              initialZoom={16}
+                              enableDetailsLink={false}
                         />
-                     </Suspense>
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-base-content/50">
                         {t("station.map_loading")}
