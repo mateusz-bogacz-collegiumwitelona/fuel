@@ -23,11 +23,27 @@
   },
 
   "map": {
-    "fuelstationmap": "Mapa stacji benzynowych",
-    "dashboardback": "← Powrót do dashboardu",
-    "search": "Szukaj",
-    "seedetails": "Zobacz szczegóły",
-    "stationname": "Wpisz nazwę stacji (np. Orlen)"
+  "fuelstationmap": "Mapa stacji benzynowych",
+  "dashboardback": "← Powrót do dashboardu",
+  "search": "Szukaj",
+  "seedetails": "Zobacz szczegóły",
+  "stationname": "Wpisz nazwę stacji (np. Orlen)",
+  "fuelstationmap": "Mapa stacji paliw",
+  "dashboardback": "Powrót do pulpitu",
+  "search": "Szukaj",
+  "search_placeholder": "Nazwa stacji, miasto, ulica...",
+  "seedetails": "Zobacz szczegóły",
+  "loading": "Ładowanie mapy...",
+  "use_my_location": "Użyj mojej lokalizacji",
+  "location_active": "Lokalizacja aktywna (kliknij by odświeżyć)",
+  "distance_label": "Dystans",
+  "km": "km",
+  "results_count": "Wyników",
+  "geolocation_not_supported": "Twoja przeglądarka nie obsługuje geolokacji.",
+  "location_permission_error": "Nie udało się pobrać lokalizacji. Sprawdź uprawnienia.",
+  "no_stations_found": "Nie znaleziono stacji w promieniu {{distance}} km.",
+  "server_error": "Błąd serwera",
+  "error_prefix": "Błąd:"
   },
 
   "list": {
@@ -191,7 +207,7 @@
   },
 
   "station": {
-    "back": "← Powrót do dashboardu",
+    "back": "← Powrót do mapy",
     "title": "Szczegóły stacji",
     "loading": "Ładowanie...",
     "missing_url_data": "Brak danych stacji w adresie URL.",
@@ -570,8 +586,84 @@
     "logging_in": "Logowanie...",
     "invalid_credentials": "Błędny email lub hasło",
     "success": "Zalogowano pomyślnie!",
-    "connection_error": "Błąd połączenia z serwerem"
+    "connection_error": "Błąd połączenia z serwerem",
+    "or": "LUB",
+    "forgot_password": "Zapomniałeś hasła? Kliknij tutaj",
+    "no_account": "Nie masz konta?",
+    "register": "Zarejestruj się!",
+    "default_success": "Zalogowano pomyślnie!"
   },
+
+"register": {
+    "title": "Rejestracja",
+    "username_placeholder": "Nazwa użytkownika",
+    "email_placeholder": "Email",
+    "password_placeholder": "Hasło",
+    "confirm_password_placeholder": "Powtórz hasło",
+    "password_rules": "Hasło musi mieć co najmniej 6 znaków, zawierać co najmniej: jedną wielką literę, jedną cyfrę oraz jeden znak specjalny.",
+    "submit": "Zarejestruj się",
+    "registering": "Rejestrowanie...",
+    "or": "LUB",
+    "facebook_button": "Zarejestruj się przez Facebook",
+    "have_account": "Masz już konto?",
+    "login_link": "Zaloguj się",
+    "error_username_required": "Podaj nazwę użytkownika.",
+    "error_password_mismatch": "Hasła nie są takie same.",
+    "error_password_short": "Hasło musi mieć co najmniej 6 znaków.",
+    "error_creation_failed": "Nie udało się utworzyć konta.",
+    "success_message": "Konto zostało utworzone. Sprawdź e-mail, aby potwierdzić adres.",
+    "connection_error": "Błąd połączenia z serwerem."
+  },
+
+"forgot-password": {
+    "title": "Przypomnienie hasła",
+    "description": "Wpisz adres e-mail użyty przy rejestracji. Jeśli konto istnieje i e-mail jest potwierdzony, wyślemy wiadomość z instrukcją zmiany hasła.",
+    "email_placeholder": "E-mail",
+    "submit": "Wyślij link resetujący",
+    "sending": "Wysyłanie...",
+    "remember_password": "Pamiętasz hasło?",
+    "back_to_login": "Wróć do logowania",
+    "error_email_required": "Podaj adres e-mail.",
+    "error_sending_failed": "Nie udało się wysłać maila z resetem hasła.",
+    "success_message": "Jeśli konto istnieje i e-mail jest potwierdzony, wysłaliśmy wiadomość z instrukcją resetu hasła.",
+    "connection_error": "Błąd połączenia z serwerem."
+  },
+  "reset-password": {
+    "title": "Ustaw nowe hasło",
+    "description": "Wpisz swoje nowe hasło poniżej.",
+    "account_label": "Konto",
+    "new_password_placeholder": "Nowe hasło",
+    "confirm_password_placeholder": "Powtórz nowe hasło",
+    "password_rules": "Hasło musi mieć co najmniej 6 znaków, zawierać co najmniej jedną wielką literę, jedną cyfrę oraz jeden znak specjalny.",
+    "submit": "Zapisz nowe hasło",
+    "saving": "Zapisywanie...",
+    "success_button": "Przejdź do logowania",
+    "remember_password": "Pamiętasz hasło?",
+    "back_to_login": "Wróć do logowania",
+    "error_missing_token_link": "Błąd: Brak tokena resetującego w linku.",
+    "error_missing_token_submit": "Brak tokena weryfikacyjnego (użyj linku z e-maila).",
+    "error_password_mismatch": "Hasła nie są takie same.",
+    "error_password_short": "Hasło musi mieć co najmniej 6 znaków.",
+    "error_setting_failed": "Nie udało się ustawić nowego hasła.",
+    "success_message": "Hasło zostało zmienione. Możesz się teraz zalogować.",
+    "connection_error": "Błąd połączenia z serwerem."
+  },
+
+"confirm-email": {
+    "verifying_initial": "Weryfikacja adresu e-mail...",
+    "loading_title": "Weryfikacja...",
+    "loading_desc": "Proszę czekać, sprawdzamy Twój link.",
+    "error_title": "Błąd weryfikacji",
+    "success_title": "Sukces!",
+    "back_to_login": "Wróć do logowania",
+    "go_to_login": "Przejdź do logowania",
+    "error_invalid_link": "Nieprawidłowy link potwierdzający (brak tokena lub e-maila).",
+    "error_already_confirmed": "Twój e-mail został już wcześniej potwierdzony. Możesz się zalogować.",
+    "error_default": "Nie udało się potwierdzić adresu e-mail.",
+    "success_message": "Potwierdzono email. Możesz się teraz zalogować.",
+    "connection_error": "Błąd połączenia z serwerem."
+  },
+
 
   "common": {
     "save": "Zapisz",

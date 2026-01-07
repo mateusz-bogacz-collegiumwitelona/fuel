@@ -23,11 +23,27 @@
   },
 
   "map": {
-    "fuelstationmap": "Station map",
-    "dashboardback": "← Back to dashboard",
-    "search": "Search",
-    "seedetails": "See details",
-    "stationname": " Type station name (e.g. Orlen)"
+  "fuelstationmap": "Station map",
+  "dashboardback": "← Back to dashboard",
+  "search": "Search",
+   "seedetails": "See details",
+  "stationname": " Type station name (e.g. Orlen)",
+  "fuelstationmap": "Fuel Station Map",
+  "dashboardback": "Back to Dashboard",
+  "search": "Search",
+  "search_placeholder": "Station name, city, street...",
+  "seedetails": "See details",
+  "loading": "Loading map...",
+  "use_my_location": "Use my location",
+  "location_active": "Location active (click to refresh)",
+  "distance_label": "Distance",
+  "km": "km",
+  "results_count": "Results",
+  "geolocation_not_supported": "Geolocation is not supported by your browser.",
+  "location_permission_error": "Could not retrieve location. Check browser permissions.",
+  "no_stations_found": "No stations found within {{distance}} km.",
+  "server_error": "Server error",
+  "error_prefix": "Error:"
   },
 
   "list": {
@@ -191,7 +207,7 @@
 },
 
 "station": {
-  "back": "← Back to dashboard",
+  "back": "← Back to map",
   "title": "Station details",
   "loading": "Loading...",
   "missing_url_data": "Missing station data in the URL.",
@@ -503,15 +519,91 @@
 },
 
 "login": {
-  "title": "Login",
-  "email_placeholder": "Email",
-  "password_placeholder": "Password",
-  "submit": "Sign in",
-  "logging_in": "Signing in...",
-  "invalid_credentials": "Invalid email or password",
-  "success": "Successfully signed in!",
-  "connection_error": "Connection error"
+    "title": "Login",
+    "email_placeholder": "Email",
+    "password_placeholder": "Password",
+    "submit": "Log in",
+    "logging_in": "Logging in...",
+    "invalid_credentials": "Invalid email or password",
+    "success": "Logged in successfully!",
+    "connection_error": "Server connection error",
+    "or": "OR",
+    "forgot_password": "Forgot your password? Click here",
+    "no_account": "Don't have an account?",
+    "register": "Sign up!",
+    "default_success": "Logged in successfully!"
 },
+
+"register": {
+    "title": "Sign up",
+    "username_placeholder": "Username",
+    "email_placeholder": "Email",
+    "password_placeholder": "Password",
+    "confirm_password_placeholder": "Confirm password",
+    "password_rules": "Password must be at least 6 characters long and include at least: one uppercase letter, one number, and one special character.",
+    "submit": "Sign up",
+    "registering": "Registering...",
+    "or": "OR",
+    "facebook_button": "Sign up with Facebook",
+    "have_account": "Already have an account?",
+    "login_link": "Log in",
+    "error_username_required": "Enter a username.",
+    "error_password_mismatch": "Passwords do not match.",
+    "error_password_short": "Password must be at least 6 characters long.",
+    "error_creation_failed": "Failed to create account.",
+    "success_message": "Account created. Check your email to confirm your address.",
+    "connection_error": "Server connection error."
+  },
+
+"forgot-password": {
+    "title": "Forgot password",
+    "description": "Enter the email address used for registration. If the account exists and the email is confirmed, we will send a message with instructions to reset your password.",
+    "email_placeholder": "Email",
+    "submit": "Send reset link",
+    "sending": "Sending...",
+    "remember_password": "Remember your password?",
+    "back_to_login": "Back to login",
+    "error_email_required": "Enter an email address.",
+    "error_sending_failed": "Failed to send password reset email.",
+    "success_message": "If the account exists and the email is confirmed, we have sent a message with password reset instructions.",
+    "connection_error": "Server connection error."
+  },
+  "reset-password": {
+    "title": "Set new password",
+    "description": "Enter your new password below.",
+    "account_label": "Account",
+    "new_password_placeholder": "New password",
+    "confirm_password_placeholder": "Confirm new password",
+    "password_rules": "Password must be at least 6 characters long and include at least one uppercase letter, one number, and one special character.",
+    "submit": "Save new password",
+    "saving": "Saving...",
+    "success_button": "Go to login",
+    "remember_password": "Remember your password?",
+    "back_to_login": "Back to login",
+    "error_missing_token_link": "Error: Missing reset token in link.",
+    "error_missing_token_submit": "Missing verification token (use the link from the email).",
+    "error_password_mismatch": "Passwords do not match.",
+    "error_password_short": "Password must be at least 6 characters long.",
+    "error_setting_failed": "Failed to set new password.",
+    "success_message": "Password changed successfully. You can now log in.",
+    "connection_error": "Server connection error."
+  },
+
+"confirm-email": {
+    "verifying_initial": "Verifying email address...",
+    "loading_title": "Verifying...",
+    "loading_desc": "Please wait, checking your link.",
+    "error_title": "Verification error",
+    "success_title": "Success!",
+    "back_to_login": "Back to login",
+    "go_to_login": "Go to login",
+    "error_invalid_link": "Invalid confirmation link (missing token or email).",
+    "error_already_confirmed": "Your email has already been confirmed. You can log in.",
+    "error_default": "Failed to confirm email address.",
+    "success_message": "Email confirmed. You can now log in.",
+    "connection_error": "Server connection error."
+  },
+
 
 "brand-admin": {
   "add_title": "Add new brand",
