@@ -72,6 +72,9 @@ async function fetchMe(): Promise<any | null> {
 
 export default function Login() {
   const { t } = useTranslation();
+  React.useEffect(() => {
+    document.title = t("login.title") + " - FuelStats";
+  }, [t]);
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -221,7 +224,6 @@ export default function Login() {
           )}
 
 
-          {/* --- FACEBOOK BUTTON --- */}
           <div className="divider my-1 text-sm opacity-70">{t("login.or")}</div>
           
           <FacebookButton 

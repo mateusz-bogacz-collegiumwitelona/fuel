@@ -6,6 +6,9 @@ import { useTranslation } from "react-i18next";
 
 export default function ForgotPassword() {
   const { t } = useTranslation();
+  React.useEffect(() => {
+    document.title = t("forgot-password.title") + " - FuelStats";
+  }, [t]);
   const [email, setEmail] = React.useState("");
   const [message, setMessage] = React.useState("");
   const [loading, setLoading] = React.useState(false);

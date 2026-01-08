@@ -7,6 +7,9 @@ import { useTranslation } from "react-i18next";
 
 export default function Register() {
   const { t } = useTranslation();
+  React.useEffect(() => {
+    document.title = t("register.title") + " - FuelStats";
+  }, [t]);
   
   const [username, setUsername] = React.useState("");
   const [email, setEmail] = React.useState("");

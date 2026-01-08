@@ -28,6 +28,9 @@ type BrandListResponseData = {
 
 export default function BrandAdminPage() {
   const { t } = useTranslation();
+  React.useEffect(() => {
+    document.title = t("brandadmin.title") + " - FuelStats";
+  }, [t]);
   const { state, email } = useAdminGuard();
 
   const [brands, setBrands] = React.useState<AdminBrand[]>([]);

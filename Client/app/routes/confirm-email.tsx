@@ -6,6 +6,9 @@ import { useTranslation } from "react-i18next";
 
 export default function ConfirmEmail() {
   const { t } = useTranslation();
+  React.useEffect(() => {
+    document.title = t("confirm-email.title") + " - FuelStats";
+  }, [t]);
   const [status, setStatus] = React.useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = React.useState("");
   

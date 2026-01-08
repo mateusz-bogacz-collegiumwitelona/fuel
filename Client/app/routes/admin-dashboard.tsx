@@ -6,6 +6,9 @@ import { useTranslation } from "react-i18next";
 
 export default function AdminDashboard() {
   const { t } = useTranslation();
+  React.useEffect(() => {
+    document.title = t("footer.links.admindashboard") + " - FuelStats";
+  }, [t]);
   const { state, email } = useAdminGuard();
 
   const handleLogout = () => {

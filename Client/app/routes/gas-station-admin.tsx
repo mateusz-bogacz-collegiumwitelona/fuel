@@ -27,6 +27,9 @@ type StationListResponseData = {
 
 export default function GasStationAdminPage() {
   const { t } = useTranslation();
+    React.useEffect(() => {
+      document.title = t("stationadmin.title") + " - FuelStats";
+    }, [t]);
   const { state, email } = useAdminGuard();
 
   const [stations, setStations] = React.useState<AdminStation[]>([]);
