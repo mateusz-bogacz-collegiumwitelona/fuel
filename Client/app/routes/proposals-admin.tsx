@@ -44,6 +44,9 @@ type StatsData = {
 
 export default function ProposalAdminPage() {
   const { t } = useTranslation();
+    React.useEffect(() => {
+      document.title = t("proposaladmin.title") + " - FuelStats";
+    }, [t]);
   const { state, email } = useAdminGuard();
 
   const [groups, setGroups] = React.useState<ProposalGroup[]>([]);

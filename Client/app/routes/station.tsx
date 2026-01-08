@@ -30,6 +30,7 @@ type StationProfile = {
 
 export default function StationProfilePage() {
   const { t } = useTranslation();
+
   const { brandName, city, street, houseNumber } = useParams<{
     brandName: string;
     city: string;
@@ -107,6 +108,14 @@ export default function StationProfilePage() {
   const buildGoogleMapsDirectionsUrl = (lat: number, lng: number) => {
     return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
   };
+
+  useEffect(() => {
+    if (station) {
+      document.title = `${station.brandName} ${station.city} ${station.street} ${station.houseNumber} - FuelStats`;
+    } else {
+      document.title = t("station.title") + " - FuelStats";
+    }
+  }, [station, t]);
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content relative flex flex-col">

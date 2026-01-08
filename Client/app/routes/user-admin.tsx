@@ -33,6 +33,9 @@ type UserListResponseData = {
 
 export default function UserAdminPage() {
   const { t } = useTranslation();
+    React.useEffect(() => {
+      document.title = t("useradmin.title") + " - FuelStats";
+    }, [t]);
   const { state, email } = useAdminGuard();
 
   const [users, setUsers] = React.useState<AdminUser[]>([]);
