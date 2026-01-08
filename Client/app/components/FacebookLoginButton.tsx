@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from "react-i18next";
 
 declare global {
     interface Window {
@@ -10,9 +11,15 @@ declare global {
 interface FacebookLoginButtonProps {
     onLoginSuccess: (data: any) => void;
     onLoginFailure: (msg: string) => void;
+    buttonText?: string;
 }
 
-const FacebookLoginButton: React.FC<FacebookLoginButtonProps> = ({ onLoginSuccess, onLoginFailure }) => {
+const FacebookLoginButton: React.FC<FacebookLoginButtonProps> = ({ 
+    onLoginSuccess, 
+    onLoginFailure, 
+    buttonText 
+}) => {
+    const { t } = useTranslation();
 
     useEffect(() => {
         window.fbAsyncInit = function() {
@@ -56,16 +63,17 @@ const FacebookLoginButton: React.FC<FacebookLoginButtonProps> = ({ onLoginSucces
             if(res.ok) {
                 onLoginSuccess(data.data || data);
             } else {
-                onLoginFailure(data.message || "Błąd serwera");
+                onLoginFailure(data.message || t("login.error_server"));
             }
         } catch (err) {
             console.error(err);
-            onLoginFailure("Błąd połączenia");
+            onLoginFailure(t("login.connection_error"));
         }
     };
+
     const handleLogin = () => {
         if (!window.FB) {
-            onLoginFailure("Facebook SDK nie jest gotowy. Odśwież stronę.");
+            onLoginFailure(t("login.error_facebook_sdk"));
             return;
         }
 
@@ -73,14 +81,14 @@ const FacebookLoginButton: React.FC<FacebookLoginButtonProps> = ({ onLoginSucces
             if (response.authResponse) {
                 loginToServer(response.authResponse.accessToken);
             } else {
-                onLoginFailure("Anulowano logowanie.");
+                onLoginFailure(t("login.error_login_cancelled"));
             }
         }, { scope: 'public_profile,email' });
     };
 
     return (
         <button type="button" onClick={handleLogin} className="btn btn-primary w-full mt-2">
-            Zaloguj przez Facebooka
+            {buttonText || t("login.facebook_button")}
         </button>
     );
 };

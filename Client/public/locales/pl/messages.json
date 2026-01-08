@@ -591,7 +591,14 @@
     "forgot_password": "Zapomniałeś hasła? Kliknij tutaj",
     "no_account": "Nie masz konta?",
     "register": "Zarejestruj się!",
-    "default_success": "Zalogowano pomyślnie!"
+    "default_success": "Zalogowano pomyślnie!",
+    "facebook_button": "Zaloguj przez Facebooka",
+    "google_button": "Zaloguj przez Google",
+    "error_facebook_sdk": "Facebook SDK nie jest gotowy. Odśwież stronę.",
+    "error_google_sdk": "Google SDK nie jest gotowy. Odśwież stronę.",
+    "error_google_token": "Brak tokenu od Google.",
+    "error_login_cancelled": "Anulowano logowanie.",
+    "error_server": "Błąd serwera."
   },
 
 "register": {

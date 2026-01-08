@@ -531,7 +531,14 @@
     "forgot_password": "Forgot your password? Click here",
     "no_account": "Don't have an account?",
     "register": "Sign up!",
-    "default_success": "Logged in successfully!"
+    "default_success": "Logged in successfully!",
+    "facebook_button": "Log in with Facebook",
+    "google_button": "Log in with Google",
+    "error_facebook_sdk": "Facebook SDK is not ready. Refresh the page.",
+    "error_google_sdk": "Google SDK is not ready. Refresh the page.",
+    "error_google_token": "Missing Google token.",
+    "error_login_cancelled": "Login cancelled.",
+    "error_server": "Server error."
 },
 
 "register": {
