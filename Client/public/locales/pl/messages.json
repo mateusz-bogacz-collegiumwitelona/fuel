@@ -43,7 +43,8 @@
   "location_permission_error": "Nie udało się pobrać lokalizacji. Sprawdź uprawnienia.",
   "no_stations_found": "Nie znaleziono stacji w promieniu {{distance}} km.",
   "server_error": "Błąd serwera",
-  "error_prefix": "Błąd:"
+  "error_prefix": "Błąd:",
+  "all_brands": "Marki"
   },
 
   "list": {

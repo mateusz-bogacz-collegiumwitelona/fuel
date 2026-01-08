@@ -43,7 +43,8 @@
   "location_permission_error": "Could not retrieve location. Check browser permissions.",
   "no_stations_found": "No stations found within {{distance}} km.",
   "server_error": "Server error",
-  "error_prefix": "Error:"
+  "error_prefix": "Error:",
+  "all_brands": "Brands"
   },
 
   "list": {
