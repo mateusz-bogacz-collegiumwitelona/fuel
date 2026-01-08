@@ -21,10 +21,6 @@ using Serilog.Sinks.PeriodicBatching;
 using Services.BackgroundServices;
 using Services.BackgrounServices;
 using Services.Commands;
-using Services.Email;
-using Services.Event;
-using Services.Event.Handlers;
-using Services.Event.Interfaces;
 using Services.Helpers;
 using Services.Interfaces;
 using Services.Services;
@@ -32,6 +28,7 @@ using StackExchange.Redis;
 using System.Reflection;
 using System.Text;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 
 //log configuration
 Log.Logger = new LoggerConfiguration()
@@ -65,7 +62,7 @@ builder.Services.AddCors(op =>
 {
     op.AddPolicy("AllowClient", p =>
     {
-        p.WithOrigins("http://localhost:4000")
+        p.WithOrigins("http://localhost:4000", "https://localhost")
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials();
@@ -207,6 +204,27 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
+//identity cookie config
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Events.OnRedirectToLogin = context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return Task.CompletedTask;
+    };
+});
+
+//nginx header config
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
+
 // add connection to redis
 var redisHost = builder.Configuration["Redis:Host"] ?? "redis";
 var redisPort = builder.Configuration["Redis:Port"] ?? "6379";
@@ -252,9 +270,6 @@ builder.Services.AddScoped<IBrandServices, BrandServices>();
 builder.Services.AddScoped<IBanService, BanService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 
-//singleton email queue
-builder.Services.AddSingleton<IEmailQueue, InMemoryEmailQueue>();
-
 //register helpers
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<EmailBodys>();
@@ -266,24 +281,7 @@ builder.Services.AddScoped<IStorage, BlobApiHelper>();
 //register background services
 builder.Services.AddHostedService<BanExpirationService>();
 builder.Services.AddHostedService<ProposalExpirationService>();
-builder.Services.AddHostedService<EmailBackgroundWorker>();
 
-//register dispacher
-builder.Services.AddTransient<IEventDispatcher, EventDispatcher>();
-
-//register observers
-builder.Services.AddTransient<IEventHandler<PriceProposalEvaluatedEvent>, UpdateUserStatisticsHandler>();
-builder.Services.AddTransient<IEventHandler<PriceProposalEvaluatedEvent>, ProposalEmailNotificationHandler>();
-builder.Services.AddTransient<IEventHandler<PriceProposalEvaluatedEvent>, ProposalCacheInvalidationHandler>();
-builder.Services.AddTransient<IEventHandler<UserRegisteredEvent>, InitializeUserStatsHandler>();
-builder.Services.AddTransient<IEventHandler<UserRegisteredEvent>, SendRegistrationEmailHandler>();
-builder.Services.AddTransient<IEventHandler<UserBannedEvent>, ClearUserReportsHandler>();
-builder.Services.AddTransient<IEventHandler<UserBannedEvent>, NotifyUserBanHandler>();
-builder.Services.AddTransient<IEventHandler<UserBannedEvent>, InvalidateBannedUserCacheHandler>();
-builder.Services.AddTransient<IEventHandler<UserUnlockedEvent>, NotifyUserUnlockHandler>();
-builder.Services.AddTransient<IEventHandler<UserUnlockedEvent>, InvalidateUnlockedUserCacheHandler>();
-
-//controllers and swagger
 builder.Services.AddControllers(op =>
 {
     var policy = new AuthorizationPolicyBuilder()
@@ -349,15 +347,14 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-if (!builder.Environment.IsEnvironment("Testing"))
+app.UseForwardedHeaders();
+
+var cliArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
+if (cliArgs.Length > 0)
 {
-    var cliArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
-    if (cliArgs.Length > 0)
-    {
-        var commandRunner = new CommandRunner(app.Services);
-        await commandRunner.RunAsync(cliArgs);
-        Environment.Exit(0);
-    }
+    var commandRunner = new CommandRunner(app.Services);
+    await commandRunner.RunAsync(cliArgs);
+    Environment.Exit(0);
 }
 
 // Configure the HTTP request pipeline.
@@ -379,8 +376,7 @@ using (var scope = app.Services.CreateScope())
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
 
-        if (!builder.Environment.IsEnvironment("Testing"))
-        { await dbContext.Database.MigrateAsync(); }
+        await dbContext.Database.MigrateAsync();
 
         var seeder = new SeedData(roleManager, userManager, dbContext);
         await seeder.InicializeAsync();
@@ -406,5 +402,3 @@ app.UseHttpsRedirection();
 app.MapControllers();
 
 app.Run();
-
-public partial class Program { }

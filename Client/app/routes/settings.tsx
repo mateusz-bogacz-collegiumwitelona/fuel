@@ -129,7 +129,7 @@ export default function SettingsPage() {
           toSend,
         )}`,
         {
-          method: "POST",
+          method: "PATCH",
           headers,
           credentials: "include",
         },
@@ -170,7 +170,7 @@ export default function SettingsPage() {
           toSend,
         )}`,
         {
-          method: "POST",
+          method: "PATCH",
           headers,
           credentials: "include",
         },
@@ -226,7 +226,7 @@ export default function SettingsPage() {
       };
 
       const res = await fetch(`${API_BASE}/api/user/change-password`, {
-        method: "POST",
+        method: "PATCH",
         headers,
         credentials: "include",
         body: JSON.stringify(body),

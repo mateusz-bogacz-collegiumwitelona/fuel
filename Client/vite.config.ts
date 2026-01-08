@@ -8,6 +8,10 @@ export default defineConfig({
   server: {
     port: 4000,
     host: "0.0.0.0",
+    hmr: {
+      clientPort: 443,
+    },
+    allowedHosts: ["localhost", "nginx-dev"],
     watch: {
       usePolling: true,
     },
