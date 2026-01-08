@@ -7,8 +7,10 @@ using Data.Models;
 using Data.Reopsitories;
 using Data.Repositories;
 using Data.Seeder;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
@@ -21,6 +23,10 @@ using Serilog.Sinks.PeriodicBatching;
 using Services.BackgroundServices;
 using Services.BackgrounServices;
 using Services.Commands;
+using Services.Email;
+using Services.Event;
+using Services.Event.Handlers;
+using Services.Event.Interfaces;
 using Services.Helpers;
 using Services.Interfaces;
 using Services.Services;
@@ -28,7 +34,6 @@ using StackExchange.Redis;
 using System.Reflection;
 using System.Text;
 using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.HttpOverrides;
 
 //log configuration
 Log.Logger = new LoggerConfiguration()
@@ -350,7 +355,7 @@ var app = builder.Build();
 app.UseForwardedHeaders();
 
 var cliArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
-if (cliArgs.Length > 0)
+if (!app.Environment.IsEnvironment("Testing") && cliArgs.Length > 0)
 {
     var commandRunner = new CommandRunner(app.Services);
     await commandRunner.RunAsync(cliArgs);
@@ -402,3 +407,5 @@ app.UseHttpsRedirection();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

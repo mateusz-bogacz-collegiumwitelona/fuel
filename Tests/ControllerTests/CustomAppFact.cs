@@ -4,6 +4,7 @@ using Data.Enums;
 using Data.Interfaces;
 using Data.Models;
 using Microsoft.AspNetCore.Authentication.Facebook;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -14,6 +15,8 @@ using Microsoft.Extensions.Options;
 using Moq;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
+using Services.Email;
+using Services.Event.Interfaces;
 using StackExchange.Redis;
 using System.Net;
 using System.Net.Sockets;
@@ -47,18 +50,27 @@ public class CustomAppFact : WebApplicationFactory<Program>
                 d.ImplementationType?.Name.Contains("IdentityCookieOptionsSetup") == true);
             if (identityAppDescriptor != null)
                 services.Remove(identityAppDescriptor);
-
+            var googleDescriptors = services
+                .Where(d =>
+                    d.ServiceType != null && d.ServiceType.FullName?.IndexOf("Google", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    d.ImplementationType != null && d.ImplementationType.FullName?.IndexOf("Google", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    d.ImplementationInstance != null && d.ImplementationInstance.GetType().FullName?.IndexOf("Google", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    d.ImplementationFactory != null && d.ImplementationFactory?.Method.DeclaringType?.FullName.IndexOf("Google", StringComparison.OrdinalIgnoreCase) >= 0
+                )
+                .ToList();
+            foreach (var d in googleDescriptors)
+                services.Remove(d);
+            services.RemoveAll<IConfigureOptions<GoogleOptions>>();
+            services.RemoveAll<IPostConfigureOptions<GoogleOptions>>();
             services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             });
-
             var dbDescriptor = services.SingleOrDefault(d =>
                 d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
             if (dbDescriptor != null)
                 services.Remove(dbDescriptor);
-
             services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseInMemoryDatabase("TestDb");
@@ -127,7 +139,14 @@ public class CustomAppFact : WebApplicationFactory<Program>
             storageMock.Setup(s => s.GetPublicUrl(It.IsAny<string>(), It.IsAny<string>()))
                 .Returns((string objectPath, string? bucket) => $"https://fake-storage/{objectPath}");
             services.AddSingleton(storageMock.Object);
-
+            services.RemoveAll<IEmailQueue>();
+            var emailQueueMock = new Mock<IEmailQueue>();
+            emailQueueMock.Setup(q => q.QueueEmail(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()));
+            emailQueueMock.Setup(q => q.DequeueAsync(It.IsAny<CancellationToken>()))
+                          .Returns((CancellationToken ct) => new ValueTask<EmailMessage>(Task.FromResult(new EmailMessage(string.Empty, string.Empty, string.Empty))));
+            services.AddSingleton(emailQueueMock.Object);
+            services.RemoveAll<IEventDispatcher>();
+            services.AddSingleton<IEventDispatcher, NoOpEventDispatcher>();
             var adminId = Guid.NewGuid();
             var userId = Guid.NewGuid();
             var userId2 = Guid.NewGuid();
@@ -214,7 +233,6 @@ public class CustomAppFact : WebApplicationFactory<Program>
                 var ft4 = new FuelType { Name = "YBenzyna 98", Code = "Y", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
                 var ft5 = new FuelType { Name = "XDeleteBenzyna", Code = "X", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
                 var ft6 = new FuelType { Name = "ZBenzyna", Code = "Z", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
-
                 var pp1 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token1", ProposedPrice = 5.0m, PhotoUrl = "url1", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Pending, ReviewedAt = null, ReviewedBy = null, Reviewer = null };
                 var pp2 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token2", ProposedPrice = 4.0m, PhotoUrl = "url2", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Rejected, ReviewedAt = null, ReviewedBy = null, Reviewer = null };
                 var pp3 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token3", ProposedPrice = 4.0m, PhotoUrl = "url3", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Pending, ReviewedAt = DateTime.UtcNow.AddDays(-1), ReviewedBy = admin.Id, Reviewer = admin };
@@ -296,6 +314,37 @@ public class CustomAppFact : WebApplicationFactory<Program>
                 if (!db.PriceProposals.Any())
                 {
                     db.PriceProposals.AddRange(pp1, pp2, pp3);
+                    db.SaveChanges();
+                }
+                if (!db.ProposalStatistics.Any(ps => ps.UserId == user1.Id))
+                {
+                    db.ProposalStatistics.Add(new ProposalStatistic
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = user1.Id,
+                        TotalProposals = 3,
+                        ApprovedProposals = 1,
+                        RejectedProposals = 1,
+                        AcceptedRate = 33,
+                        Points = 1,
+                        UpdatedAt = DateTime.UtcNow
+                    });
+                    db.SaveChanges();
+                }
+                if (!db.FuelPrices.Any(fp => fp.StationId == station1.Id))
+                {
+                    db.FuelPrices.Add(new FuelPrice
+                    {
+                        Id = Guid.NewGuid(),
+                        Station = station1,
+                        StationId = station1.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        FuelType = ft2,
+                        FuelTypeId = ft2.Id,
+                        ValidFrom = DateTime.UtcNow,
+                        Price = 3.0m,
+                        UpdatedAt = DateTime.UtcNow
+                    });
                     db.SaveChanges();
                 }
             }
