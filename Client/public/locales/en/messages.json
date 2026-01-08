@@ -598,6 +598,7 @@
   },
 
 "confirm-email": {
+    "title": "Confirm email",
     "verifying_initial": "Verifying email address...",
     "loading_title": "Verifying...",
     "loading_desc": "Please wait, checking your link.",

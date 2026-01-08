@@ -658,6 +658,7 @@
   },
 
 "confirm-email": {
+    "title": "Potwierdź email",
     "verifying_initial": "Weryfikacja adresu e-mail...",
     "loading_title": "Weryfikacja...",
     "loading_desc": "Proszę czekać, sprawdzamy Twój link.",
