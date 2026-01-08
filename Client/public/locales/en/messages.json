@@ -419,7 +419,8 @@
     "review_ban_by_label": "Banned by",
     "unlock_title": "Unlock user",
     "unlock_confirm": "Are you sure you want to lift the ban for user {{user}}?",
-    "unlock_confirm_button": "Unlock"
+    "unlock_confirm_button": "Unlock",
+	"sort_hasReport": "Has Report"
 },
 
 "settings": {

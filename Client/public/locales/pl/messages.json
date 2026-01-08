@@ -447,7 +447,8 @@
     "review_ban_by_label": "Nałożył",
     "unlock_title": "Odblokuj użytkownika",
     "unlock_confirm": "Czy na pewno chcesz zdjąć bana z użytkownika {{user}}?",
-    "unlock_confirm_button": "Odblokuj"
+    "unlock_confirm_button": "Odblokuj",
+	"sort_hasReport": "Zgłoszenia"
   },
 
   "settings": {
