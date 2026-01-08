@@ -18,13 +18,16 @@ type Station = {
 
 export default function MapView(): JSX.Element {
   const { t } = useTranslation();
+  React.useEffect(() => {
+    document.title = t("map.title") + " - FuelStats";
+  }, [t]);
 
   const [stations, setStations] = useState<Station[]>([]);
   const [allStations, setAllStations] = useState<Station[]>([]);
   
-  // Filtry
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchRadius, setSearchRadius] = useState<string>("50"); // Domyślnie 50 km
+  const [searchRadius, setSearchRadius] = useState<string>("50"); 
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
 
   const [isClient, setIsClient] = useState(false);
@@ -36,9 +39,8 @@ export default function MapView(): JSX.Element {
     fetchStations();
   }, []);
 
-  // Funkcja matematyczna do obliczania odległości w linii prostej (Haversine formula)
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Promień Ziemi w km
+    const R = 6371; 
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a =
@@ -79,7 +81,6 @@ export default function MapView(): JSX.Element {
 
       let data: Station[] = await response.json();
 
-      // --- FILTROWANIE PO STRONIE KLIENTA (BEZPIECZNIK) ---
       if (finalLat && finalLng && dist) {
         data = data.filter(s => {
             if (!s.latitude || !s.longitude) return false;
@@ -87,7 +88,7 @@ export default function MapView(): JSX.Element {
             return distanceKm <= dist;
         });
       }
-      // ----------------------------------------------------
+
       
       setAllStations(data);
       
