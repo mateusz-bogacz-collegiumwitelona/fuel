@@ -154,12 +154,12 @@ export default function MapView(): JSX.Element {
 
           <div className="relative">
              <details className="dropdown" ref={dropdownRef}>
-<summary className="btn bg-base-100 border-base-content/20 w-full md:w-56 justify-between">
-  {selectedBrands.length === 0 
-    ? (t("map.all_brands") || "Wybierz marki") 
-    : t("map.selected_count", { count: selectedBrands.length})}
-  <svg className="fill-current" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
-</summary>
+                <summary className="btn bg-base-100 border-base-content/20 w-full md:w-56 justify-between">
+                  {selectedBrands.length === 0 
+                    ? (t("map.all_brands") || "Wybierz marki") 
+                    : t("map.selected_count", { count: selectedBrands.length})}
+                  <svg className="fill-current" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+                </summary>
                 <ul className="p-2 shadow menu dropdown-content z-[1] bg-base-100 rounded-box w-64 max-h-60 overflow-y-auto block">
                   {availableBrands.length > 0 ? availableBrands.map((brand) => (
                     <li key={brand}>
