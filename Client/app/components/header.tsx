@@ -142,7 +142,6 @@ export default function Header() {
               <li><a href="/dashboard">{t("header.links.dashboard")}</a></li>
               <li><a href="/map">{t("header.links.map")}</a></li>
               <li><a href="/list">{t("header.links.list")}</a></li>
-              <li><a href="/proposals">{t("header.links.addproposal")}</a></li>
 
               {role === "Admin" && (
                 <>
