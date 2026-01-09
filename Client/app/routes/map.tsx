@@ -3,6 +3,7 @@ import Header from "../components/header";
 import Footer from "../components/footer";
 import { API_BASE } from "../components/api";
 import { useTranslation } from "react-i18next";
+import { useUserGuard } from "../components/useUserGuard"; 
 
 const GlobalMapContent = lazy(() => import("../components/GlobalMapContent"));
 
@@ -18,6 +19,8 @@ type Station = {
 
 export default function MapView(): JSX.Element {
   const { t } = useTranslation();
+  const { state } = useUserGuard(); 
+
   useEffect(() => {
     document.title = t("map.fuelstationmap", "Mapa stacji") + " - FuelStats";
   }, [t]);
@@ -37,9 +40,11 @@ export default function MapView(): JSX.Element {
 
   useEffect(() => {
     setIsClient(true);
-    fetchBrands();
-    fetchStations(); 
-  }, []);
+    if (state === "allowed") {
+      fetchBrands();
+      fetchStations(); 
+    }
+  }, [state]);
 
   const fetchBrands = async () => {
     try {
@@ -137,6 +142,17 @@ export default function MapView(): JSX.Element {
       prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]
     );
   };
+  if (state === "checking") {
+    return (
+      <div className="min-h-screen bg-base-200 flex items-center justify-center">
+        <span className="loading loading-spinner loading-lg" />
+      </div>
+    );
+  }
+
+  if (state !== "allowed") {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
