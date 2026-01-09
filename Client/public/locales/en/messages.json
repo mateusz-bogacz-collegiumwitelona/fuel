@@ -44,7 +44,8 @@
   "no_stations_found": "No stations found within {{distance}} km.",
   "server_error": "Server error",
   "error_prefix": "Error:",
-  "all_brands": "Brands"
+  "all_brands": "Brands",
+  "selected_count": "{{count}} selected"
   },
 
   "list": {

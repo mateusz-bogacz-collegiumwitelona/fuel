@@ -44,7 +44,8 @@
   "no_stations_found": "Nie znaleziono stacji w promieniu {{distance}} km.",
   "server_error": "Błąd serwera",
   "error_prefix": "Błąd:",
-  "all_brands": "Marki"
+  "all_brands": "Marki",
+  "selected_count": "{{count}} wybranych"
   },
 
   "list": {
