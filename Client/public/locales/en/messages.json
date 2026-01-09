@@ -57,7 +57,7 @@
     "searchaddress": "Search address",
     "useaddress": "Use this address",
     "usealocalization": "Use my lokalization",
-    "fueltype": "Rodzaj paliwa",
+    "fueltype": "Fuel type",
     "choosefuel": "Choose fuel/s",
     "nofuel": "No fuel types available",
     "mark": "Mark",
@@ -76,15 +76,18 @@
     "muchresults": "Results on page:",
     "stationloading": "Station loading...",
     "name": "Name",
-    "pb95": "PB95",
-    "diesel": "Diesel",
+    "pb98": "PB98",
     "lpg": "LPG",
+    "e85": "E85",
+    "on": "ON",
+    "pb95": "PB95",
     "city": "City",
     "street": "Street",
     "action": "Action",
     "map": "Map",
     "page": "Page",
-    "nostation2": "No stations match your search criteria"
+    "nostation2": "No stations match your search criteria",
+    "showFuels": "Show fuel types"
   },
 
   "stations": {
@@ -744,5 +747,34 @@
     "save": "Save",
     "cancel": "Cancel",
     "close": "Close"
-  }
+  },
+
+  "home": {
+  "title": "FuelStats",
+  "subtitle": "Check fuel prices faster and smarter",
+  "heroAlt": "Fuel stations map",
+
+  "featuresTitle": "Features",
+  "features": {
+    "map": "Interactive fuel station map with live prices",
+    "list": "Station list with sorting and filtering",
+    "dashboard": "Statistics and price history dashboard",
+    "mapDesc": "Can be better, but it's good",
+    "listDesc": "It's max what we could do, list is impressive",
+    "dashboardDesc": "All You need in one place"
+  },
+
+  "howItWorks": [
+    "Open the map and find stations near you",
+    "Compare current fuel prices",
+    "Choose the best option and save money"
+  ],
+
+  "ctaRegister": "Register",
+  "ctaLogin": "Log in",
+
+  "footerContact": "Contact: kontakt@fuelstats.example",
+  "privacy": "Privacy policy",
+  "terms": "Terms of service"
+}
 }

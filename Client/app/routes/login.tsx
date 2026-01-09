@@ -1,6 +1,6 @@
 import * as React from "react";
-import Header from "../components/header";
-import Footer from "../components/footer";
+import HeaderHome from "../components/HeaderHome";
+import FooterHome from "../components/FooterHome";
 import { useTranslation } from "react-i18next";
 import FacebookButton from "../components/FacebookLoginButton";
 import { API_BASE } from "../components/api";
@@ -186,7 +186,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
-      <Header />
+      <HeaderHome/>
 
       <div className="flex-grow flex justify-center items-center">
         <form
@@ -255,7 +255,7 @@ export default function Login() {
         </form>
       </div>
 
-      <Footer />
+      <FooterHome/>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import * as React from "react";
-import Header from "../components/header";
-import Footer from "../components/footer";
+import HeaderHome from "../components/HeaderHome";
+import FooterHome from "../components/FooterHome";
 import { API_BASE } from "../components/api";
 import FacebookButton from "../components/FacebookLoginButton";
 import { useTranslation } from "react-i18next";
@@ -102,7 +102,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
-      <Header />
+      <HeaderHome/>
 
       <div className="flex-grow flex justify-center items-center">
         <form
@@ -181,7 +181,7 @@ export default function Register() {
         </form>
       </div>
 
-      <Footer />
+      <FooterHome/>
     </div>
   );
 }

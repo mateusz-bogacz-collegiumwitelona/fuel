@@ -76,15 +76,18 @@
     "muchresults": "Wyników na stronę:",
     "stationloading": "Ładowanie stacji...",
     "name": "Nazwa",
-    "pb95": "PB95",
-    "diesel": "Diesel",
+    "pb98": "PB98",
     "lpg": "LPG",
+    "e85": "E85",
+    "on": "ON",
+    "pb95": "PB95",
     "city": "Miasto",
     "street": "Ulica",
     "action": "Akcje",
     "map": "Mapa",
     "page": "Strona",
-    "nostation2": "Brak stacji spełniających kryteria wyszukiwania"
+    "nostation2": "Brak stacji spełniających kryteria wyszukiwania",
+    "showFuels": "Pokazuj rodzaje paliw"
   },
 
   "stations": {
@@ -688,5 +691,34 @@
     "save": "Zapisz",
     "cancel": "Anuluj",
     "close": "Zamknij"
-  }
+  },
+
+  "home": {
+  "title": "FuelStats",
+  "subtitle": "Sprawdzaj ceny paliw szybciej i mądrzej",
+  "heroAlt": "Mapa stacji paliw",
+
+  "featuresTitle": "Funkcje",
+  "features": {
+    "map": "Interaktywna mapa stacji paliw",
+    "list": "Lista stacji z sortowaniem i filtrowaniem",
+    "dashboard": "Panel statystyk i historii cen",
+    "mapDesc": "Mogła być lepsza, ale jest dobra",
+    "listDesc": "To max, co możemy zrobić, lista jest imponująca",
+    "dashboardDesc": "Wszystko co potrzebujesz w jednym miejscu"
+  },
+
+  "howItWorks": [
+    "Otwórz mapę i znajdź stacje w swojej okolicy",
+    "Porównaj aktualne ceny paliw",
+    "Wybierz najlepszą opcję i oszczędzaj"
+  ],
+
+  "ctaRegister": "Zarejestruj się",
+  "ctaLogin": "Zaloguj się",
+
+  "footerContact": "Kontakt: kontakt@fuelstats.example",
+  "privacy": "Polityka prywatności",
+  "terms": "Regulamin"
+}
 }
