@@ -10,6 +10,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Services.Event;
+using Services.Event.Interfaces;
 using Services.Helpers;
 using Services.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
@@ -31,6 +33,7 @@ namespace Services.Services
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly ITokenFactory _tokenFactory;
         private readonly GoogleAuthClient _googleAuthClient;
+        private readonly IEventDispatcher _eventDispatcher;
 
         public LoginRegisterServices(
             UserManager<ApplicationUser> userManager,
@@ -43,7 +46,8 @@ namespace Services.Services
             IUserRepository userRepository,
             IHttpContextAccessor httpContext,
             IRefreshTokenRepository refreshTokenRepository,
-            ITokenFactory tokenFactory            
+            ITokenFactory tokenFactory,
+             IEventDispatcher eventDispatcher
             )
         {
             _userManager = userManager;
@@ -53,11 +57,11 @@ namespace Services.Services
             _logger = logger;
             _email = email;
             _proposalStatisticRepository = proposalStatisticRepository;
-
             _userRepository = userRepository;
             _httpContext = httpContext;
             _refreshTokenRepository = refreshTokenRepository;
             _tokenFactory = tokenFactory;
+            _eventDispatcher = eventDispatcher;
         }
 
         public async Task<Result<LoginResponse>> HandleLoginAsync(LoginRequest request)
@@ -466,20 +470,9 @@ namespace Services.Services
                     );
                 }
 
-                var isProposalStatAdded = await _proposalStatisticRepository.AddProposalStatisticRecordAsync(user);
+               var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-                if (!isProposalStatAdded)
-                {
-                    _logger.LogError("Failed to create proposal statistics record for user {Email}.", request.Email);
-                    return Result<IdentityResult>.Bad(
-                        "Failed to create proposal statistics record for user.",
-                        StatusCodes.Status500InternalServerError
-                    );
-                }
-
-                var confirmToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-
-                if (string.IsNullOrEmpty(confirmToken))
+                if (string.IsNullOrEmpty(confirmationToken))
                 {
                     _logger.LogError("Failed to generate email confirmation token for user {Email}.", request.Email);
                     return Result<IdentityResult>.Bad(
@@ -488,20 +481,7 @@ namespace Services.Services
                     );
                 }
 
-                var sendEmailConfirmation = await _email.SendRegisterConfirmEmailAsync(
-                    request.Email,
-                    request.UserName,
-                    confirmToken
-                );
-
-                if (!sendEmailConfirmation)
-                {
-                    _logger.LogError("Failed to send confirmation email to: {Email}", request.Email);
-                    return Result<IdentityResult>.Bad(
-                        "User registered but failed to send confirmation email",
-                        StatusCodes.Status500InternalServerError
-                    );
-                }
+                await _eventDispatcher.PublishAsync(new UserRegisteredEvent(user, confirmationToken));
 
                 _logger.LogInformation("User registered successfully: {Email}", request.Email);
                 return Result<IdentityResult>.Good(

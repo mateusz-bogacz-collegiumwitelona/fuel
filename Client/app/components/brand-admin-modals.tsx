@@ -26,9 +26,9 @@ function BaseModal({ isOpen, title, children, onClose }: BaseModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-base-300/60">
-      <div className="bg-base-100 rounded-xl shadow-xl w-full max-w-md p-6">
-        <div className="flex justify-between items-center mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-base-300/60 p-4">
+      <div className="bg-base-100 rounded-xl shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-center p-6 pb-2 flex-shrink-0">
           <h2 className="text-xl font-semibold">{title}</h2>
           <button
             className="btn btn-sm btn-ghost"
@@ -39,7 +39,9 @@ function BaseModal({ isOpen, title, children, onClose }: BaseModalProps) {
             ✕
           </button>
         </div>
-        {children}
+        <div className="p-6 pt-2 overflow-y-auto">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -76,14 +78,14 @@ export function AddBrandModal({
             <span className="label-text">{t("brand-admin.add_label_name")}</span>
           </label>
           <input
-            className="input input-bordered input-sm"
+            className="input input-bordered input-sm w-full"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
           />
         </div>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-2">
           <button
             type="button"
             className="btn btn-ghost btn-sm"
@@ -142,14 +144,14 @@ export function EditBrandModal({
             <span className="label-text">{t("brand-admin.edit_new_name_label")}</span>
           </label>
           <input
-            className="input input-bordered input-sm"
+            className="input input-bordered input-sm w-full"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             required
           />
         </div>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-2">
           <button
             type="button"
             className="btn btn-ghost btn-sm"
@@ -192,7 +194,7 @@ export function DeleteBrandModal({
         {t("brand-admin.delete_warning")}
       </p>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 pt-2">
         <button
           className="btn btn-ghost btn-sm"
           type="button"

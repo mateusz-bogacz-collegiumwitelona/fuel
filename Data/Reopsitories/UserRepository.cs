@@ -146,26 +146,5 @@ namespace Data.Reopsitories
             return list;
         }
 
-        public async Task<bool> ReportUserAsync(
-            ApplicationUser reported, 
-            ApplicationUser reportedBy, 
-            string reason)
-        {
-            var report = new ReportUserRecord
-            {
-                Id = Guid.NewGuid(),
-                ReportedUserId = reported.Id,
-                ReportedUser = reported,
-                ReportingUserId = reportedBy.Id,
-                ReportingUser = reportedBy,
-                Description = reason,
-                CreatedAt = DateTime.UtcNow,
-                Status = Data.Enums.ReportStatusEnum.Pending
-            };
-
-            await _context.ReportUserRecords.AddAsync(report);
-            var result = await _context.SaveChangesAsync();
-            return result > 0;
-        }
     }
 }

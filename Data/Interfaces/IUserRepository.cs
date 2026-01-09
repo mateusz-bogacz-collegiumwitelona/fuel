@@ -10,6 +10,5 @@ namespace Data.Interfaces
         Task<bool> IsUserDeleted(ApplicationUser user);
         Task<IdentityResult> DeleteUserAsync(ApplicationUser user);
         Task<List<GetUserListResponse>> GetUserListAsync(TableRequest request);
-        
     }
 }

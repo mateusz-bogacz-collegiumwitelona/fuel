@@ -1,4 +1,5 @@
-﻿using Controllers.Controllers;
+﻿using Azure.Core;
+using Controllers.Controllers;
 using DTO.Requests;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
@@ -742,6 +743,115 @@ namespace Contlollers.Controllers.Client
         public async Task<IActionResult> GetPriceProposaByStationAsync([FromQuery] FindStationRequest request, [FromQuery] GetPaggedRequest pagged)
         {
             var result = await _stationServices.GetPriceProposalByStationAsync(request, pagged);
+            return result.IsSuccess
+                ? StatusCode(result.StatusCode, result.Data)
+                : StatusCode(result.StatusCode, new
+                {
+                    success = false,
+                    message = result.Message,
+                    errors = result.Errors
+                });
+        }
+
+        /// <summary>
+        /// Get fuel price history for a specific gas station.
+        /// </summary>
+        /// <remarks>
+        /// Description  
+        /// Returns the complete price history for all fuel types or a specific fuel type at a given gas station.  
+        ///
+        /// Station Identification  
+        /// All parameters are **required** to uniquely identify a station:
+        /// - **BrandName**: The gas station brand (e.g., "Shell", "BP", "Orlen")
+        /// - **Street**: Street name where the station is located
+        /// - **HouseNumber**: Building/house number of the station
+        /// - **City**: City where the station is located
+        ///
+        /// Fuel Type Filter (Optional)  
+        /// - **fuelCode**: Fuel type code (e.g., "PB95", "ON", "LPG"). If omitted, returns history for all fuel types available at the station.
+        ///
+        /// Example requests  
+        /// ```
+        /// # Get history for all fuels
+        /// GET /api/station/fuel-price/history?BrandName=Shell&amp;Street=Marszałkowska&amp;HouseNumber=1&amp;City=Warszawa
+        ///
+        /// # Get history for specific fuel
+        /// GET /api/station/fuel-price/history?BrandName=Shell&amp;Street=Marszałkowska&amp;HouseNumber=1&amp;City=Warszawa&amp;fuelCode=PB95
+        /// ```
+        ///
+        /// Example response (single fuel)  
+        /// ```json
+        /// {
+        ///   "isSuccess": true,
+        ///   "data": {
+        ///     "fuelType": "Benzyna 95",
+        ///     "fuelCode": "PB95",
+        ///     "validFrom": [
+        ///       "2024-10-05T12:00:00Z",
+        ///       "2024-11-10T08:00:00Z",
+        ///       "2024-12-20T10:30:00Z"
+        ///     ],
+        ///     "validTo": [
+        ///       "2024-11-10T08:00:00Z",
+        ///       "2024-12-20T10:30:00Z",
+        ///       null
+        ///     ],
+        ///     "price": [
+        ///       6.40,
+        ///       6.50,
+        ///       6.80
+        ///     ]
+        ///   },
+        ///   "message": "Fuel price history retrieved successfully.",
+        ///   "statusCode": 200,
+        ///   "errors": null
+        /// }
+        /// ```
+        ///
+        /// Example response (all fuels)  
+        /// ```json
+        /// {
+        ///   "isSuccess": true,
+        ///   "data": [
+        ///     {
+        ///       "fuelType": "Benzyna 95",
+        ///       "fuelCode": "PB95",
+        ///       "validFrom": ["2024-10-05T12:00:00Z", "2024-12-20T10:30:00Z"],
+        ///       "validTo": ["2024-12-20T10:30:00Z", null],
+        ///       "price": [6.40, 6.80]
+        ///     },
+        ///     {
+        ///       "fuelType": "Diesel",
+        ///       "fuelCode": "ON",
+        ///       "validFrom": ["2024-10-05T12:00:00Z"],
+        ///       "validTo": [null],
+        ///       "price": [6.20]
+        ///     }
+        ///   ],
+        ///   "message": "Fuel price history retrieved successfully.",
+        ///   "statusCode": 200,
+        ///   "errors": null
+        /// }
+        /// ```
+        ///
+        /// Notes  
+        /// - The arrays `validFrom`, `validTo`, and `price` have matching indices (e.g., `price[0]` corresponds to `validFrom[0]` and `validTo[0]`).
+        /// - A `null` value in `validTo` indicates the current active price.
+        /// - Prices are sorted chronologically from oldest to newest.
+        /// - Perfect for generating price history charts and graphs.
+        /// </remarks>
+        /// <param name="findStation">Station identification parameters (BrandName, Street, HouseNumber, City)</param>
+        /// <param name="fuelCode">Optional fuel type code to filter history for a specific fuel (e.g., "PB95", "ON")</param>
+        /// <response code="200">Fuel price history successfully retrieved</response>
+        /// <response code="400">Invalid fuel type code provided</response>
+        /// <response code="404">Station not found or no price history available</response>
+        /// <response code="500">An unexpected server error occurred</response>
+        [HttpGet("fuel-price/history")]
+        public async Task<IActionResult> GetFuelPriceHistoryAsync(
+            [FromQuery] FindStationRequest findStation, 
+            [FromQuery] string? fuelCode)
+        {
+            var result = await _stationServices.GetFuelPriceHistoryAsync(findStation, fuelCode);
             return result.IsSuccess
                 ? StatusCode(result.StatusCode, result.Data)
                 : StatusCode(result.StatusCode, new

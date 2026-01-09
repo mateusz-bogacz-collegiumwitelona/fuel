@@ -1,12 +1,12 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import React, { useEffect, useState, lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { API_BASE } from "../components/api";
 import { useTranslation } from "react-i18next";
 import { ProposalModal } from "../components/proposal-modal";
-// 1. IMPORTUJEMY NOWY MODAL
 import { ViewProposalsModal } from "../components/view-proposals-modal";
+import { StationPriceHistoryModal } from "../components/station-price-history-modal";
 
 const StationMapContent = lazy(() => import("../components/StationMapContent"));
 
@@ -41,14 +41,11 @@ export default function StationProfilePage() {
   const [station, setStation] = useState<StationProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Stan dla modala Zgłaszania (istniejący)
   const [isProposalOpen, setIsProposalOpen] = useState(false);
-  
-  // 2. NOWY STAN DLA MODALA PODGLĄDU
   const [isViewProposalsOpen, setIsViewProposalsOpen] = useState(false);
+  
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
-  // Stan dla SSR
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -154,14 +151,20 @@ export default function StationProfilePage() {
                 </div>
                 
                 <div className="flex flex-col sm:flex-row gap-3">
-                    {/* Nowy przycisk TRZEBA TŁUMACZENIE DOROBIĆ vvvvvvvvv*/}
-                      <button 
-                          className="btn btn-neutral shadow-sm"
-                          onClick={() => setIsViewProposalsOpen(true)}
-                      >
-                          Zobacz propozycje cen
-                      </button>
-                    {/* Nowy przycisk TRZEBA TŁUMACZENIE DOROBIĆ ^^^^^^*/}
+                    <button 
+                        className="btn btn-neutral shadow-sm"
+                        onClick={() => setIsViewProposalsOpen(true)}
+                    >
+                        {t("station.view_proposals_button")}
+                    </button>
+                    
+                    <button 
+                        className="btn btn-outline shadow-sm"
+                        onClick={() => setIsHistoryOpen(true)}
+                    >
+                        {t("station.history_button")}
+                    </button>
+
                     <button 
                         className="btn btn-primary shadow-lg"
                         onClick={() => setIsProposalOpen(true)}
@@ -269,6 +272,12 @@ export default function StationProfilePage() {
       <ViewProposalsModal 
         isOpen={isViewProposalsOpen}
         onClose={() => setIsViewProposalsOpen(false)}
+        station={station}
+      />
+
+      <StationPriceHistoryModal 
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
         station={station}
       />
 

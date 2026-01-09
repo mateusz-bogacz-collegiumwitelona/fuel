@@ -6,6 +6,8 @@ using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using Services.Event;
+using Services.Event.Interfaces;
 using Services.Helpers;
 using Services.Interfaces;
 using System.Diagnostics;
@@ -22,6 +24,7 @@ namespace Services.Services
         private readonly IProposalStatisticRepository _proposalStatisticRepository;
         private IEmailSender _email;
         private readonly CacheService _cache;
+        private readonly IEventDispatcher _eventDispatcher;
 
         public PriceProposalServices(
             IPriceProposalRepository priceProposalRepository,
@@ -31,7 +34,8 @@ namespace Services.Services
             IFuelTypeRepository fuelTypeRepository,
             IProposalStatisticRepository proposalStatisticRepository,
             IEmailSender email,
-            CacheService cache
+            CacheService cache,
+            IEventDispatcher eventDispatcher
             )
         {
             _priceProposalRepository = priceProposalRepository;
@@ -42,6 +46,7 @@ namespace Services.Services
             _proposalStatisticRepository = proposalStatisticRepository;
             _email = email;
             _cache = cache;
+            _eventDispatcher = eventDispatcher;
         }
 
         public async Task<Result<string>> AddNewProposalAsync(string email, AddNewPriceProposalRequest request)
@@ -319,28 +324,9 @@ namespace Services.Services
                         priceProposal.User.Id);
                 }
 
-                var sendEmail = await _email.SendPriceProposalStatusEmail(
-                    priceProposal.User.Email,
-                    priceProposal.User.UserName,
-                    isAccepted,
-                    new FindStationRequest
-                    {
-                        BrandName = priceProposal.Station.Brand.Name,
-                        Street = priceProposal.Station.Address.Street,
-                        HouseNumber = priceProposal.Station.Address.HouseNumber,
-                        City = priceProposal.Station.Address.City
-                    },
-                    priceProposal.ProposedPrice
-                    );
+                var proposalEvent = new PriceProposalEvaluatedEvent(priceProposal, isAccepted);
 
-                if (!sendEmail)
-                {
-                    _logger.LogWarning(
-                        "Failed to send price proposal status email to user {UserId} for proposal {ProposalId}",
-                        priceProposal.User.Id,
-                        priceProposal.Id);
-                }
-                await _cache.InvalidateUserStatsCacheAsync(priceProposal.User.Email);
+                await _eventDispatcher.PublishAsync(proposalEvent);
 
                 return Result<bool>.Good(
                     $"Price proposal {(isAccepted ? "accepted" : "rejected")} successfully",

@@ -34,10 +34,22 @@ namespace Services.Services
         {
             try
             {
+                string brands = request.BrandName != null && request.BrandName.Any() 
+                    ? string.Join("-", request.BrandName.OrderBy(b => b)) 
+                    : "all";
+
+                string location = request.LocationLatitude.HasValue && request.LocationLongitude.HasValue && request.Distance.HasValue
+                    ? $"{request.LocationLatitude}-{request.LocationLongitude}-{request.Distance}"
+                    : "no-location";
+
+                string rawKey = $"{CacheService.CacheKeys.StationMap}:{brands}:{location}";
+
+                string dynamicKey = _cache.GenerateCacheKey(rawKey);
+
                 var result = await _cache.GetOrSetAsync(
-                    CacheService.CacheKeys.StationMap,
+                    dynamicKey,
                     async () => await _stationRepository.GetAllStationsForMapAsync(request),
-                    CacheService.CacheExpiry.Medium
+                    CacheService.CacheExpiry.Short
                     );
 
                 if (result == null || result.Count == 0)
@@ -54,7 +66,6 @@ namespace Services.Services
                     "Stations retrieved successfully.",
                     StatusCodes.Status200OK,
                     result);
-
             }
             catch (Exception ex)
             {
@@ -561,6 +572,75 @@ namespace Services.Services
                             "price proposals",
                             CacheService.CacheExpiry.Short
                         );
+        }
+
+        public async Task<Result<object>> GetFuelPriceHistoryAsync(FindStationRequest findStation, string? fuelCode)
+        {
+            try
+            {
+                var station = await _stationRepository.FindStationByDataAsync(
+                        findStation.BrandName,
+                        findStation.Street,
+                        findStation.HouseNumber,
+                        findStation.City
+                        );
+
+                if (station == null)
+                {
+                    _logger.LogWarning("Station not found with the provided details.");
+                    return Result<object>.Bad(
+                        "Station not found.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "No station found with the provided details." });
+                }
+
+                object fuelPriceHistroy;
+
+                if (!string.IsNullOrEmpty(fuelCode))
+                {
+                    var fuelType = await _fuelTypeRepository.FindFuelTypeByCodeAsync(fuelCode);
+
+                    if (fuelType == null)
+                    {
+                        _logger.LogWarning("Invalid fuel type code: {FuelCode}", fuelCode);
+                        return Result<object>.Bad(
+                            "Validation error",
+                            StatusCodes.Status400BadRequest,
+                            new List<string> { $"Invalid fuel type code: {fuelCode}" });
+                    }
+
+                    fuelPriceHistroy = await _stationRepository.GetFuelPriceHistoryAsync(
+                        station.Id,
+                        fuelType.Id
+                        );
+                }
+                else
+                {
+                    fuelPriceHistroy = await _stationRepository.GetFuelPriceAllHistoryAsync(station.Id);
+                }
+
+                if (fuelPriceHistroy == null)
+                {
+                    _logger.LogWarning("No fuel price history found for the specified station and fuel type.");
+                    return Result<object>.Bad(
+                        "No fuel price history found.",
+                        StatusCodes.Status404NotFound,
+                        new List<string> { "No fuel price history found for the specified station and fuel type." });
+                }
+
+                return Result<object>.Good(
+                    "Fuel price history retrieved successfully.",
+                    StatusCodes.Status200OK,
+                    fuelPriceHistroy);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while retrieving fuel price history: {ex.Message} | {ex.InnerException}");
+                return Result<object>.Bad(
+                    "An error occurred while processing your request.",
+                    StatusCodes.Status500InternalServerError,
+                    new List<string> { $"{ex.Message} | {ex.InnerException}" });
+            }
         }
     }
 }
