@@ -22,6 +22,11 @@ type UserProfile = {
 
 export default function SettingsPage() {
   const { t } = useTranslation();
+
+    React.useEffect(() => {
+      document.title = t("settings.title") + " - FuelStats";
+    }, [t]);
+
   const { state, email } = useUserGuard();
 
   const [activeTab, setActiveTab] = React.useState<

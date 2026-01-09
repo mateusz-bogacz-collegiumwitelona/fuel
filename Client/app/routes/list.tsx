@@ -40,6 +40,9 @@ type SortColumn = "distance" | "price" | null;
 
 export default function ListPage() {
     const { t } = useTranslation();
+  React.useEffect(() => {
+    document.title = t("list.stationlist") + " - FuelStats";
+  }, [t]);
     const [email, setEmail] = React.useState<string | null>(null);
     const [stations, setStations] = React.useState<Station[] | null>(null);
     const [loading, setLoading] = React.useState(true);

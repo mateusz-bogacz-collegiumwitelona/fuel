@@ -41,6 +41,10 @@ async function loadExternalTranslations() {
 export default function Home(): JSX.Element {
   const { t, i18n } = useTranslation();
 
+    React.useEffect(() => {
+      document.title = "FuelStats";
+    }, [t]);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       loadExternalTranslations();
