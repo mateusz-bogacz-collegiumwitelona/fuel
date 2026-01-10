@@ -1,0 +1,59 @@
+name: Run Integration Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+      - production
+  push:
+    branches:
+      - main
+      - production
+
+jobs:
+  run-integration-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB: testdb
+      POSTGRES_HOST: postgis
+      POSTGRES_PORT: 5432
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      FACEBOOK_OAUTH_CLIENT_ID: "ci-test-fb-id"
+      FACEBOOK_OAUTH_CLIENT_SECRET: ${{ secrets.FACEBOOK_OAUTH_CLIENT_SECRET }}
+
+      GOOGLE_CLIENT_ID: "ci-test-google-id"
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+
+      API_PORT: 5111
+      MAILPIT_PORT: 63854
+      NGINX_HTTP_PORT: 8080
+      NGINX_HTTPS_PORT: 443
+      CLIENT_PORT: 4000
+      AZURITE_BLOB_PORT: 10000
+      AZURITE_QUEUE_PORT: 10001
+      AZURITE_TABLE_PORT: 10002
+      DOCKER_REGISTRY: ""
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Test Services
+        run: docker compose build tests postgis redis
+
+      - name: Run Tests
+        run: docker compose run -T --rm tests
+
+      - name: Cleanup Containers and Volumes
+        if: always()
+        run: docker compose down --volumes --remove-orphans
