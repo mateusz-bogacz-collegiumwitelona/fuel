@@ -44,8 +44,10 @@ services:
       dockerfile: Tests/Dockerfile
     container_name: tests
     depends_on:
-      - postgis
-      - redis
+      postgis:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       - ConnectionStrings__DefaultConnection=User ID=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Host=postgis;Port=${POSTGRES_PORT};Database=${POSTGRES_DB};
       - Redis__Host=${REDIS_HOST}
