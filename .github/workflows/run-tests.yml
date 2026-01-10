@@ -25,10 +25,10 @@ jobs:
       REDIS_HOST: redis
       REDIS_PORT: 6379
 
-      FACEBOOK_OAUTH_CLIENT_ID: "ci-test-fb-id"
+      FACEBOOK_OAUTH_CLIENT_ID: ${{ secrets.FACEBOOK_OAUTH_CLIENT_ID }}
       FACEBOOK_OAUTH_CLIENT_SECRET: ${{ secrets.FACEBOOK_OAUTH_CLIENT_SECRET }}
 
-      GOOGLE_CLIENT_ID: "ci-test-google-id"
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
 
       API_PORT: 5111
