@@ -80,10 +80,7 @@ export default function Login() {
   const [password, setPassword] = React.useState("");
   const [message, setMessage] = React.useState("");
 
-
   const handleFacebookSuccess = (data: any) => {
-    if (data?.email) localStorage.setItem("email", data.email);
-    if (data?.token) localStorage.setItem("token", data.token);
 
     const roleFromBody = extractRoleLoose(data);
     if (roleFromBody) {
@@ -133,14 +130,6 @@ export default function Login() {
         return;
       }
 
-      if (data?.email) {
-        try {
-          localStorage.setItem("email", data.email);
-        } catch {
-
-        }
-      }
-
       const roleFromBody = extractRoleLoose(data);
       if (roleFromBody) {
         setMessage(t("login.success"));
@@ -151,15 +140,6 @@ export default function Login() {
       const me = await fetchMe();
       if (me) {
         const meRole = extractRoleLoose(me);
-        const meEmail = me.email ?? me.userName ?? null;
-
-        if (meEmail) {
-          try {
-            localStorage.setItem("email", String(meEmail));
-          } catch {
-
-          }
-        }
 
         setMessage(t("login.success"));
         redirectByRole(meRole);
