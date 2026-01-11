@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Link } from "react-router";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { API_BASE } from "../components/api";
@@ -22,6 +23,9 @@ type UserProfile = {
 
 export default function SettingsPage() {
   const { t } = useTranslation();
+      React.useEffect(() => {
+      document.title = t("settings.title") + " - FuelStats";
+    }, [t]);
   const { state, email } = useUserGuard();
 
   const [activeTab, setActiveTab] = React.useState<
@@ -269,18 +273,11 @@ export default function SettingsPage() {
                 {t("settings.tab_account")}
               </button>
 
-              <button
-                className={`btn btn-ghost justify-start ${activeTab === "general" ? "btn-active" : ""}`}
-                onClick={() => setActiveTab("general")}
-              >
-                {t("settings.tab_general")}
-              </button>
-
               <div className="divider my-2"></div>
 
-              <a href="/dashboard" className="btn btn-outline">
+              <Link to="/dashboard" className="btn btn-outline">
                 {t("settings.back")}
-              </a>
+              </Link> 
             </nav>
           </aside>
 
@@ -312,11 +309,6 @@ export default function SettingsPage() {
                           <div className="text-sm text-gray-400">{t("settings.label_email")}</div>
                           <div className="font-medium">{user?.email ?? "-"}</div>
                         </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <div className="text-sm text-gray-400">{t("settings.label_registered")}</div>
-                        <div className="text-sm">{user?.createdAt ? new Date(user.createdAt).toLocaleString() : "-"}</div>
                       </div>
                     </div>
 
@@ -435,29 +427,6 @@ export default function SettingsPage() {
                       ) : (
                         <div className="text-sm text-gray-400">{t("settings.stats_none")}</div>
                       )}
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "general" && (
-                  <div>
-                    <h2 className="text-xl font-semibold mb-2">{t("settings.general_title")}</h2>
-                    <div className="bg-base-100 p-4 rounded">
-                      <p className="text-sm text-gray-400 mb-2">{t("settings.misc_text")}</p>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <label className="flex items-center gap-2">
-                          <input type="checkbox" className="checkbox" />
-                          <span className="text-sm">{t("settings.opt_notify_accepted")}</span>
-                        </label>
-
-                        <label className="flex items-center gap-2">
-                          <input type="checkbox" className="checkbox" />
-                          <span className="text-sm">{t("settings.opt_auto_loc")}</span>
-                        </label>
-                      </div>
-                      <div className="mt-4">
-                        <button className="btn btn-primary">{t("settings.save_settings")}</button>
-                      </div>
                     </div>
                   </div>
                 )}
