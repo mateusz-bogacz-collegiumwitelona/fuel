@@ -142,16 +142,15 @@ export default function Header() {
               <li><a href="/dashboard">{t("header.links.dashboard")}</a></li>
               <li><a href="/map">{t("header.links.map")}</a></li>
               <li><a href="/list">{t("header.links.list")}</a></li>
-              <li><a href="/proposals">{t("header.links.addproposal")}</a></li>
 
               {role === "Admin" && (
                 <>
                   <li className="menu-title"><span>{t("header.links.foradmin")}</span></li>
-                  <li><a href="/admin-dashboard">{t("header.links.admindashboard")}</a></li>
-                  <li><a href="/brand_admin">{t("header.links.brands")}</a></li>
-                  <li><a href="/user_admin">{t("header.links.users")}</a></li>
-                  <li><a href="/gas_station_admin">{t("header.links.stations")}</a></li>
-                  <li><a href="/proposal-admin">{t("header.links.proposaladmin")}</a></li>
+                  <li><a href="/admin">{t("header.links.admindashboard")}</a></li>
+                  <li><a href="/admin/brands">{t("header.links.brands")}</a></li>
+                  <li><a href="/admin/users">{t("header.links.users")}</a></li>
+                  <li><a href="/admin/stations">{t("header.links.stations")}</a></li>
+                  <li><a href="/admin/proposals">{t("header.links.proposaladmin")}</a></li>
                 </>
               )}
 

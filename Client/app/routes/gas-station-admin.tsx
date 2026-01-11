@@ -1,6 +1,7 @@
 import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
+import { Link } from "react-router";
 
 import {
   AddStationModal,
@@ -27,6 +28,11 @@ type StationListResponseData = {
 
 export default function GasStationAdminPage() {
   const { t } = useTranslation();
+  
+  React.useEffect(() => {
+    document.title = t("stationadmin.title", "Admin dashboard - Gas stations") + " - FuelStats";
+  }, [t]);
+
   const { state, email } = useAdminGuard();
 
   const [stations, setStations] = React.useState<AdminStation[]>([]);
@@ -38,23 +44,26 @@ export default function GasStationAdminPage() {
   const [totalPages, setTotalPages] = React.useState(1);
 
   const [search, setSearch] = React.useState("");
+  
+  const [sortBy, setSortBy] = React.useState("brandname");
+  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("asc");
 
-  const [activeModal, setActiveModal] =
-    React.useState<"add" | "edit" | "delete" | null>(null);
-  const [selectedStation, setSelectedStation] =
-    React.useState<AdminStation | null>(null);
+  const [activeModal, setActiveModal] = React.useState<"add" | "edit" | "delete" | null>(null);
+  const [selectedStation, setSelectedStation] = React.useState<AdminStation | null>(null);
 
   React.useEffect(() => {
     if (state !== "allowed") return;
     (async () => {
-      await loadStationsFromApi(pageNumber, pageSize, search);
+      await loadStationsFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
     })();
-  }, [state, pageNumber, pageSize, search, t]);
+  }, [state, pageNumber, pageSize, search, sortBy, sortDirection]);
 
   async function loadStationsFromApi(
     page: number,
     size: number,
     searchValue: string,
+    sortField: string,
+    direction: "asc" | "desc",
   ) {
     setLoading(true);
     setError(null);
@@ -63,8 +72,8 @@ export default function GasStationAdminPage() {
       const params = new URLSearchParams({
         PageNumber: String(page),
         PageSize: String(size),
-        SortBy: "brandname",
-        SortDirection: "asc",
+        SortBy: sortField,
+        SortDirection: direction,
       });
 
       if (searchValue.trim().length > 0) {
@@ -84,17 +93,17 @@ export default function GasStationAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        const msg = t("stationadmin.error_fetch", { status: res.status, text });
-        throw new Error(msg);
+        const msg = t("stationadmin.error_fetch", "Error fetching stations");
+        throw new Error(`${msg} (${res.status}): ${text}`);
       }
 
       const json = await res.json();
       const data: StationListResponseData | undefined = json.items
         ? (json as StationListResponseData)
-        : json.data;
+        : json.data || json; 
 
       if (!data || !Array.isArray(data.items)) {
-        throw new Error(t("stationadmin.error_unexpected_response"));
+        throw new Error(t("stationadmin.error_unexpected_response", "Unexpected response format"));
       }
 
       setStations(data.items);
@@ -102,7 +111,7 @@ export default function GasStationAdminPage() {
       setTotalPages(data.totalPages);
     } catch (e: any) {
       console.error(e);
-      setError(e?.message ?? t("stationadmin.error_fetch_fallback"));
+      setError(e?.message ?? t("stationadmin.error_fetch_fallback", "Failed to load stations"));
       setStations([]);
     } finally {
       setLoading(false);
@@ -134,15 +143,14 @@ export default function GasStationAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        const msg = t("stationadmin.error_add", { status: res.status, text });
-        throw new Error(msg);
+        throw new Error(t("stationadmin.error_add", "Failed to add station") + ` (${res.status}): ${text}`);
       }
 
-      await loadStationsFromApi(pageNumber, pageSize, search);
+      await loadStationsFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : t("stationadmin.error_add_fallback"));
+      alert(e instanceof Error ? e.message : t("stationadmin.error_add_fallback", "Failed to add station"));
     }
   };
 
@@ -178,15 +186,14 @@ export default function GasStationAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        const msg = t("stationadmin.error_edit", { status: res.status, text });
-        throw new Error(msg);
+        throw new Error(t("stationadmin.error_edit", "Failed to edit station") + ` (${res.status}): ${text}`);
       }
 
-      await loadStationsFromApi(pageNumber, pageSize, search);
+      await loadStationsFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : t("stationadmin.error_edit_fallback"));
+      alert(e instanceof Error ? e.message : t("stationadmin.error_edit_fallback", "Failed to edit station"));
     }
   };
 
@@ -207,15 +214,14 @@ export default function GasStationAdminPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        const msg = t("stationadmin.error_delete", { status: res.status, text });
-        throw new Error(msg);
+        throw new Error(t("stationadmin.error_delete", "Failed to delete station") + ` (${res.status}): ${text}`);
       }
 
-      await loadStationsFromApi(pageNumber, pageSize, search);
+      await loadStationsFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
       closeModal();
     } catch (e: any) {
       console.error(e);
-      alert(e instanceof Error ? e.message : t("stationadmin.error_delete_fallback"));
+      alert(e instanceof Error ? e.message : t("stationadmin.error_delete_fallback", "Failed to delete station"));
     }
   };
 
@@ -260,60 +266,89 @@ export default function GasStationAdminPage() {
         
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">{t("stationadmin.title")}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">{t("stationadmin.title", "Gas Stations")}</h1>
             <p className="text-sm text-base-content/70">
-              {email ? t("stationadmin.logged_in_as", { email }) : t("stationadmin.checking_session")}
+              {email ? t("stationadmin.logged_in_as", { email }) : t("stationadmin.checking_session", "Checking session...")}
             </p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto justify-end">
-            <a href="/admin" className="btn btn-outline btn-sm">
-              {t("stationadmin.back_to_admin")}
-            </a>
+            <Link to="/admin" className="btn btn-outline btn-sm">
+              {t("brandadmin.back_to_admin")}
+            </Link>
             <button className="btn btn-primary btn-sm" onClick={openAdd} type="button">
-              {t("stationadmin.add_station_button")}
+              {t("stationadmin.add_station_button", "Add Station")}
             </button>
           </div>
         </div>
 
-        <div className="bg-base-300 rounded-xl p-4 shadow-md mb-4">
-          <div className="form-control w-full">
-            <label className="label">
-              <span className="label-text">{t("stationadmin.search_label")}</span>
-            </label>
-            <input
-              type="text"
-              className="input input-bordered input-sm w-full"
-              placeholder={t("stationadmin.search_placeholder")}
-              value={search}
-              onChange={(e) => {
-                setPageNumber(1);
-                setSearch(e.target.value);
-              }}
-            />
+        <div className="bg-base-300 rounded-xl p-4 shadow-md mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="flex flex-col gap-2 w-full md:w-auto md:flex-row md:items-end flex-wrap">
+
+            <div className="form-control w-full md:w-auto">
+              <label className="label"><span className="label-text">{t("stationadmin.search_label", "Search")}</span></label>
+              <input
+                type="text"
+                className="input input-bordered input-sm w-full md:w-80"
+                placeholder={t("stationadmin.search_placeholder", "City, street, brand...")}
+                value={search}
+                onChange={(e) => {
+                  setPageNumber(1);
+                  setSearch(e.target.value);
+                }}
+              />
+            </div>
+
+            <div className="form-control w-full md:w-auto">
+              <label className="label"><span className="label-text">{t("stationadmin.sort_label", "Sort by")}</span></label>
+              <select
+                className="select select-bordered select-sm w-full md:w-auto"
+                value={sortBy}
+                onChange={(e) => {
+                  setPageNumber(1);
+                  setSortBy(e.target.value);
+                }}
+              >
+                <option value="brandname">{t("stationadmin.sort_brand", "Brand")}</option>
+                <option value="city">{t("stationadmin.sort_city", "City")}</option>
+                <option value="createdAt">{t("stationadmin.sort_created", "Created")}</option>
+              </select>
+            </div>
+
+            <div className="form-control w-full md:w-auto">
+              <label className="label"><span className="label-text">{t("stationadmin.sort_dir_label", "Direction")}</span></label>
+              <select
+                className="select select-bordered select-sm w-full md:w-auto"
+                value={sortDirection}
+                onChange={(e) => setSortDirection(e.target.value as "asc" | "desc")}
+              >
+                <option value="asc">{t("stationadmin.sort_asc", "Ascending")}</option>
+                <option value="desc">{t("stationadmin.sort_desc", "Descending")}</option>
+              </select>
+            </div>
           </div>
         </div>
 
         <div className="bg-base-300 rounded-xl p-4 shadow-md">
           {loading ? (
-            <div className="text-sm">{t("stationadmin.loading")}</div>
+            <div className="text-sm">{t("stationadmin.loading", "Loading...")}</div>
           ) : error ? (
             <div className="text-sm text-error">{error}</div>
           ) : stations.length === 0 ? (
-            <div className="text-sm">{t("stationadmin.no_stations")}</div>
+            <div className="text-sm">{t("stationadmin.no_stations", "No stations found.")}</div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="table table-zebra table-sm w-full">
                   <thead>
                     <tr>
-                      <th>{t("stationadmin.table_hash")}</th>
-                      <th>{t("stationadmin.table_brand")}</th>
-                      <th>{t("stationadmin.table_city")}</th>
-                      <th>{t("stationadmin.table_street")}</th>
-                      <th>{t("stationadmin.table_postal")}</th>
-                      <th>{t("stationadmin.table_created")}</th>
-                      <th>{t("stationadmin.table_updated")}</th>
-                      <th className="text-right">{t("stationadmin.table_actions")}</th>
+                      <th>{t("stationadmin.table_hash", "#")}</th>
+                      <th>{t("stationadmin.table_brand", "Brand")}</th>
+                      <th>{t("stationadmin.table_city", "City")}</th>
+                      <th>{t("stationadmin.table_street", "Street")}</th>
+                      <th>{t("stationadmin.table_postal", "Postal")}</th>
+                      <th>{t("stationadmin.table_created", "Created")}</th>
+                      <th>{t("stationadmin.table_updated", "Updated")}</th>
+                      <th className="text-right">{t("stationadmin.table_actions", "Actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -329,10 +364,10 @@ export default function GasStationAdminPage() {
                         <td>
                           <div className="flex justify-end gap-2">
                             <button className="btn btn-xs" type="button" onClick={() => openEdit(s)}>
-                              {t("stationadmin.edit_button")}
+                              {t("stationadmin.edit_button", "Edit")}
                             </button>
                             <button className="btn btn-xs btn-error" type="button" onClick={() => openDelete(s)}>
-                              {t("stationadmin.delete_button")}
+                              {t("stationadmin.delete_button", "Delete")}
                             </button>
                           </div>
                         </td>

@@ -5,7 +5,6 @@ import Footer from "../components/footer";
 import { useTranslation } from "react-i18next";
 import { API_BASE } from "../components/api";
 
-
 function parseJwt(token: string | null) {
     if (!token) return null;
     try {
@@ -35,22 +34,21 @@ type Station = {
     address?: string;
     distanceMeters?: number;
     fuelPrices?: Record<string, number | string> | null;
-    pricePb95?: number | null;
-    priceDiesel?: number | null;
-    priceLpg?: number | null;
 };
 
 type SortColumn = "distance" | "price" | null;
 
 export default function ListPage() {
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
+  React.useEffect(() => {
+    document.title = t("list.stationlist") + " - FuelStats";
+  }, [t]);
     const [email, setEmail] = React.useState<string | null>(null);
     const [stations, setStations] = React.useState<Station[] | null>(null);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
 
     // Filters
-    const [selectedFuelTypes, setSelectedFuelTypes] = React.useState<string[]>([]);
     const [minPrice, setMinPrice] = React.useState<string>("");
     const [maxPrice, setMaxPrice] = React.useState<string>("");
     const [brandName, setBrandName] = React.useState<string>("");
@@ -59,6 +57,12 @@ export default function ListPage() {
     // Sorting
     const [sortColumn, setSortColumn] = React.useState<SortColumn>(null);
     const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("asc");
+    // For price-sorting / price-filtering the API requires a fuel type. This is single-select.
+    const [priceFuel, setPriceFuel] = React.useState<string | null>(null);
+    const [priceDropdownOpen, setPriceDropdownOpen] = React.useState<boolean>(false);
+
+    // Columns control - which fuel columns to show (scalable table)
+    const [visibleFuelColumns, setVisibleFuelColumns] = React.useState<string[]>(["PB95", "ON", "LPG"]);
 
     // Location
     const [userCoords, setUserCoords] = React.useState<{ lat: number; lon: number } | null>(null);
@@ -72,8 +76,6 @@ export default function ListPage() {
     const [availableFuelTypes, setAvailableFuelTypes] = React.useState<string[]>([]);
     const [availableBrands, setAvailableBrands] = React.useState<string[]>([]);
     const [brandsOpen, setBrandsOpen] = React.useState<boolean>(false);
-    const [fuelsOpen, setFuelsOpen] = React.useState<boolean>(false);
-    const [brandFilter, setBrandFilter] = React.useState<string>("");
 
     // Fetch available fuel types and brands once
     React.useEffect(() => {
@@ -86,31 +88,31 @@ export default function ListPage() {
                 };
                 if (token) fetchOptions.headers.Authorization = `Bearer ${token}`;
 
-                console.log('[ListPage] fetching fuel-codes and all-brands with options:', fetchOptions);
-
                 // Fuel codes
                 try {
                     const fRes = await fetch(`${API_BASE}/api/station/fuel-codes`, fetchOptions);
                     const fText = await fRes.text();
 
                     if (!fRes.ok) {
-                        console.warn('[ListPage] fuel-codes response not ok', fRes.status, fText);
                         if (fRes.status === 404) setAvailableFuelTypes([]);
                     } else {
                         let fJson: any;
                         try { fJson = JSON.parse(fText); } catch { fJson = fText; }
 
-                        // support several shapes: ['PB95',...] or { data: [...] } or { items: [...] } or [{ code: 'PB95' }, ...]
                         let arr: any[] = [];
                         if (Array.isArray(fJson)) arr = fJson;
                         else if (Array.isArray(fJson.data)) arr = fJson.data;
                         else if (Array.isArray(fJson.items)) arr = fJson.items;
 
-                        // if items are objects, try to extract string code
                         arr = arr.map((x: any) => typeof x === 'string' ? x : (x.code || x.name || x.value || x));
-                        // filter falsy and unique
                         arr = Array.from(new Set(arr.filter(Boolean)));
                         setAvailableFuelTypes(arr);
+
+                        // keep visible columns in sync (don't overwrite user's choice)
+                        setVisibleFuelColumns(prev => {
+                            if (!prev || prev.length === 0) return arr.slice(0, 3);
+                            return prev.filter(p => arr.includes(p)).concat(arr.filter(a => !prev.includes(a)).slice(0, Math.max(0, 3 - prev.length)));
+                        });
                     }
                 } catch (e) {
                     console.error('[ListPage] error fetching fuel-codes', e);
@@ -123,7 +125,6 @@ export default function ListPage() {
                     const bText = await bRes.text();
 
                     if (!bRes.ok) {
-                        console.warn('[ListPage] all-brands response not ok', bRes.status, bText);
                         if (bRes.status === 404) setAvailableBrands([]);
                     } else {
                         let bJson: any;
@@ -154,17 +155,19 @@ export default function ListPage() {
     async function geocodeAddress(query: string) {
         if (!query || query.trim().length === 0) {
             setAddressSuggestions([]);
-            return;
+            return [] as any[];
         }
         setAddressLoading(true);
         try {
-            // Using Nominatim (OpenStreetMap) for simple geocoding. Swap to your preferred geocoding API if needed.
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=0&limit=5`);
-            if (!res.ok) return;
+            if (!res.ok) return [];
             const json = await res.json();
-            setAddressSuggestions(Array.isArray(json) ? json : []);
+            const arr = Array.isArray(json) ? json : [];
+            setAddressSuggestions(arr);
+            return arr;
         } catch (e) {
             console.error("Geocode error", e);
+            return [];
         } finally {
             setAddressLoading(false);
         }
@@ -179,8 +182,8 @@ export default function ListPage() {
     async function applyAddress() {
         if (userCoords) return;
         if (!address) return;
-        await geocodeAddress(address);
-        const first = addressSuggestions[0];
+        const suggestions = await geocodeAddress(address);
+        const first = suggestions[0];
         if (first) {
             selectAddress(first);
         } else {
@@ -195,9 +198,7 @@ export default function ListPage() {
     const [totalCount, setTotalCount] = React.useState<number | null>(null);
 
     // Collapsible filters
-    const [filtersOpen, setFiltersOpen] = React.useState<boolean>(false); // domyślnie zwinięte
-
-    const fuelTypes = ["PB95", "PB98", "ON", "LPG", "CNG"];
+    const [filtersOpen, setFiltersOpen] = React.useState<boolean>(false);
 
     // Auth check on mount
     React.useEffect(() => {
@@ -238,7 +239,7 @@ export default function ListPage() {
             fetchStations();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [email, pageNumber, pageSize, sortColumn, sortDirection]);
+    }, [email, pageNumber, pageSize, sortColumn, sortDirection, priceFuel, userCoords]);
 
     async function fetchStations() {
         setLoading(true);
@@ -246,23 +247,35 @@ export default function ListPage() {
 
         const token = localStorage.getItem("token");
 
-        // Build request body according to your API
-        const requestBody = {
-            LocationLatitude: userCoords?.lat ?? null,
-            LocationLongitude: userCoords?.lon ?? null,
-            Distance: distance ? parseFloat(distance) : null,
-            FuelType: selectedFuelTypes.length > 0 ? selectedFuelTypes : null,
-            MinPrice: minPrice ? parseFloat(minPrice) : null,
-            MaxPrice: maxPrice ? parseFloat(maxPrice) : null,
-            BrandName: brandName || null,
-            SortingByDisance: sortColumn === "distance" ? true : null,
-            SortingByPrice: sortColumn === "price" ? true : null,
-            SortingDirection: sortColumn ? sortDirection : null, // tylko jeśli sortujemy
-            Pagging: {
-                PageNumber: pageNumber,
-                PageSize: pageSize,
+        // Enforce API requirements: min/max price require a fuel type
+        if ((minPrice || maxPrice) && !priceFuel) {
+            setError("Filtr ceny wymaga wybranego paliwa w sekcji sortowania (wybierz paliwo przy sortowaniu po cenie).\n");
+            setLoading(false);
+            return;
+        }
+
+        // Build request body according to API swagger (camelCase keys)
+        const requestBody: any = {
+            locationLatitude: userCoords?.lat ?? null,
+            locationLongitude: userCoords?.lon ?? null,
+            distance: distance ? parseFloat(distance) : null,
+            fuelType: priceFuel ? [priceFuel] : undefined,
+            minPrice: minPrice ? parseFloat(minPrice) : null,
+            maxPrice: maxPrice ? parseFloat(maxPrice) : null,
+            brandName: brandName || null,
+            sortingByDisance: sortColumn === "distance" ? (true) : null,
+            sortingByPrice: sortColumn === "price" ? (true) : null,
+            sortingDirection: sortColumn ? sortDirection : null,
+            pagging: {
+                pageNumber: pageNumber,
+                pageSize: pageSize,
             },
         };
+
+        // remove undefined fields (API tolerates nulls but keep payload cleaner)
+        Object.keys(requestBody).forEach(k => {
+            if (requestBody[k] === undefined) delete requestBody[k];
+        });
 
         try {
             const headers: Record<string, string> = {
@@ -270,8 +283,6 @@ export default function ListPage() {
                 Accept: "application/json",
             };
             if (token) headers["Authorization"] = `Bearer ${token}`;
-
-            console.log("Fetching stations with body:", requestBody);
 
             const res = await fetch(`${API_BASE}/api/station/list`, {
                 method: "POST",
@@ -282,8 +293,6 @@ export default function ListPage() {
 
             if (!res.ok) {
                 const errorText = await res.text();
-                console.error("API Error:", res.status, errorText);
-
                 let errorMessage = `Błąd ${res.status}: `;
                 try {
                     const errorJson = JSON.parse(errorText);
@@ -294,12 +303,11 @@ export default function ListPage() {
 
                 setError(errorMessage);
                 setStations([]);
+                setLoading(false);
                 return;
             }
 
             const data = await res.json();
-            console.log("API Response:", data);
-
             const items = Array.isArray(data.items) ? data.items : [];
 
             setStations(normalizeStations(items));
@@ -323,7 +331,7 @@ export default function ListPage() {
             if (Array.isArray(s.fuelPrice)) {
                 const map: Record<string, number> = {};
                 for (const item of s.fuelPrice) {
-                    const code = item.fuelCode ?? "";
+                    const code = (item.fuelCode ?? "").toString();
                     const price = typeof item.price === "string"
                         ? parseFloat(item.price.replace(",", "."))
                         : Number(item.price);
@@ -346,40 +354,8 @@ export default function ListPage() {
                 city: s.city ?? undefined,
                 imageUrl: s.imageUrl ?? undefined,
                 fuelPrices: fuelPrices,
-                pricePb95: fuelPrices?.["PB95"] ?? null,
-                priceDiesel: fuelPrices?.["ON"] ?? null,
-                priceLpg: fuelPrices?.["LPG"] ?? null,
-            };
+            } as Station;
         });
-    }
-
-    function toggleFuelType(type: string) {
-        setSelectedFuelTypes(prev =>
-            prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-        );
-    }
-
-    function handleSearch() {
-        setPageNumber(1);
-        fetchStations();
-    }
-
-    function getUserLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setUserCoords({
-                        lat: position.coords.latitude,
-                        lon: position.coords.longitude
-                    });
-                },
-                (error) => {
-                    setError("Nie udało się pobrać lokalizacji: " + error.message);
-                }
-            );
-        } else {
-            setError("Geolokalizacja nie jest wspierana przez twoją przeglądarkę");
-        }
     }
 
     function formatPriceValue(val: number | null | undefined) {
@@ -450,6 +426,30 @@ export default function ListPage() {
         );
     }
 
+    // UI helpers for sorting toggles
+    function toggleDistanceSort() {
+        if (sortColumn === "distance") {
+            setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+        } else {
+            setSortColumn("distance");
+            setSortDirection("asc");
+            // keep the selected fuel persistent — if none is selected, default to the first available fuel
+            if (!priceFuel && availableFuelTypes && availableFuelTypes.length > 0) {
+                setPriceFuel(availableFuelTypes[0]);
+            }
+        }
+    }
+
+    function handlePriceSortSelect(fuel: string) {
+        if (sortColumn === "price" && priceFuel === fuel) {
+            setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+        } else {
+            setSortColumn("price");
+            setPriceFuel(fuel);
+            setSortDirection("asc");
+        }
+    }
+
     return (
         <div className="min-h-screen bg-base-200 text-base-content">
             <Header />
@@ -457,9 +457,9 @@ export default function ListPage() {
             <main className="mx-auto max-w-7xl px-4 py-8">
                 <div className="flex items-center justify-between mb-6">
                     <h1 className="text-2xl md:text-3xl font-bold">{t("list.stationlist")}</h1>
-                    <a href="/dashboard" className="btn btn-outline">
+                        <Link to="/dashboard" className="btn btn-outline">
                         {t("list.dashboardback")}
-                    </a>
+                        </Link>
                 </div>
 
                 <section className="mb-6">
@@ -486,7 +486,7 @@ export default function ListPage() {
                                         const v = e.target.value;
                                         setAddress(v);
                                         if (geocodeTimeoutRef.current) window.clearTimeout(geocodeTimeoutRef.current);
-                                        geocodeTimeoutRef.current = window.setTimeout(() => geocodeAddress(v), 500);
+                                        geocodeTimeoutRef.current = window.setTimeout(() => geocodeAddress(v), 500) as unknown as number;
                                     }}
                                     className="input input-bordered input-sm w-full"
                                 />
@@ -525,46 +525,13 @@ export default function ListPage() {
                                 >
                                     {t("list.useaddress")}
                                 </button>
-                                <button onClick={getUserLocation} className="btn btn-sm btn-outline ml-auto">
+                                <button onClick={() => {
+                                    if (navigator.geolocation) {
+                                        navigator.geolocation.getCurrentPosition((pos) => setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude }), (err) => setError("Nie udało się pobrać lokalizacji: " + err.message));
+                                    } else setError("Geolokalizacja nie jest wspierana przez twoją przeglądarkę");
+                                }} className="btn btn-sm btn-outline ml-auto">
                                     {t("list.usealocalization")}
                                 </button>
-                            </div>
-                        </div>
-
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">{t("list.fueltype")}</label>
-
-                            <div className="relative inline-block">
-                                <button
-                                    type="button"
-                                    className="btn"
-                                    onClick={() => setFuelsOpen(v => !v)}
-                                >
-                                    {selectedFuelTypes.length > 0
-                                        ? selectedFuelTypes.join(', ')
-                                        : t("list.choosefuel")
-                                    } {fuelsOpen ? '▲' : '▼'}
-                                </button>
-
-                                {fuelsOpen && (
-                                    <ul className="dropdown menu w-64 rounded-box bg-base-100 shadow-sm mt-2 p-2 z-50">
-                                        {availableFuelTypes.length === 0 ? (
-                                            <li className="p-2 text-sm text-gray-500">{t("list.nofuel")}</li>
-                                        ) : (
-                                            availableFuelTypes.map((ft) => (
-                                                <li key={ft}>
-                                                    <button
-                                                        type="button"
-                                                        className={`w-full text-left ${selectedFuelTypes.includes(ft) ? 'font-semibold' : ''}`}
-                                                        onClick={() => toggleFuelType(ft)}
-                                                    >
-                                                        {selectedFuelTypes.includes(ft) ? '✓ ' : ''}{ft}
-                                                    </button>
-                                                </li>
-                                            ))
-                                        )}
-                                    </ul>
-                                )}
                             </div>
                         </div>
 
@@ -585,11 +552,11 @@ export default function ListPage() {
                                             type="text"
                                             placeholder="Filtruj marki..."
                                             className="input input-sm mb-2 w-full"
-                                            value={brandFilter}
-                                            onChange={(e) => setBrandFilter(e.target.value)}
+                                            value={""}
+                                            onChange={() => { /* simple: brand filtering handled clientside via availableBrands list */ }}
                                         />
                                         <ul className="max-h-40 overflow-auto">
-                                            {availableBrands.filter(b => b.toLowerCase().includes(brandFilter.toLowerCase())).map((b) => (
+                                            {availableBrands.map((b) => (
                                                 <li key={b}>
                                                     <button
                                                         type="button"
@@ -631,39 +598,7 @@ export default function ListPage() {
                             </div>
                         </div>
 
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">{t("list.sort")}</label>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => {
-                                        setSortColumn("distance");
-                                        setSortDirection("asc");
-                                    }}
-                                    className={`btn btn-sm ${sortColumn === "distance" ? "btn-primary" : "btn-outline"}`}
-                                >
-                                    {t("list.distance")}
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setSortColumn("price");
-                                        setSortDirection("asc");
-                                    }}
-                                    className={`btn btn-sm ${sortColumn === "price" ? "btn-primary" : "btn-outline"}`}
-                                >
-                                    {t("list.price")}
-                                </button>
-                                <select
-                                    value={sortDirection}
-                                    onChange={(e) => setSortDirection(e.target.value as "asc" | "desc")}
-                                    className="select select-sm select-bordered"
-                                >
-                                    <option value="asc">{t("list.ascending")}</option>
-                                    <option value="desc">{t("list.descending")}</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <button onClick={handleSearch} className="btn btn-primary w-full">
+                        <button onClick={() => { setPageNumber(1); fetchStations(); }} className="btn btn-primary w-full">
                             {t("list.searchstation")}
                         </button>
 
@@ -679,16 +614,66 @@ export default function ListPage() {
                             <label className="text-sm">{t("list.muchresults")}</label>
                             <select
                                 value={pageSize}
-                                onChange={(e) => {
-                                    setPageSize(Number(e.target.value));
-                                    setPageNumber(1);
-                                }}
+                                onChange={(e) => { setPageSize(Number(e.target.value)); setPageNumber(1); }}
                                 className="select select-sm select-bordered"
                             >
                                 {[10, 20, 30, 50].map(n => (
                                     <option key={n} value={n}>{n}</option>
                                 ))}
                             </select>
+                        </div>
+                    </div>
+
+                    {/* Sorting area - includes fuel selection for price sorting */}
+                    <div className="mb-4 p-3 border rounded-md bg-base-200">
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <button onClick={toggleDistanceSort} className={`btn btn-sm ${sortColumn === "distance" ? "btn-primary" : "btn-outline"}`}>
+                                {t("list.distance")} {sortColumn === "distance" ? (sortDirection === "asc" ? '↑' : '↓') : ''}
+                                {priceFuel && (
+                                    <span className="ml-2 badge badge-sm">{priceFuel}</span>
+                                )}
+                            </button>
+
+                            <div className="relative">
+                                <button
+                                    onClick={() => setPriceDropdownOpen(v => !v)}
+                                    className={`btn btn-sm ${sortColumn === "price" ? "btn-primary" : "btn-outline"}`}
+                                >
+                                    {t("list.price")} {sortColumn === "price" && priceFuel
+                                        ? `(${priceFuel}) ${sortDirection === 'asc' ? '↑' : '↓'}`
+                                        : ''}
+                                </button>
+
+                                {/* dropdown of single fuel choices for price-sort */}
+                                {priceDropdownOpen && (
+                                    <div className="absolute mt-2 w-44 rounded-box bg-base-100 shadow-sm p-2 z-50">
+                                        {availableFuelTypes.length === 0 ? (
+                                            <div className="p-2 text-sm">{t("list.nofuel")}</div>
+                                        ) : (
+                                            availableFuelTypes.map(ft => (
+                                                <button
+                                                    key={ft}
+                                                    className={`w-full text-left py-1 ${priceFuel === ft ? 'font-semibold' : ''}`}
+                                                    onClick={() => handlePriceSortSelect(ft)}
+                                                >
+                                                    {priceFuel === ft ? '✓ ' : ''}{ft}
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-2 ml-auto">
+                                <label className="text-sm mr-2">{t("list.showFuels")}</label>
+                                <div className="flex gap-1 items-center">
+                                    {availableFuelTypes.slice(0, 6).map(ft => (
+                                        <button key={ft} className={`btn btn-xs ${visibleFuelColumns.includes(ft) ? 'btn-primary' : 'btn-outline'}`} onClick={() => {
+                                            setVisibleFuelColumns(prev => prev.includes(ft) ? prev.filter(p => p !== ft) : [...prev, ft]);
+                                        }}>{ft}</button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -706,49 +691,51 @@ export default function ListPage() {
                             <div className="overflow-x-auto">
                                 <table className="table table-zebra w-full">
                                     <thead>
-                                    <tr>
-                                        <th>{t("list.name")}</th>
-                                        <th>{t("list.pb95")}</th>
-                                        <th>{t("list.diesel")}</th>
-                                        <th>{t("list.lpg")}</th>
-                                        <th>{t("list.city")}</th>
-                                        <th>{t("list.street")}</th>
-                                        <th>{t("list.action")}</th>
-                                    </tr>
+                                        <tr>
+                                            <th>{t("list.name")}</th>
+                                            {/* dynamic fuel columns */}
+                                            {visibleFuelColumns.map(f => (
+                                                <th key={f}>{f}</th>
+                                            ))}
+
+                                            <th>{t("list.city")}</th>
+                                            <th>{t("list.street")}</th>
+                                            <th>{t("list.action")}</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
-                                    {stations.map((s, idx) => (
-                                        <tr key={s.id ?? idx}>
-                                            <td className="font-medium">{s.brandName ?? s.name ?? "-"}</td>
-                                            <td>{formatPriceValue(s.pricePb95)}</td>
-                                            <td>{formatPriceValue(s.priceDiesel)}</td>
-                                            <td>{formatPriceValue(s.priceLpg)}</td>
-                                            <td>{s.city ?? "-"}</td>
-                                            <td>
-                                                {s.street ?? "-"}
-                                                {s.houseNumber ? ` ${s.houseNumber}` : ""}
-                                            </td>
-                                            <td>
-                                                <div className="flex gap-2">
-                                                    <a
-                                                        href={`/map?lat=${s.latitude ?? ""}&lon=${s.longitude ?? ""}`}
-                                                        className="btn btn-xs btn-outline"
-                                                    >
-                                                        {t("list.map")}
-                                                    </a>
+                                        {stations.map((s, idx) => (
+                                            <tr key={s.id ?? idx}>
+                                                <td className="font-medium">{s.brandName ?? s.name ?? "-"}</td>
 
-                                                    <Link
-                                                        to={`/station/${encodeURIComponent(s.brandName)}/${encodeURIComponent(s.city)}/${encodeURIComponent(
-                                                        s.street
-                                                        )}/${encodeURIComponent(s.houseNumber)}`}
-                                                        className="btn btn-xs btn-outline"
+                                                {visibleFuelColumns.map(f => (
+                                                    <td key={f}>{formatPriceValue(s.fuelPrices?.[f])}</td>
+                                                ))}
+
+                                                <td>{s.city ?? "-"}</td>
+                                                <td>
+                                                    {s.street ?? "-"}
+                                                    {s.houseNumber ? ` ${s.houseNumber}` : ""}
+                                                </td>
+                                                <td>
+                                                    <div className="flex gap-2">
+                                                        <a
+                                                            href={`/map?lat=${s.latitude ?? ""}&lon=${s.longitude ?? ""}`}
+                                                            className="btn btn-xs btn-outline"
+                                                        >
+                                                            {t("list.map")}
+                                                        </a>
+
+                                                        <Link
+                                                            to={`/station/${encodeURIComponent(String(s.brandName ?? ''))}/${encodeURIComponent(String(s.city ?? ''))}/${encodeURIComponent(String(s.street ?? ''))}/${encodeURIComponent(String(s.houseNumber ?? ''))}`}
+                                                            className="btn btn-xs btn-outline"
                                                         >
                                                             {t("map.seedetails")}
-                                                    </Link>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                        </Link>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>

@@ -33,6 +33,9 @@ type UserListResponseData = {
 
 export default function UserAdminPage() {
   const { t } = useTranslation();
+    React.useEffect(() => {
+      document.title = t("useradmin.title") + " - FuelStats";
+    }, [t]);
   const { state, email } = useAdminGuard();
 
   const [users, setUsers] = React.useState<AdminUser[]>([]);
@@ -46,8 +49,6 @@ export default function UserAdminPage() {
   const [sortBy, setSortBy] = React.useState("username");
   const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("asc");
 
-  const [onlyReported, setOnlyReported] = React.useState(false);
-
   const [activeModal, setActiveModal] = React.useState<
     "role" | "ban" | "review" | "unlock" | "reports" | null
   >(null);
@@ -60,17 +61,16 @@ export default function UserAdminPage() {
   React.useEffect(() => {
     if (state !== "allowed") return;
     (async () => {
-      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection, onlyReported);
+      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
     })();
-  }, [state, pageNumber, pageSize, search, sortBy, sortDirection, onlyReported]);
+  }, [state, pageNumber, pageSize, search, sortBy, sortDirection]);
 
   async function loadUsersFromApi(
     page: number,
     size: number,
     searchValue: string,
     sort: string,
-    direction: "asc" | "desc",
-    showReported: boolean
+    direction: "asc" | "desc"
   ) {
     setLoading(true);
     setError(null);
@@ -85,10 +85,6 @@ export default function UserAdminPage() {
 
       if (searchValue.trim().length > 0) {
         params.set("Search", searchValue.trim());
-      }
-
-      if (showReported) {
-        params.set("OnlyReported", "true");
       }
 
       const res = await fetch(
@@ -126,13 +122,6 @@ export default function UserAdminPage() {
       setLoading(false);
     }
   }
-
-  const displayedUsers = React.useMemo(() => {
-    if (onlyReported) {
-      return users.filter((u) => u.hasReport);
-    }
-    return users;
-  }, [users, onlyReported]);
 
   const openRoleModal = (user: AdminUser) => { setSelectedUser(user); setActiveModal("role"); };
   const openBanModal = (user: AdminUser) => { setSelectedUser(user); setActiveModal("ban"); };
@@ -200,7 +189,7 @@ export default function UserAdminPage() {
         const text = await res.text();
         throw new Error(t("useradmin.error_change_role", { status: res.status, text }));
       }
-      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection, onlyReported);
+      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
       closeModal();
     } catch (e: any) {
       console.error(e);
@@ -221,7 +210,7 @@ export default function UserAdminPage() {
         const text = await res.text();
         throw new Error(t("useradmin.error_ban", { status: res.status, text }));
       }
-      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection, onlyReported);
+      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
       closeModal();
     } catch (e: any) {
       console.error(e);
@@ -244,7 +233,7 @@ export default function UserAdminPage() {
         const text = await res.text();
         throw new Error(t("useradmin.error_unlock", { status: res.status, text }));
       }
-      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection, onlyReported);
+      await loadUsersFromApi(pageNumber, pageSize, search, sortBy, sortDirection);
       closeModal();
     } catch (e: any) {
       console.error(e);
@@ -319,6 +308,7 @@ export default function UserAdminPage() {
                 <option value="email">{t("useradmin.sort_email")}</option>
                 <option value="roles">{t("useradmin.sort_roles")}</option>
                 <option value="isBanned">{t("useradmin.sort_isBanned")}</option>
+                <option value="hasReport">{t("useradmin.sort_hasReport") || "Has Report"}</option>
                 <option value="createdAt">{t("useradmin.sort_createdAt")}</option>
               </select>
             </div>
@@ -332,21 +322,6 @@ export default function UserAdminPage() {
                 <option value="asc">{t("useradmin.sort_dir_asc")}</option>
                 <option value="desc">{t("useradmin.sort_dir_desc")}</option>
               </select>
-            </div>
-
-            <div className="form-control ml-2 mt-2 md:mt-0">
-               <label className="cursor-pointer label flex flex-col items-start gap-1">
-                 <span className="label-text text-xs">{t("useradmin.filter_only_reported")}</span>
-                 <input 
-                   type="checkbox" 
-                   className="checkbox checkbox-sm checkbox-base" 
-                   checked={onlyReported} 
-                   onChange={e => {
-                     setOnlyReported(e.target.checked); 
-                     setPageNumber(1);
-                   }} 
-                  />
-               </label>
             </div>
           </div>
         </div>
@@ -374,14 +349,14 @@ export default function UserAdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {displayedUsers.map((u, idx) => (
+                    {users.map((u, idx) => (
                       <tr key={`${u.email}-${idx}`}>
                         <td>{idx + 1 + (pageNumber - 1) * pageSize}</td>
                         <td className="font-semibold">
                           {u.userName}
                           {u.hasReport && (
                             <span className="ml-2 tooltip tooltip-right text-warning" data-tip={t("useradmin.reports_modal_title")}>
-                              ⚠️
+                              !
                             </span>
                           )}
                         </td>
@@ -432,13 +407,6 @@ export default function UserAdminPage() {
                         </td>
                       </tr>
                     ))}
-                    {displayedUsers.length === 0 && users.length > 0 && (
-                      <tr>
-                        <td colSpan={7} className="text-center text-sm py-4 text-base-content/60">
-                          {t("useradmin.reports_modal_no_reports") || "Brak zgłoszonych użytkowników na tej stronie."}
-                        </td>
-                      </tr>
-                    )}
                   </tbody>
                 </table>
               </div>

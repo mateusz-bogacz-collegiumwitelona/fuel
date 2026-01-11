@@ -2,10 +2,12 @@ import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { API_BASE } from "../components/api";
+import { useTranslation } from "react-i18next";
 
 export default function ResetPassword() {
+  const { t } = useTranslation();
   const [email, setEmail] = React.useState("");
-  const [token, setToken] = React.useState(""); // Token jest w stanie, ale nie w widoku
+  const [token, setToken] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [message, setMessage] = React.useState("");
@@ -23,30 +25,30 @@ export default function ResetPassword() {
     if (tokenParam) setToken(tokenParam);
     
     if (!tokenParam) {
-       setMessage("Błąd: Brak tokena resetującego w linku.");
+       setMessage(t("reset-password.error_missing_token_link"));
     }
-  }, []);
+  }, [t]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!token.trim()) {
-      setMessage("Brak tokena weryfikacyjnego (użyj linku z e-maila).");
+      setMessage(t("reset-password.error_missing_token_submit"));
       return;
     }
 
     if (password !== confirmPassword) {
-      setMessage("Hasła nie są takie same.");
+      setMessage(t("reset-password.error_password_mismatch"));
       return;
     }
 
     if (password.length < 6) {
-      setMessage("Hasło musi mieć co najmniej 6 znaków.");
+      setMessage(t("reset-password.error_password_short"));
       return;
     }
 
     setLoading(true);
-    setMessage("Ustawianie nowego hasła...");
+    setMessage(t("reset-password.saving"));
 
     try {
       const response = await fetch(`${API_BASE}/api/set-new-password`, {
@@ -74,18 +76,18 @@ export default function ResetPassword() {
       if (!response.ok || data?.success === false) {
         const serverMsg =
           (data && (data.message || data.error)) ??
-          "Nie udało się ustawić nowego hasła.";
+          t("reset-password.error_setting_failed");
         setMessage(serverMsg);
         return;
       }
 
       setIsSuccess(true);
-      setMessage(data?.message ?? "Hasło zostało zmienione. Możesz się teraz zalogować.");
+      setMessage(data?.message ?? t("reset-password.success_message"));
       setPassword("");
       setConfirmPassword("");
     } catch (error) {
       console.error(error);
-      setMessage("Błąd połączenia z serwerem.");
+      setMessage(t("reset-password.connection_error"));
     } finally {
       setLoading(false);
     }
@@ -101,22 +103,22 @@ export default function ResetPassword() {
           className="bg-base-300 p-8 rounded-2xl shadow-lg flex flex-col gap-4 w-full max-w-sm"
         >
           <h2 className="text-2xl font-bold text-center mb-2">
-            Ustaw nowe hasło
+            {t("reset-password.title")}
           </h2>
 
           {!isSuccess && (
-            <p className="text-xs text-gray-400 leading-snug mb-2">
-              Wpisz swoje nowe hasło poniżej.
+            <p className="text-xs text-base-content/70 leading-snug mb-2">
+              {t("reset-password.description")}
             </p>
           )}
 
           <div className="form-control">
-             <label className="label py-0"><span className="label-text-alt">Konto</span></label>
+             <label className="label py-0"><span className="label-text-alt">{t("reset-password.account_label")}</span></label>
              <input
                 type="email"
                 value={email}
                 readOnly
-                className="p-3 rounded-md bg-base-200 border border-gray-600 text-gray-500 cursor-not-allowed outline-none"
+                className="p-3 rounded-md bg-base-200 border border-gray-600 text-base-content/50 cursor-not-allowed outline-none"
              />
           </div>
 
@@ -125,7 +127,7 @@ export default function ResetPassword() {
             <>
               <input
                 type="password"
-                placeholder="Nowe hasło"
+                placeholder={t("reset-password.new_password_placeholder")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -134,20 +136,19 @@ export default function ResetPassword() {
 
               <input
                 type="password"
-                placeholder="Powtórz nowe hasło"
+                placeholder={t("reset-password.confirm_password_placeholder")}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 className="p-3 rounded-md bg-base-100 border border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-400 outline-none"
               />
 
-              <div className="text-xs text-gray-400 leading-snug">
-                Hasło musi mieć co najmniej 6 znaków, zawierać co najmniej jedną
-                wielką literę, jedną cyfrę oraz jeden znak specjalny.
+              <div className="text-xs text-base-content/70 leading-snug">
+                {t("reset-password.password_rules")}
               </div>
 
               <button type="submit" className="btn btn-info" disabled={loading || !token}>
-                {loading ? "Zapisywanie..." : "Zapisz nowe hasło"}
+                {loading ? t("reset-password.saving") : t("reset-password.submit")}
               </button>
             </>
           )}
@@ -160,12 +161,12 @@ export default function ResetPassword() {
 
           <div className="text-center text-sm mt-2">
             {isSuccess ? (
-                <a href="/login" className="btn btn-primary w-full mt-2">Przejdź do logowania</a>
+                <a href="/login" className="btn btn-primary w-full mt-2">{t("reset-password.success_button")}</a>
             ) : (
                 <>
-                Pamiętasz hasło?{" "}
+                {t("reset-password.remember_password")}{" "}
                 <a href="/login" className="link link-primary">
-                  Wróć do logowania
+                  {t("reset-password.back_to_login")}
                 </a>
                 </>
             )}

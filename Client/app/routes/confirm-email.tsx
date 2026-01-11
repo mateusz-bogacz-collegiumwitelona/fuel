@@ -2,12 +2,23 @@ import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { API_BASE } from "../components/api";
+import { useTranslation } from "react-i18next";
 
 export default function ConfirmEmail() {
+  const { t } = useTranslation();
+  React.useEffect(() => {
+    document.title = t("confirm-email.title") + " - FuelStats";
+  }, [t]);
   const [status, setStatus] = React.useState<"loading" | "success" | "error">("loading");
-  const [message, setMessage] = React.useState("Weryfikacja adresu e-mail...");
+  const [message, setMessage] = React.useState("");
   
   const effectRan = React.useRef(false);
+
+  React.useEffect(() => {
+    if (status === "loading") {
+      setMessage(t("confirm-email.verifying_initial"));
+    }
+  }, [t, status]);
 
   React.useEffect(() => {
     if (effectRan.current === true) return;
@@ -18,13 +29,14 @@ export default function ConfirmEmail() {
 
     if (!emailParam || !tokenParam) {
       setStatus("error");
-      setMessage("Nieprawidłowy link potwierdzający (brak tokena lub e-maila).");
+      setMessage(t("confirm-email.error_invalid_link"));
       return;
     }
 
     effectRan.current = true;
 
     confirmEmail(emailParam, tokenParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const confirmEmail = async (emailValue: string, tokenValue: string) => {
@@ -52,28 +64,30 @@ export default function ConfirmEmail() {
       if (!response.ok || data?.success === false) {
         const serverMsg =
           (data && (data.message || data.error)) ??
-          "Nie udało się potwierdzić adresu e-mail.";
+          t("confirm-email.error_default");
 
         console.log("Błąd weryfikacji:", serverMsg); 
 
         if (serverMsg.toLowerCase().includes("already confirmed")) {
             setStatus("success");
-            setMessage("Twój e-mail został już wcześniej potwierdzony. Możesz się zalogować.");
+            setMessage(t("confirm-email.error_already_confirmed"));
             return;
         }
 
         setStatus("error");
-        setMessage(serverMsg);
+        setMessage(serverMsg === "Nie udało się potwierdzić adresu e-mail." 
+          ? t("confirm-email.error_default") 
+          : serverMsg);
         return;
       }
 
       setStatus("success");
-      setMessage("Potwierdzono email. Możesz się teraz zalogować.");
+      setMessage(data?.message ?? t("confirm-email.success_message"));
 
     } catch (error) {
       console.error(error);
       setStatus("error");
-      setMessage("Błąd połączenia z serwerem.");
+      setMessage(t("confirm-email.connection_error"));
     }
   };
 
@@ -87,27 +101,27 @@ export default function ConfirmEmail() {
           {status === "loading" && (
             <div className="flex flex-col items-center">
               <span className="loading loading-spinner loading-lg mb-4 text-info"></span>
-              <h2 className="text-xl font-bold">Weryfikacja...</h2>
-              <p className="text-sm text-gray-400 mt-2">Proszę czekać, sprawdzamy Twój link.</p>
+              <h2 className="text-xl font-bold">{t("confirm-email.loading_title")}</h2>
+              <p className="text-sm text-base-content/70 mt-2">{t("confirm-email.loading_desc")}</p>
             </div>
           )}
 
           {status === "error" && (
             <div className="flex flex-col items-center">
-              <h2 className="text-xl font-bold text-error mb-2">Błąd weryfikacji</h2>
-              <p className="text-sm text-gray-300 mb-4">{message}</p>
+              <h2 className="text-xl font-bold text-error mb-2">{t("confirm-email.error_title")}</h2>
+              <p className="text-sm text-base-content/70 mb-4">{message}</p>
               <a href="/login" className="btn btn-outline btn-sm">
-                Wróć do logowania
+                {t("confirm-email.back_to_login")}
               </a>
             </div>
           )}
 
           {status === "success" && (
             <div className="flex flex-col items-center">
-              <h2 className="text-2xl font-bold text-success mb-4">Sukces!</h2>
+              <h2 className="text-2xl font-bold text-success mb-4">{t("confirm-email.success_title")}</h2>
               <p className="text-lg mb-6">{message}</p>
               <a href="/login" className="btn btn-primary w-full">
-                Przejdź do logowania
+                {t("confirm-email.go_to_login")}
               </a>
             </div>
           )}
