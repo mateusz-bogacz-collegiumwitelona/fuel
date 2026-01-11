@@ -41,6 +41,9 @@ jobs:
       AZURITE_TABLE_PORT: 10002
       DOCKER_REGISTRY: ""
 
+      ADMIN_EMAIL: admin@example.pl
+      ADMIN_PASSWORD: "AdminPassword123!"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
