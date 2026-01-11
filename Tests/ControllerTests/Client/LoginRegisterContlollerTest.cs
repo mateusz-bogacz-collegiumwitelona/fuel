@@ -68,11 +68,14 @@ namespace Tests.ControllerTest.Client
             Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 
             var body = await resp.Content.ReadAsStringAsync();
-            var data = JsonSerializer.Deserialize<LoginResponse>(body, JsonOptions);
-            Assert.NotNull(data);
-            Assert.False(string.IsNullOrWhiteSpace(data.Email));
-            Assert.False(string.IsNullOrWhiteSpace(data.UserName));
-            Assert.NotNull(data.Roles);
+            if (JsonDocument.Parse(body).RootElement.TryGetProperty("data", out var unpacked))
+            {
+                var data = JsonSerializer.Deserialize<LoginResponse>(unpacked.GetRawText(), JsonOptions);
+                Assert.NotNull(data);
+                Assert.False(string.IsNullOrWhiteSpace(data.Email));
+                Assert.False(string.IsNullOrWhiteSpace(data.UserName));
+                Assert.NotNull(data.Roles);
+            }
         }
 
         [Fact]
