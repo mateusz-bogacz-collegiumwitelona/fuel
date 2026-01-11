@@ -3,7 +3,6 @@ using DTO.Requests;
 using DTO.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using NRedisStack;
 using Services.Helpers;
 using Services.Interfaces;
 
@@ -35,10 +34,22 @@ namespace Services.Services
         {
             try
             {
+                string brands = request.BrandName != null && request.BrandName.Any() 
+                    ? string.Join("-", request.BrandName.OrderBy(b => b)) 
+                    : "all";
+
+                string location = request.LocationLatitude.HasValue && request.LocationLongitude.HasValue && request.Distance.HasValue
+                    ? $"{request.LocationLatitude}-{request.LocationLongitude}-{request.Distance}"
+                    : "no-location";
+
+                string rawKey = $"{CacheService.CacheKeys.StationMap}:{brands}:{location}";
+
+                string dynamicKey = _cache.GenerateCacheKey(rawKey);
+
                 var result = await _cache.GetOrSetAsync(
-                    CacheService.CacheKeys.StationMap,
+                    dynamicKey,
                     async () => await _stationRepository.GetAllStationsForMapAsync(request),
-                    CacheService.CacheExpiry.Medium
+                    CacheService.CacheExpiry.Short
                     );
 
                 if (result == null || result.Count == 0)
@@ -55,7 +66,6 @@ namespace Services.Services
                     "Stations retrieved successfully.",
                     StatusCodes.Status200OK,
                     result);
-
             }
             catch (Exception ex)
             {
