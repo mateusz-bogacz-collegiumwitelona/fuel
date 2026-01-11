@@ -1,7 +1,7 @@
 import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
-
+import { Link } from "react-router";
 import { useAdminGuard } from "../components/useAdminGuard";
 import { API_BASE } from "../components/api";
 import { useTranslation } from "react-i18next";
@@ -371,9 +371,9 @@ export default function ProposalAdminPage() {
               {email ? t("proposaladmin.logged_in_as", { email }) : t("proposaladmin.checking_session")}
             </p>
           </div>
-          <a href="/admin" className="btn btn-outline btn-sm">
-            {t("proposaladmin.back_to_admin")}
-          </a>
+        <Link to="/admin" className="btn btn-outline btn-sm">
+          {t("brandadmin.back_to_admin")}
+        </Link>
         </div>
 
         <div className="mt-6 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">

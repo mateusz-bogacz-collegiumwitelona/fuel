@@ -1,7 +1,7 @@
 import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
-
+import { Link } from "react-router";
 import {
   AddBrandModal,
   EditBrandModal,
@@ -236,9 +236,9 @@ export default function BrandAdminPage() {
             </p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto justify-end">
-            <a href="/admin" className="btn btn-outline btn-sm">
+            <Link to="/admin" className="btn btn-outline btn-sm">
               {t("brandadmin.back_to_admin")}
-            </a>
+            </Link>
             <button className="btn btn-primary btn-sm" type="button" onClick={openAdd}>
               {t("brandadmin.add_brand_button")}
             </button>

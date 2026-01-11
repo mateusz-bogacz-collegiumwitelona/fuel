@@ -4,7 +4,7 @@ import Footer from "../components/footer";
 import { API_BASE } from "../components/api";
 import { useTranslation } from "react-i18next";
 import { useUserGuard } from "../components/useUserGuard"; 
-
+import { Link } from "react-router";
 const GlobalMapContent = lazy(() => import("../components/GlobalMapContent"));
 
 type Station = {
@@ -161,9 +161,9 @@ export default function MapView(): JSX.Element {
       <main className="mx-auto max-w-7xl px-4 py-8 flex-grow w-full">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl md:text-3xl font-bold">{t("map.fuelstationmap")}</h1>
-          <a href="/dashboard" className="btn btn-outline">
-            {t("map.dashboardback")}
-          </a>
+        <Link to="/dashboard" className="btn btn-outline">
+          {t("map.dashboardback")}
+        </Link>
         </div>
 
         <div className="bg-base-300 p-4 rounded-xl shadow-md mb-6 flex flex-col md:flex-row gap-4 items-stretch md:items-center flex-wrap">

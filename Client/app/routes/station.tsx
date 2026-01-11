@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, Link } from "react-router";
 import { useTranslation } from "react-i18next";
-
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { API_BASE } from "../components/api";

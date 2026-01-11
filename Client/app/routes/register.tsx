@@ -157,14 +157,7 @@ export default function Register() {
             {loading ? t("register.registering") : t("register.submit")}
           </button>
           
-          {/* --- FACEBOOK BUTTON --- */}
-          <div className="divider my-2 text-sm text-base-content/50">{t("register.or")}</div>
-          
-          <FacebookButton 
-            buttonText={t("register.facebook_button")}
-            onLoginSuccess={handleFacebookSuccess}
-            onLoginFailure={(msg) => setMessage(msg)}
-          />
+
 
           {message && (
             <p className="text-center text-sm text-base-content/80 mt-2">

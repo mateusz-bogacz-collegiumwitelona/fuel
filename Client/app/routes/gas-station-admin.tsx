@@ -1,6 +1,7 @@
 import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
+import { Link } from "react-router";
 
 import {
   AddStationModal,
@@ -38,7 +39,6 @@ export default function GasStationAdminPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // --- FILTRY I SORTOWANIE ---
   const [pageNumber, setPageNumber] = React.useState(1);
   const [pageSize] = React.useState(10);
   const [totalPages, setTotalPages] = React.useState(1);
@@ -272,20 +272,18 @@ export default function GasStationAdminPage() {
             </p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto justify-end">
-            <a href="/admin" className="btn btn-outline btn-sm">
-              {t("stationadmin.back_to_admin", "Back")}
-            </a>
+            <Link to="/admin" className="btn btn-outline btn-sm">
+              {t("brandadmin.back_to_admin")}
+            </Link>
             <button className="btn btn-primary btn-sm" onClick={openAdd} type="button">
               {t("stationadmin.add_station_button", "Add Station")}
             </button>
           </div>
         </div>
 
-        {/* --- PANEL FILTRÓW --- */}
         <div className="bg-base-300 rounded-xl p-4 shadow-md mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col gap-2 w-full md:w-auto md:flex-row md:items-end flex-wrap">
-            
-            {/* Wyszukiwanie tekstowe */}
+
             <div className="form-control w-full md:w-auto">
               <label className="label"><span className="label-text">{t("stationadmin.search_label", "Search")}</span></label>
               <input
@@ -300,7 +298,6 @@ export default function GasStationAdminPage() {
               />
             </div>
 
-            {/* Sortowanie - Kolumna */}
             <div className="form-control w-full md:w-auto">
               <label className="label"><span className="label-text">{t("stationadmin.sort_label", "Sort by")}</span></label>
               <select
@@ -317,7 +314,6 @@ export default function GasStationAdminPage() {
               </select>
             </div>
 
-            {/* Sortowanie - Kierunek */}
             <div className="form-control w-full md:w-auto">
               <label className="label"><span className="label-text">{t("stationadmin.sort_dir_label", "Direction")}</span></label>
               <select
@@ -332,7 +328,6 @@ export default function GasStationAdminPage() {
           </div>
         </div>
 
-        {/* --- TABELA --- */}
         <div className="bg-base-300 rounded-xl p-4 shadow-md">
           {loading ? (
             <div className="text-sm">{t("stationadmin.loading", "Loading...")}</div>
