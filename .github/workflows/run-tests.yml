@@ -1,5 +1,4 @@
 name: Run Integration Tests
-
 on:
   pull_request:
     branches:
@@ -9,7 +8,6 @@ on:
     branches:
       - main
       - production
-
 jobs:
   run-integration-tests:
     runs-on: ubuntu-latest
@@ -20,17 +18,12 @@ jobs:
       POSTGRES_DB: testdb
       POSTGRES_HOST: postgis
       POSTGRES_PORT: 5432
-
       REDIS_HOST: redis
-
       REDIS_PORT: 6379
-
       FACEBOOK_OAUTH_CLIENT_ID: ${{ secrets.FACEBOOK_OAUTH_CLIENT_ID }}
       FACEBOOK_OAUTH_CLIENT_SECRET: ${{ secrets.FACEBOOK_OAUTH_CLIENT_SECRET }}
-
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-
       API_PORT: 5111
       MAILPIT_PORT: 63854
       NGINX_HTTP_PORT: 8080
@@ -40,7 +33,6 @@ jobs:
       AZURITE_QUEUE_PORT: 10001
       AZURITE_TABLE_PORT: 10002
       DOCKER_REGISTRY: ""
-
       ADMIN_EMAIL: admin@example.pl
       ADMIN_PASSWORD: "AdminPassword123!"
     steps:
@@ -54,35 +46,15 @@ jobs:
         run: docker compose build tests postgis redis
 
       - name: Run Tests
+        shell: bash
         run: |
-          set +e
-          docker compose run -T --rm tests 2>&1 | tee test_output.log
-          TEST_EXIT_CODE=${PIPESTATUS[0]}
-          set -e
-
-          echo "-----------------------------------"
-          echo "Docker container exit code: $TEST_EXIT_CODE"
-          echo "-----------------------------------"
+          docker compose run -T --rm tests 2>&1 | tee test_output.log || true
 
           if grep -q "Test Run Successful" test_output.log; then
-            PASSED=$(grep -oP 'Passed: \K\d+' test_output.log | tail -1 || echo "N/A")
-            TOTAL=$(grep -oP 'Total tests: \K\d+' test_output.log | tail -1 || echo "N/A")
-            
-            echo "Tests passed: $PASSED/$TOTAL"
-            
-            if [ "$TEST_EXIT_CODE" -ne 0 ]; then
-              echo "Warning: Container exited with code $TEST_EXIT_CODE"
-              echo "This is likely due to background service disposal (EfCoreSink)"
-              echo "Tests passed successfully - safe to ignore"
-            fi
-            
+            echo "Tests passed successfully"
             exit 0
           else
-            echo "Tests failed or did not complete"
-            echo ""
-            echo ""----------------------------------"
-            echo "Test output:"
-            echo "-----------------------------------"
+            echo "Tests failed"
             cat test_output.log
             exit 1
           fi
