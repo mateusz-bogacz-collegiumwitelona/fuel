@@ -4,6 +4,7 @@ using Data.Reopsitories;
 using DTO.Requests;
 using DTO.Responses;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NetTopologySuite;
@@ -24,6 +25,7 @@ namespace Tests.RepositoryTests
 
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
                 .Options;
 
             _context = new ApplicationDbContext(options);
@@ -305,7 +307,7 @@ namespace Tests.RepositoryTests
                 Price = 4.5m
             };
             _context.FuelPrices.Add(fuelprice);
-            _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
 
             //Act
             var result = await _repository.AssignFuelTypeToStationAsync(petrol.Id, station.Id, 3.0m);

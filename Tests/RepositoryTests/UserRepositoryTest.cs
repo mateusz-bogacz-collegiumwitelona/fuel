@@ -235,36 +235,5 @@ namespace Tests.RepositoryTests
             Assert.True(result.ToList().Skip(1).First().IsBanned);
             _output.WriteLine("Success, GetUserListAsync sees active ban status");
         }
-
-        [Fact]
-        public async Task ReportUserAsyncTest_SuccessIfReportAddedAndReturnedTrue()
-        {
-            //Arrange
-            var reason = "TestReport";
-            var user1 = new ApplicationUser
-            {
-                Id = Guid.NewGuid(),
-                Email = "reporting@test.com",
-                UserName = "ReportingUser"
-            };
-
-            var user2 = new ApplicationUser
-            {
-                Id = Guid.NewGuid(),
-                Email = "reported@test.com",
-                UserName = "ReportedUser"
-            };
-
-            //Act
-            var result = await _repository.ReportUserAsync(user2, user1, reason);
-
-            //Assert
-            var report = await _context.ReportUserRecords.FirstOrDefaultAsync();
-            Assert.True(result);
-            Assert.Equal("TestReport", report?.Description);
-            Assert.Equal(user1.Id, report?.ReportingUserId);
-            Assert.Equal(user2.Id, report?.ReportedUserId);
-            _output.WriteLine("Success, ReportUserAsync successfuly creates a report.");
-        }
     }
 }

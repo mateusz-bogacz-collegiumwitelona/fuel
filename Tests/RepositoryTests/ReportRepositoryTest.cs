@@ -261,5 +261,85 @@ namespace Tests.RepositoryTests
             Times.Once);
             _output.WriteLine("Succes, ChangeRepostStatusToRejectAsync returns and throws an error when given bad data");
         }
+
+        [Fact]
+        public async Task ClearReports_SuccessIfCleared()
+        {
+            //Arrange
+            var reporting1 = new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                Email = "reporting1@test.com",
+                UserName = "Reporting1"
+            };
+            var reporting2 = new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                Email = "reporting2@test.com",
+                UserName = "Reporting2"
+            };
+
+            var reported1 = new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                Email = "reported1@test.com",
+                UserName = "Reported1"
+            };
+
+            var reported2 = new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                Email = "reported2@test.com",
+                UserName = "Reported2"
+            };
+
+            var admin = new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                Email = "admin@test.com",
+                UserName = "Admin"
+            };
+
+            var pending1 = new ReportUserRecord
+            {
+                Id = Guid.NewGuid(),
+                ReportingUserId = reporting1.Id,
+                ReportedUserId = reported1.Id,
+                CreatedAt = DateTime.UtcNow.AddHours(-10),
+                Status = ReportStatusEnum.Pending,
+                Description = "report1"
+            };
+
+            var pending2 = new ReportUserRecord
+            {
+                Id = Guid.NewGuid(),
+                ReportingUserId = reporting2.Id,
+                ReportedUserId = reported2.Id,
+                CreatedAt = DateTime.UtcNow.AddHours(-5),
+                Status = ReportStatusEnum.Pending,
+                Description = "report2"
+            };
+
+            _context.Users.AddRange(reporting1, reporting2, reported1, reported2, admin);
+            _context.ReportUserRecords.AddRange(pending1, pending2);
+            await _context.SaveChangesAsync();
+
+            // Act
+            await _repository.ClearReports(reported1.Id, admin);
+            await _repository.ClearReports(reported2.Id, admin);
+
+            // Assert
+            var updated1 = await _context.ReportUserRecords.FindAsync(pending1.Id);
+            var updated2 = await _context.ReportUserRecords.FindAsync(pending2.Id);
+
+            Assert.Equal(ReportStatusEnum.Accepted, updated1?.Status);
+            Assert.Equal(ReportStatusEnum.Accepted, updated2?.Status);
+            Assert.Equal(admin.Id, updated1?.ReviewedByAdminId);
+            Assert.Equal(admin.Id, updated2?.ReviewedByAdminId);
+            Assert.NotNull(updated1?.ReviewedAt);
+            Assert.NotNull(updated2?.ReviewedAt);
+
+            _output.WriteLine("Success, ClearReports marks all pending reportsas accepted");
+        }
     }
 }

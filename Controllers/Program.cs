@@ -255,7 +255,6 @@ builder.Services.AddSingleton(sp =>
 //configure facebook auth settings
 builder.Services.Configure<Microsoft.AspNetCore.Authentication.Google.GoogleOptions>(
     builder.Configuration.GetSection("Google"));
-
 //register repo 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IStationRepository, StationRepository>();
@@ -287,7 +286,7 @@ builder.Services.AddScoped<EmailBodys>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenFactory, TokenFactory>();
 builder.Services.AddScoped<CacheService>();
-builder.Services.AddScoped<IStorage, BlobApiHelper>(); 
+builder.Services.AddScoped<IStorage, BlobApiHelper>();
 builder.Services.AddScoped<GoogleAuthClient>();
 
 //register background services
@@ -310,7 +309,6 @@ builder.Services.AddTransient<IEventHandler<UserBannedEvent>, InvalidateBannedUs
 builder.Services.AddTransient<IEventHandler<UserUnlockedEvent>, NotifyUserUnlockHandler>();
 builder.Services.AddTransient<IEventHandler<UserUnlockedEvent>, InvalidateUnlockedUserCacheHandler>();
 
-//controllers and swagger
 builder.Services.AddControllers(op =>
 {
     var policy = new AuthorizationPolicyBuilder()
@@ -379,7 +377,7 @@ var app = builder.Build();
 app.UseForwardedHeaders();
 
 var cliArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
-if (cliArgs.Length > 0)
+if (!app.Environment.IsEnvironment("Testing") && cliArgs.Length > 0)
 {
     var commandRunner = new CommandRunner(app.Services);
     await commandRunner.RunAsync(cliArgs);
@@ -431,3 +429,5 @@ app.UseHttpsRedirection();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

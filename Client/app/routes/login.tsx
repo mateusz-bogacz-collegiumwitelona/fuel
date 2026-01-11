@@ -1,6 +1,6 @@
 import * as React from "react";
-import Header from "../components/header";
-import Footer from "../components/footer";
+import HeaderHome from "../components/HeaderHome";
+import FooterHome from "../components/FooterHome";
 import { useTranslation } from "react-i18next";
 import FacebookButton from "../components/FacebookLoginButton";
 import { API_BASE } from "../components/api";
@@ -72,19 +72,19 @@ async function fetchMe(): Promise<any | null> {
 
 export default function Login() {
   const { t } = useTranslation();
+  React.useEffect(() => {
+    document.title = t("login.title") + " - FuelStats";
+  }, [t]);
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [message, setMessage] = React.useState("");
 
-
   const handleFacebookSuccess = (data: any) => {
-    if (data?.email) localStorage.setItem("email", data.email);
-    if (data?.token) localStorage.setItem("token", data.token);
 
     const roleFromBody = extractRoleLoose(data);
     if (roleFromBody) {
-      setMessage(t("login.success") || "Zalogowano pomyślnie!");
+      setMessage(t("login.success") || t("login.default_success"));
       redirectByRole(roleFromBody);
       return;
     }
@@ -130,14 +130,6 @@ export default function Login() {
         return;
       }
 
-      if (data?.email) {
-        try {
-          localStorage.setItem("email", data.email);
-        } catch {
-
-        }
-      }
-
       const roleFromBody = extractRoleLoose(data);
       if (roleFromBody) {
         setMessage(t("login.success"));
@@ -148,15 +140,6 @@ export default function Login() {
       const me = await fetchMe();
       if (me) {
         const meRole = extractRoleLoose(me);
-        const meEmail = me.email ?? me.userName ?? null;
-
-        if (meEmail) {
-          try {
-            localStorage.setItem("email", String(meEmail));
-          } catch {
-
-          }
-        }
 
         setMessage(t("login.success"));
         redirectByRole(meRole);
@@ -183,7 +166,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
-      <Header />
+      <HeaderHome/>
 
       <div className="flex-grow flex justify-center items-center">
         <form
@@ -221,8 +204,7 @@ export default function Login() {
           )}
 
 
-          {/* --- FACEBOOK BUTTON --- */}
-          <div className="divider my-1 text-sm opacity-70">LUB</div>
+          <div className="divider my-1 text-sm opacity-70">{t("login.or")}</div>
           
           <FacebookButton 
             onLoginSuccess={handleFacebookSuccess}
@@ -239,13 +221,13 @@ export default function Login() {
               href="/forgot-password"
               className="link link-hover opacity-70 hover:opacity-100 transition-opacity"
             >
-              Zapomniałeś hasła? Kliknij tutaj
+              {t("login.forgot_password")}
             </a>
             
             <div className="mt-1">
-              Nie masz konta?{" "}
+              {t("login.no_account")}{" "}
               <a href="/register" className="link link-primary font-bold">
-                Zarejestruj się!
+                {t("login.register")}
               </a>
             </div>
           </div>
@@ -253,7 +235,7 @@ export default function Login() {
         </form>
       </div>
 
-      <Footer />
+      <FooterHome/>
     </div>
   );
 }

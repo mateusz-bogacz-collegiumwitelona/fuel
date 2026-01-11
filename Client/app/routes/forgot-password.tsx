@@ -2,8 +2,13 @@ import * as React from "react";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { API_BASE } from "../components/api";
+import { useTranslation } from "react-i18next";
 
 export default function ForgotPassword() {
+  const { t } = useTranslation();
+  React.useEffect(() => {
+    document.title = t("forgot-password.title") + " - FuelStats";
+  }, [t]);
   const [email, setEmail] = React.useState("");
   const [message, setMessage] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -12,12 +17,12 @@ export default function ForgotPassword() {
     e.preventDefault();
 
     if (!email.trim()) {
-      setMessage("Podaj adres e-mail.");
+      setMessage(t("forgot-password.error_email_required"));
       return;
     }
 
     setLoading(true);
-    setMessage("Wysyłanie instrukcji resetu hasła...");
+    setMessage(t("forgot-password.sending"));
 
     try {
       const response = await fetch(
@@ -44,18 +49,18 @@ export default function ForgotPassword() {
           (data &&
             Array.isArray(data.errors) &&
             data.errors.join(", ")) ??
-          "Nie udało się wysłać maila z resetem hasła.";
+          t("forgot-password.error_sending_failed");
         setMessage(serverMsg);
         return;
       }
 
       setMessage(
         data?.message ??
-          "Jeśli konto istnieje i e-mail jest potwierdzony, wysłaliśmy wiadomość z instrukcją resetu hasła.",
+          t("forgot-password.success_message"),
       );
     } catch (error) {
       console.error(error);
-      setMessage("Błąd połączenia z serwerem.");
+      setMessage(t("forgot-password.connection_error"));
     } finally {
       setLoading(false);
     }
@@ -71,18 +76,16 @@ export default function ForgotPassword() {
           className="bg-base-300 p-8 rounded-2xl shadow-lg flex flex-col gap-4 w-full max-w-sm"
         >
           <h2 className="text-2xl font-bold text-center mb-2">
-            Przypomnienie hasła
+            {t("forgot-password.title")}
           </h2>
 
-          <p className="text-xs text-gray-400 leading-snug mb-2">
-            Wpisz adres e-mail użyty przy rejestracji. Jeśli konto istnieje i
-            e-mail jest potwierdzony, wyślemy wiadomość z instrukcją zmiany
-            hasła.
+          <p className="text-xs text-base-content/70 leading-snug mb-2">
+            {t("forgot-password.description")}
           </p>
 
           <input
             type="email"
-            placeholder="E-mail"
+            placeholder={t("forgot-password.email_placeholder")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -90,19 +93,19 @@ export default function ForgotPassword() {
           />
 
           <button type="submit" className="btn btn-info" disabled={loading}>
-            {loading ? "Wysyłanie..." : "Wyślij link resetujący"}
+            {loading ? t("forgot-password.sending") : t("forgot-password.submit")}
           </button>
 
           {message && (
-            <p className="text-center text-sm text-gray-300 mt-2">
+            <p className="text-center text-sm text-base-content/80 mt-2">
               {message}
             </p>
           )}
 
           <div className="text-center text-sm mt-2">
-            Pamiętasz hasło?{" "}
+            {t("forgot-password.remember_password")}{" "}
             <a href="/login" className="link link-primary">
-              Wróć do logowania
+              {t("forgot-password.back_to_login")}
             </a>
           </div>
         </form>

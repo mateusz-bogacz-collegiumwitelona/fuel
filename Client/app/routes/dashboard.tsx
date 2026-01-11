@@ -31,7 +31,9 @@ type Station = {
 export default function Dashboard(): JSX.Element {
   const { state, email } = useUserGuard();
   const { t } = useTranslation();
-
+  React.useEffect(() => {
+    document.title = t("footer.links.dashboard") + " - FuelStats";
+  }, [t]);
   const [requests, setRequests] = React.useState<RequestItem[] | null>(null);
   const [requestsLoading, setRequestsLoading] = React.useState(true);
 

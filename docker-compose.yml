@@ -33,30 +33,12 @@ services:
       - Blob__ConnectionString=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;
       - FACEBOOK_APP_ID=${FACEBOOK_OAUTH_CLIENT_ID}
       - FACEBOOK_APP_SECRET=${FACEBOOK_OAUTH_CLIENT_SECRET}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     ports:
       - "${API_PORT:-5111}:8080"
     networks:
       - dev
-
-  tests:
-    build:
-      context: .
-      dockerfile: Tests/Dockerfile
-    container_name: tests
-    depends_on:
-      - postgis
-      - redis
-    environment:
-      - ConnectionStrings__DefaultConnection=User ID=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Host=postgis;Port=${POSTGRES_PORT};Database=${POSTGRES_DB};
-      - Redis__Host=${REDIS_HOST}
-      - Redis__Port=${REDIS_PORT}
-      - ASPNETCORE_ENVIRONMENT=Test
-    volumes:
-      - shared-volume:/shared/volume
-    networks:
-      - dev
-    stdin_open: true
-    tty: true
 
   postgis:
     image: postgis/postgis:17-3.5
@@ -160,3 +142,23 @@ services:
       - blob_data:/data
     networks:
       - dev
+
+  tests:
+    build:
+      context: .
+      dockerfile: Tests/Dockerfile
+    container_name: tests
+    depends_on:
+      - postgis
+      - redis
+    environment:
+      - ConnectionStrings__DefaultConnection=User ID=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Host=postgis;Port=${POSTGRES_PORT};Database=${POSTGRES_DB};
+      - Redis__Host=${REDIS_HOST}
+      - Redis__Port=${REDIS_PORT}
+      - ASPNETCORE_ENVIRONMENT=Test
+    volumes:
+      - shared-volume:/shared/volume
+    networks:
+      - dev
+    stdin_open: true
+    tty: true

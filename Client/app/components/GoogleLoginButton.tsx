@@ -1,11 +1,19 @@
 import React, { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 interface GoogleLoginButtonProps {
     onLoginSuccess: (data: any) => void;
     onLoginFailure: (msg: string) => void;
+    buttonText?: string;
 }
 
-const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({ onLoginSuccess, onLoginFailure }) => {
+const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({ 
+    onLoginSuccess, 
+    onLoginFailure, 
+    buttonText 
+}) => {
+    const { t } = useTranslation();
+
     useEffect(() => {
         const scriptId = "google-identity-services";
         if (!document.getElementById(scriptId)) {
@@ -32,7 +40,7 @@ const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({ onLoginSuccess, o
 
     const handleCredentialResponse = async (response: any) => {
         if (!response.credential) {
-            onLoginFailure("Brak tokenu od Google");
+            onLoginFailure(t("login.error_google_token"));
             return;
         }
 
@@ -55,23 +63,23 @@ const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({ onLoginSuccess, o
 
             const data = await res.json();
             if (res.ok && data?.success) onLoginSuccess(data.data);
-            else onLoginFailure(data?.message || "Błąd logowania");
+            else onLoginFailure(data?.message || t("login.invalid_credentials"));
         } catch {
-            onLoginFailure("Błąd połączenia");
+            onLoginFailure(t("login.connection_error"));
         }
     };
 
     const handleLogin = () => {
         if (!(window as any).google?.accounts?.id) {
-            onLoginFailure("Google SDK nie jest gotowy. Odśwież stronę.");
+            onLoginFailure(t("login.error_google_sdk"));
             return;
         }
-        (window as any).google.accounts.id.prompt(); // wywołanie prompt do logowania
+        (window as any).google.accounts.id.prompt();
     };
 
     return (
-        <button type="button" onClick={handleLogin} className="btn btn-red w-full mt-2">
-            Zaloguj przez Google
+        <button type="button" onClick={handleLogin} className="btn btn-error w-full mt-2 text-white">
+            {buttonText || t("login.google_button")}
         </button>
     );
 };

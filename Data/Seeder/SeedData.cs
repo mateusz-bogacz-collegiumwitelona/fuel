@@ -70,14 +70,17 @@ namespace Data.Seeder
                     await SeedRolesAsync();
                 }
 
-                await CreateUserIfNotExists("Admin", "admin@example.pl", "Admin123!", "Admin");
-                await CreateUserIfNotExists("User", "user@example.pl", "User123!", "User");
+                string adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL");
+                string adminPass = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
+
+                await CreateUserIfNotExists("Admin", adminEmail, adminPass, "Admin");
 
                 for (int i = 1; i <= 10; i++)
                 {
                     string userName = $"User{i}";
                     string userEmail = $"user{i}@example.pl";
-                    await CreateUserIfNotExists(userName, userEmail, "User123!", "User");
+                    string pass = GenerateSecurePassword();
+                    await CreateUserIfNotExists(userName, userEmail, pass, "User");
                 }
 
                 Console.WriteLine("All users seeded successfully.");
@@ -87,6 +90,7 @@ namespace Data.Seeder
                 Console.WriteLine($"An error occurred while seeding users: {ex.Message} | {ex.InnerException}");
             }
         }
+
         private async Task CreateUserIfNotExists(string userName, string email, string password, string role)
         {
             var existingUser = await _userManager.FindByEmailAsync(email);
@@ -109,13 +113,23 @@ namespace Data.Seeder
                 if (result.Succeeded)
                 {
                     await _userManager.AddToRoleAsync(newUser, role);
+                    Console.WriteLine($"✓ User {userName} created successfully");
                 }
                 else
                 {
-                    throw new Exception($"Failed to create {userName}");
+                    Console.WriteLine($"✗ Failed to create {userName}:");
+                    foreach (var error in result.Errors)
+                    {
+                        Console.WriteLine($"  - {error.Code}: {error.Description}");
+                    }
                 }
             }
+            else
+            {
+                Console.WriteLine($"User {userName} already exists - skipping");
+            }
         }
+
 
         public async Task SeedBrandsAsync()
         {
@@ -164,18 +178,20 @@ namespace Data.Seeder
             try
             {
                 using var httpClient = new HttpClient();
+                httpClient.Timeout = TimeSpan.FromMinutes(5);
 
                 var query = @"
-                [out:json][timeout:180];
-                area[""ISO3166-1""=""PL""]->.poland;
-                (
-                  node[""amenity""=""fuel""](area.poland);
-                  way[""amenity""=""fuel""](area.poland);
-                  relation[""amenity""=""fuel""](area.poland);
-                );
-                out center;
-            ";
+            [out:json][timeout:300];
+            area[""ISO3166-1""=""PL""]->.poland;
+            (
+              node[""amenity""=""fuel""](area.poland);
+              way[""amenity""=""fuel""](area.poland);
+              relation[""amenity""=""fuel""](area.poland);
+            );
+            out center;
+        ";
 
+                Console.WriteLine("Fetching stations from Overpass API...");
                 var content = new StringContent($"data={query}", Encoding.UTF8, "application/x-www-form-urlencoded");
                 var response = await httpClient.PostAsync("https://overpass-api.de/api/interpreter", content);
                 response.EnsureSuccessStatusCode();
@@ -183,18 +199,67 @@ namespace Data.Seeder
                 var jsonString = await response.Content.ReadAsStringAsync();
                 var jsonDoc = JsonDocument.Parse(jsonString);
 
-                var batch = new List<Station>();
-                int maxStations = 10; 
-                int count = 0;
+                var elements = jsonDoc.RootElement.GetProperty("elements").EnumerateArray().ToList();
+                Console.WriteLine($"Found {elements.Count} potential stations from Overpass API");
 
-                foreach (var element in jsonDoc.RootElement.GetProperty("elements").EnumerateArray())
+                var existingStations = await _context.Stations
+                    .Include(s => s.Address)
+                    .ToListAsync();
+
+                var existingLocations = new HashSet<string>();
+                foreach (var station in existingStations)
                 {
-                    if (count >= maxStations) break;
+                    if (station.Address?.Location != null)
+                    {
+                        var key = $"{Math.Round(station.Address.Location.Y, 6)}_{Math.Round(station.Address.Location.X, 6)}";
+                        existingLocations.Add(key);
+                    }
+                }
+
+                Console.WriteLine($"Found {existingLocations.Count} existing stations in database");
+
+                var batch = new List<Station>();
+                int processedCount = 0;
+                int skippedCount = 0;
+                int addedCount = 0;
+
+                foreach (var element in elements)
+                {
+                    processedCount++;
 
                     var tags = element.TryGetProperty("tags", out var t) ? t : default;
-                    string brandName = GetBrandName(tags);
 
+                    double lat = element.TryGetProperty("lat", out var latEl)
+                        ? latEl.GetDouble()
+                        : element.GetProperty("center").GetProperty("lat").GetDouble();
+                    double lon = element.TryGetProperty("lon", out var lonEl)
+                        ? lonEl.GetDouble()
+                        : element.GetProperty("center").GetProperty("lon").GetDouble();
+
+                    var locationKey = $"{Math.Round(lat, 6)}_{Math.Round(lon, 6)}";
+                    if (existingLocations.Contains(locationKey))
+                    {
+                        skippedCount++;
+                        continue;
+                    }
+
+                    var street = tags.TryGetProperty("addr:street", out var s) ? s.GetString() ?? "" : "";
+                    var number = tags.TryGetProperty("addr:housenumber", out var n) ? n.GetString() ?? "" : "";
+                    var city = tags.TryGetProperty("addr:city", out var c) ? c.GetString() ?? "" : "";
+                    var postal = tags.TryGetProperty("addr:postcode", out var p) ? p.GetString() ?? "" : "";
+
+                    if (string.IsNullOrWhiteSpace(street) ||
+                        string.IsNullOrWhiteSpace(number) ||
+                        string.IsNullOrWhiteSpace(city) ||
+                        string.IsNullOrWhiteSpace(postal))
+                    {
+                        skippedCount++;
+                        continue;
+                    }
+
+                    string brandName = GetBrandName(tags);
                     var brand = await _context.Brand.FirstOrDefaultAsync(b => b.Name.ToLower() == brandName.ToLower());
+
                     if (brand == null)
                     {
                         brand = new Brand
@@ -207,20 +272,6 @@ namespace Data.Seeder
                         _context.Brand.Add(brand);
                         await _context.SaveChangesAsync();
                     }
-
-                    double lat = element.TryGetProperty("lat", out var latEl) ? latEl.GetDouble() : element.GetProperty("center").GetProperty("lat").GetDouble();
-                    double lon = element.TryGetProperty("lon", out var lonEl) ? lonEl.GetDouble() : element.GetProperty("center").GetProperty("lon").GetDouble();
-
-                    var street = tags.TryGetProperty("addr:street", out var s) ? s.GetString() ?? "" : "";
-                    var number = tags.TryGetProperty("addr:housenumber", out var n) ? n.GetString() ?? "" : "";
-                    var city = tags.TryGetProperty("addr:city", out var c) ? c.GetString() ?? "" : "";
-                    var postal = tags.TryGetProperty("addr:postcode", out var p) ? p.GetString() ?? "" : "";
-
-                    if (string.IsNullOrWhiteSpace(street) || 
-                        string.IsNullOrEmpty(number) ||
-                        string.IsNullOrWhiteSpace(city) ||
-                        string.IsNullOrWhiteSpace(postal))
-                        continue;
 
                     var stationAddress = new StationAddress
                     {
@@ -247,12 +298,14 @@ namespace Data.Seeder
                     };
 
                     batch.Add(station);
-                    count++;
+                    existingLocations.Add(locationKey); 
+                    addedCount++;
 
                     if (batch.Count >= 100)
                     {
                         _context.Stations.AddRange(batch);
                         await _context.SaveChangesAsync();
+                        Console.WriteLine($"Progress: {processedCount}/{elements.Count} processed, {addedCount} added, {skippedCount} skipped");
                         batch.Clear();
                     }
                 }
@@ -263,14 +316,21 @@ namespace Data.Seeder
                     await _context.SaveChangesAsync();
                 }
 
-                Console.WriteLine($"Stations seeded successfully from Overpass API. Total: {count}");
+                Console.WriteLine($"Stations seeding completed!");
+                Console.WriteLine($"Total processed: {processedCount}");
+                Console.WriteLine($"Added: {addedCount}");
+                Console.WriteLine($"Skipped (duplicates): {skippedCount}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"An error occurred while seeding stations: {ex.Message} | {ex.InnerException}");
+                Console.WriteLine($"An error occurred while seeding stations: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
             }
         }
-
         public async Task SeedFuelTypesAsync()
         {
             try
@@ -486,6 +546,36 @@ namespace Data.Seeder
                 return nameEl.GetString() ?? "Unknown";
 
             return "Unknown";
+        }
+
+
+        private string GenerateSecurePassword(int length = 16)
+        {
+            const string lowercase = "abcdefghijklmnopqrstuvwxyz";
+            const string uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const string digits = "0123456789";
+            const string special = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+
+            var password = new char[length];
+
+            password[0] = lowercase[_random.Next(lowercase.Length)];
+            password[1] = uppercase[_random.Next(uppercase.Length)];
+            password[2] = digits[_random.Next(digits.Length)];
+            password[3] = special[_random.Next(special.Length)];
+
+            string allChars = lowercase + uppercase + digits + special;
+            for (int i = 4; i < length; i++)
+            {
+                password[i] = allChars[_random.Next(allChars.Length)];
+            }
+
+            for (int i = length - 1; i > 0; i--)
+            {
+                int j = _random.Next(i + 1);
+                (password[i], password[j]) = (password[j], password[i]);
+            }
+
+            return new string(password);
         }
     }
 }

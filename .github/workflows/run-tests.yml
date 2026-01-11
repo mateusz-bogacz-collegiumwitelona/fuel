@@ -1,0 +1,71 @@
+name: Run Integration Tests
+on:
+  pull_request:
+    branches:
+      - main
+      - production
+  push:
+    branches:
+      - main
+      - production
+jobs:
+  run-integration-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB: testdb
+      POSTGRES_HOST: postgis
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      FACEBOOK_OAUTH_CLIENT_ID: ${{ secrets.FACEBOOK_OAUTH_CLIENT_ID }}
+      FACEBOOK_OAUTH_CLIENT_SECRET: ${{ secrets.FACEBOOK_OAUTH_CLIENT_SECRET }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      API_PORT: 5111
+      MAILPIT_PORT: 63854
+      NGINX_HTTP_PORT: 8080
+      NGINX_HTTPS_PORT: 443
+      CLIENT_PORT: 4000
+      AZURITE_BLOB_PORT: 10000
+      AZURITE_QUEUE_PORT: 10001
+      AZURITE_TABLE_PORT: 10002
+      DOCKER_REGISTRY: ""
+      ADMIN_EMAIL: admin@example.pl
+      ADMIN_PASSWORD: "AdminPassword123!"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Test Services
+        run: docker compose build tests postgis redis
+
+      - name: Run Tests
+        shell: bash
+        run: |
+          docker compose run -T --rm tests 2>&1 | tee test_output.log || true
+
+          if grep -q "Test Run Successful" test_output.log; then
+            echo "Tests passed successfully"
+            exit 0
+          else
+            echo "Tests failed"
+            cat test_output.log
+            exit 1
+          fi
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test_output.log
+
+      - name: Cleanup Containers and Volumes
+        if: always()
+        run: docker compose down --volumes --remove-orphans
