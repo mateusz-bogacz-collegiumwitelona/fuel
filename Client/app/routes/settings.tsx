@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Link } from "react-router";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { API_BASE } from "../components/api";
@@ -274,9 +275,9 @@ export default function SettingsPage() {
 
               <div className="divider my-2"></div>
 
-              <a href="/dashboard" className="btn btn-outline">
+              <Link to="/dashboard" className="btn btn-outline">
                 {t("settings.back")}
-              </a>
+              </Link> 
             </nav>
           </aside>
 
