@@ -15,8 +15,8 @@ export default function FooterHome() {
         </p>
 
         <div className="mt-3 text-xs text-gray-500">
-          <Link to="/policy" className="link link-hover mr-3">
-            {t("footer.links.policy")}
+          <Link to="/privacy" className="link link-hover mr-3">
+            {t("footer.links.privacy")}
           </Link>
           <Link to="/delete-account" className="link link-hover">
             {t("footer.links.delete-account")}
