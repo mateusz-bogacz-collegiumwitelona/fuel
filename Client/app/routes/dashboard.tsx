@@ -111,7 +111,6 @@ export default function Dashboard(): JSX.Element {
         let res = await fetch(`${API_BASE}/api/station/map/nearest`, {
           method: "GET",
           headers,
-          body: JSON.stringify({ latitude: lat, longitude: lon }),
           credentials: "include",
         });
 
