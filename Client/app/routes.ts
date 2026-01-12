@@ -17,4 +17,6 @@ export default [
   route("admin/users", "routes/user-admin.tsx"),
   route("admin/brands", "routes/brand-admin.tsx"),
   route("admin/proposals", "routes/proposals-admin.tsx"),
+  route("delete-account", "routes/data-deletion.tsx"),
+  route("privacy", "routes/privacy-policy.tsx"),
 ] satisfies RouteConfig;
