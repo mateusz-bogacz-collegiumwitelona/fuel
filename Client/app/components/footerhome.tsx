@@ -1,5 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 
 export default function FooterHome() {
   const { t } = useTranslation();
@@ -14,12 +15,12 @@ export default function FooterHome() {
         </p>
 
         <div className="mt-3 text-xs text-gray-500">
-          <a className="link link-hover mr-3">
-            {t("home.privacy", { defaultValue: "Polityka prywatności" })}
-          </a>
-          <a className="link link-hover">
-            {t("home.terms", { defaultValue: "Regulamin" })}
-          </a>
+          <Link to="/policy" className="link link-hover mr-3">
+            {t("footer.links.policy")}
+          </Link>
+          <Link to="/delete-account" className="link link-hover">
+            {t("footer.links.delete-account")}
+          </Link>
         </div>
 
         <div className="text-xs text-gray-400 mt-4">
