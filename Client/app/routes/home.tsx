@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import HeaderHome from "../components/HeaderHome";
-import FooterHome from "../components/FooterHome";
+import HeaderHome from "../components/headerhome";
+import FooterHome from "../components/footerhome";
 
 async function loadExternalTranslations() {
   const langs = ["pl", "en"];

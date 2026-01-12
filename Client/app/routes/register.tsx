@@ -1,6 +1,6 @@
 import * as React from "react";
-import HeaderHome from "../components/HeaderHome";
-import FooterHome from "../components/FooterHome";
+import HeaderHome from "../components/headerhome";
+import FooterHome from "../components/footerhome";
 import { API_BASE } from "../components/api";
 import FacebookButton from "../components/FacebookLoginButton";
 import { useTranslation } from "react-i18next";
