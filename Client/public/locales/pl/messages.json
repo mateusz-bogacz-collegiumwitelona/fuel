@@ -21,33 +21,27 @@
     "acceptrate": "Wskaźnik akceptacji",
     "nostatistics": "Brak zgłoszeń"
   },
-
   "map": {
-  "fuelstationmap": "Mapa stacji benzynowych",
-  "dashboardback": "← Powrót do dashboardu",
-  "search": "Szukaj",
-  "seedetails": "Zobacz szczegóły",
-  "stationname": "Wpisz nazwę stacji (np. Orlen)",
-  "fuelstationmap": "Mapa stacji paliw",
-  "dashboardback": "Powrót do dashboardu",
-  "search": "Szukaj",
-  "search_placeholder": "Nazwa stacji, miasto, ulica...",
-  "seedetails": "Zobacz szczegóły",
-  "loading": "Ładowanie mapy...",
-  "use_my_location": "Użyj mojej lokalizacji",
-  "location_active": "Lokalizacja aktywna (kliknij by odświeżyć)",
-  "distance_label": "Dystans",
-  "km": "km",
-  "results_count": "Wyników",
-  "geolocation_not_supported": "Twoja przeglądarka nie obsługuje geolokacji.",
-  "location_permission_error": "Nie udało się pobrać lokalizacji. Sprawdź uprawnienia.",
-  "no_stations_found": "Nie znaleziono stacji w promieniu {{distance}} km.",
-  "server_error": "Błąd serwera",
-  "error_prefix": "Błąd:",
-  "all_brands": "Marki",
-  "selected_count": "{{count}} wybranych"
+    "fuelstationmap": "Mapa stacji paliw",
+    "dashboardback": "← Powrót do dashboardu",
+    "search": "Szukaj",
+    "seedetails": "Zobacz szczegóły",
+    "stationname": "Wpisz nazwę stacji (np. Orlen)",
+    "search_placeholder": "Nazwa stacji, miasto, ulica...",
+    "loading": "Ładowanie mapy...",
+    "use_my_location": "Użyj mojej lokalizacji",
+    "location_active": "Lokalizacja aktywna (kliknij by odświeżyć)",
+    "distance_label": "Dystans",
+    "km": "km",
+    "results_count": "Wyników",
+    "geolocation_not_supported": "Twoja przeglądarka nie obsługuje geolokacji.",
+    "location_permission_error": "Nie udało się pobrać lokalizacji. Sprawdź uprawnienia.",
+    "no_stations_found": "Nie znaleziono stacji w promieniu {{distance}} km.",
+    "server_error": "Błąd serwera",
+    "error_prefix": "Błąd:",
+    "all_brands": "Marki",
+    "selected_count": "{{count}} wybranych"
   },
-
   "list": {
     "stationlist": "Lista stacji",
     "dashboardback": "← Powrót do dashboardu",
@@ -89,14 +83,12 @@
     "nostation2": "Brak stacji spełniających kryteria wyszukiwania",
     "showFuels": "Pokazuj rodzaje paliw"
   },
-
   "stations": {
     "nearestTitle": "Najbliższe stacje",
     "loading": "Ładowanie najbliższych stacji... (upewnij się, że zezwoliłeś na dostęp do lokalizacji)",
     "noAccess": "Brak dostępu do lokalizacji i nie udało się pobrać stacji.",
     "none": "Brak dostępnych stacji."
   },
-
   "buttons": {
     "language": "Język",
     "polish": "Polski",
@@ -104,7 +96,6 @@
     "showOnMap": "Pokaż na mapie",
     "stationDetails": "Szczegóły stacji"
   },
-
   "header": {
     "links": {
       "settings": "Ustawienia",
@@ -121,7 +112,6 @@
       "proposaladmin": "Zaproponowane zmiany"
     }
   },
-
   "stats": {
     "all": "Wszystkie zgłoszenia",
     "accepted": "Zaakceptowane",
@@ -130,13 +120,11 @@
     "loading": "Ładowanie statystyk...",
     "noStats": "Brak statystyk."
   },
-
   "requests": {
     "title": "Twoje zgłoszenia (lista)",
     "loading": "Ładowanie...",
     "noRequests": "Nie masz jeszcze zgłoszeń."
   },
-
   "footer": {
     "creatorsTitle": "Twórcy",
     "linksTitle": "Odniesienia",
@@ -158,7 +146,6 @@
     "contactAria": "Wyślij wiadomość e-mail do zespołu FuelStats",
     "allRights": "Wszystkie prawa zastrzeżone"
   },
-
   "proposal": {
     "proposaladd": "Zgłoś zmianę stacji",
     "back": "← Powrót do dashboardu",
@@ -210,7 +197,6 @@
     "no_content": "brak treści",
     "error_sending_fallback": "Nie udało się wysłać propozycji."
   },
-
   "station": {
     "back": "← Powrót do mapy",
     "title": "Szczegóły stacji",
@@ -252,7 +238,6 @@
     "report_submit": "Wyślij zgłoszenie",
     "report_cancel": "Anuluj"
   },
-
   "admin": {
     "title": "Panel administratora",
     "logged_in_as": "Zalogowany jako: {{email}}",
@@ -263,7 +248,6 @@
     "gas_station_panel": "Panel stacji",
     "proposal_panel": "Panel propozycji"
   },
-
   "brandadmin": {
     "title": "Panel administracyjny – marki stacji",
     "logged_in_as": "Zalogowano jako: {{email}}",
@@ -307,75 +291,73 @@
     "delete_warning": "Operacja jest nieodwracalna. Zostaną usunięte wszystkie stacje i dane powiązane z tą marką.",
     "delete_confirm_button": "Usuń"
   },
-
   "stationadmin": {
-  "title": "Panel administracyjny – stacje paliw",
-  "logged_in_as": "Zalogowano jako: {{email}}",
-  "checking_session": "Sprawdzanie sesji...",
-  "back_to_admin": "← Powrót do panelu administratora",
-  "add_station_button": "+ Dodaj stację paliw",
-  "search_label": "Szukaj (miasto, ulica, marka, kod pocztowy)",
-  "search_placeholder": "np. Legnica, Orlen, 59-220...",
-  "loading": "Ładowanie stacji...",
-  "no_stations": "Brak stacji w systemie.",
-  "table_hash": "#",
-  "table_brand": "Marka",
-  "table_city": "Miasto",
-  "table_street": "Ulica",
-  "table_postal": "Kod pocztowy",
-  "table_created": "Utworzono",
-  "table_updated": "Zaktualizowano",
-  "table_actions": "Akcje",
-  "edit_button": "edytuj",
-  "delete_button": "usuń",
-  "page_info": "Strona {{page}} / {{total}}",
-  "error_fetch": "Błąd pobierania stacji ({{status}}): {{text}}",
-  "error_unexpected_response": "Nieoczekiwany format odpowiedzi stacji",
-  "error_fetch_fallback": "Nie udało się pobrać listy stacji",
-  "error_add": "Nie udało się dodać stacji ({{status}}): {{text}}",
-  "error_add_fallback": "Nie udało się dodać stacji",
-  "error_edit": "Nie udało się edytować stacji ({{status}}): {{text}}",
-  "error_edit_fallback": "Nie udało się edytować stacji",
-  "error_delete": "Nie udało się usunąć stacji ({{status}}): {{text}}",
-  "error_delete_fallback": "Nie udało się usunąć stacji",
-  "add_title": "Dodaj stację paliw",
-  "brand_label": "Marka / nazwa stacji",
-  "city_label": "Miasto",
-  "street_label": "Ulica",
-  "house_label": "Numer budynku",
-  "postal_label": "Kod pocztowy",
-  "lat_label": "lat",
-  "lng_label": "lng",
-  "geocode_button": "Pobierz współrzędne z adresu",
-  "geocode_loading": "Pobieranie współrzędnych...",
-  "geocode_missing_address": "Podaj co najmniej miasto, ulicę i numer budynku.",
-  "geocode_failed": "Nie udało się pobrać współrzędnych dla tego adresu.",
-  "geocode_not_found": "Nie znaleziono współrzędnych dla podanego adresu.",
-  "geocode_error": "Błąd geokodowania",
-  "no_content": "brak treści",
-  "fuel_section_title": "Ceny paliw",
-  "fuel_code_label": "Kod (np. PB95)",
-  "fuel_price_label": "Cena",
-  "fuel_add_button": "+ Dodaj paliwo",
-  "remove_button": "usuń",
-  "edit_title": "Edytuj stację paliw",
-  "edit_editing_label": "Edytujesz stację:",
-  "details_error": "Nie udało się pobrać danych stacji",
-  "details_error_fallback": "Nie udało się pobrać danych stacji do edycji.",
-  "save_changes": "Zapisz zmiany",
-  "delete_title": "Usuń stację paliw",
-  "delete_confirm": "Czy na pewno chcesz usunąć stację {{station}}?",
-  "delete_irreversible": "Tej operacji nie można cofnąć.",
-  "filter_brand": "Marka",
-  "sort_label": "Sortuj po",
-  "sort_dir_label": "Kierunek",
-  "sort_brand": "Marka",
-  "sort_city": "Miasto",
-  "sort_created": "Data utworzenia",
-  "sort_asc": "Rosnąco",
-  "sort_desc": "Malejąco"
+    "title": "Panel administracyjny – stacje paliw",
+    "logged_in_as": "Zalogowano jako: {{email}}",
+    "checking_session": "Sprawdzanie sesji...",
+    "back_to_admin": "← Powrót do panelu administratora",
+    "add_station_button": "+ Dodaj stację paliw",
+    "search_label": "Szukaj (miasto, ulica, marka, kod pocztowy)",
+    "search_placeholder": "np. Legnica, Orlen, 59-220...",
+    "loading": "Ładowanie stacji...",
+    "no_stations": "Brak stacji w systemie.",
+    "table_hash": "#",
+    "table_brand": "Marka",
+    "table_city": "Miasto",
+    "table_street": "Ulica",
+    "table_postal": "Kod pocztowy",
+    "table_created": "Utworzono",
+    "table_updated": "Zaktualizowano",
+    "table_actions": "Akcje",
+    "edit_button": "edytuj",
+    "delete_button": "usuń",
+    "page_info": "Strona {{page}} / {{total}}",
+    "error_fetch": "Błąd pobierania stacji ({{status}}): {{text}}",
+    "error_unexpected_response": "Nieoczekiwany format odpowiedzi stacji",
+    "error_fetch_fallback": "Nie udało się pobrać listy stacji",
+    "error_add": "Nie udało się dodać stacji ({{status}}): {{text}}",
+    "error_add_fallback": "Nie udało się dodać stacji",
+    "error_edit": "Nie udało się edytować stacji ({{status}}): {{text}}",
+    "error_edit_fallback": "Nie udało się edytować stacji",
+    "error_delete": "Nie udało się usunąć stacji ({{status}}): {{text}}",
+    "error_delete_fallback": "Nie udało się usunąć stacji",
+    "add_title": "Dodaj stację paliw",
+    "brand_label": "Marka / nazwa stacji",
+    "city_label": "Miasto",
+    "street_label": "Ulica",
+    "house_label": "Numer budynku",
+    "postal_label": "Kod pocztowy",
+    "lat_label": "lat",
+    "lng_label": "lng",
+    "geocode_button": "Pobierz współrzędne z adresu",
+    "geocode_loading": "Pobieranie współrzędnych...",
+    "geocode_missing_address": "Podaj co najmniej miasto, ulicę i numer budynku.",
+    "geocode_failed": "Nie udało się pobrać współrzędnych dla tego adresu.",
+    "geocode_not_found": "Nie znaleziono współrzędnych dla podanego adresu.",
+    "geocode_error": "Błąd geokodowania",
+    "no_content": "brak treści",
+    "fuel_section_title": "Ceny paliw",
+    "fuel_code_label": "Kod (np. PB95)",
+    "fuel_price_label": "Cena",
+    "fuel_add_button": "+ Dodaj paliwo",
+    "remove_button": "usuń",
+    "edit_title": "Edytuj stację paliw",
+    "edit_editing_label": "Edytujesz stację:",
+    "details_error": "Nie udało się pobrać danych stacji",
+    "details_error_fallback": "Nie udało się pobrać danych stacji do edycji.",
+    "save_changes": "Zapisz zmiany",
+    "delete_title": "Usuń stację paliw",
+    "delete_confirm": "Czy na pewno chcesz usunąć stację {{station}}?",
+    "delete_irreversible": "Tej operacji nie można cofnąć.",
+    "filter_brand": "Marka",
+    "sort_label": "Sortuj po",
+    "sort_dir_label": "Kierunek",
+    "sort_brand": "Marka",
+    "sort_city": "Miasto",
+    "sort_created": "Data utworzenia",
+    "sort_asc": "Rosnąco",
+    "sort_desc": "Malejąco"
   },
-
   "useradmin": {
     "title": "Panel administracyjny – użytkownicy",
     "logged_in_as": "Zalogowano jako: {{email}}",
@@ -461,9 +443,8 @@
     "unlock_title": "Odblokuj użytkownika",
     "unlock_confirm": "Czy na pewno chcesz zdjąć bana z użytkownika {{user}}?",
     "unlock_confirm_button": "Odblokuj",
-	"sort_hasReport": "Zgłoszenia"
+    "sort_hasReport": "Zgłoszenia"
   },
-
   "settings": {
     "title": "Ustawienia",
     "tab_account": "Ustawienia konta",
@@ -519,7 +500,6 @@
     "cancel": "Anuluj",
     "changing_text": "Zmienianie..."
   },
-
   "proposaladmin": {
     "title": "Panel administracyjny – propozycje cen",
     "logged_in_as": "Zalogowano jako: {{email}}",
@@ -587,11 +567,10 @@
     "photo_title": "Zdjęcie potwierdzające",
     "photo_loading": "Ładowanie zdjęcia…",
     "photo_alt": "Zdjęcie potwierdzające",
-	"stats_accepted": "Zgłoszenia zaakceptowane",
+    "stats_accepted": "Zgłoszenia zaakceptowane",
     "stats_pending": "Zgłoszenia oczekujące",
     "stats_rejected": "Zgłoszenia odrzucone"
   },
-
   "login": {
     "title": "Logowanie",
     "email_placeholder": "Email",
@@ -614,8 +593,7 @@
     "error_login_cancelled": "Anulowano logowanie.",
     "error_server": "Błąd serwera."
   },
-
-"register": {
+  "register": {
     "title": "Rejestracja",
     "username_placeholder": "Nazwa użytkownika",
     "email_placeholder": "Email",
@@ -635,8 +613,7 @@
     "success_message": "Konto zostało utworzone. Sprawdź e-mail, aby potwierdzić adres.",
     "connection_error": "Błąd połączenia z serwerem."
   },
-
-"forgot-password": {
+  "forgot-password": {
     "title": "Przypomnienie hasła",
     "description": "Wpisz adres e-mail użyty przy rejestracji. Jeśli konto istnieje i e-mail jest potwierdzony, wyślemy wiadomość z instrukcją zmiany hasła.",
     "email_placeholder": "E-mail",
@@ -669,8 +646,7 @@
     "success_message": "Hasło zostało zmienione. Możesz się teraz zalogować.",
     "connection_error": "Błąd połączenia z serwerem."
   },
-
-"confirm-email": {
+  "confirm-email": {
     "title": "Potwierdź email",
     "verifying_initial": "Weryfikacja adresu e-mail...",
     "loading_title": "Weryfikacja...",
@@ -685,40 +661,64 @@
     "success_message": "Potwierdzono email. Możesz się teraz zalogować.",
     "connection_error": "Błąd połączenia z serwerem."
   },
-
-
   "common": {
     "save": "Zapisz",
     "cancel": "Anuluj",
     "close": "Zamknij"
   },
-
   "home": {
-  "title": "FuelStats",
-  "subtitle": "Sprawdzaj ceny paliw szybciej i mądrzej",
-  "heroAlt": "Mapa stacji paliw",
-
-  "featuresTitle": "Funkcje",
-  "features": {
-    "map": "Interaktywna mapa stacji paliw",
-    "list": "Lista stacji z sortowaniem i filtrowaniem",
-    "dashboard": "Panel statystyk i historii cen",
-    "mapDesc": "Mogła być lepsza, ale jest dobra",
-    "listDesc": "To max, co możemy zrobić, lista jest imponująca",
-    "dashboardDesc": "Wszystko co potrzebujesz w jednym miejscu"
+    "title": "FuelStats",
+    "subtitle": "Sprawdzaj ceny paliw szybciej i mądrzej",
+    "heroAlt": "Mapa stacji paliw",
+    "featuresTitle": "Funkcje",
+    "features": {
+      "map": "Interaktywna mapa stacji paliw",
+      "list": "Lista stacji z sortowaniem i filtrowaniem",
+      "dashboard": "Panel statystyk i historii cen",
+      "mapDesc": "Mogła być lepsza, ale jest dobra",
+      "listDesc": "To max, co możemy zrobić, lista jest imponująca",
+      "dashboardDesc": "Wszystko co potrzebujesz w jednym miejscu"
+    },
+    "howItWorks": [
+      "Otwórz mapę i znajdź stacje w swojej okolicy",
+      "Porównaj aktualne ceny paliw",
+      "Wybierz najlepszą opcję i oszczędzaj"
+    ],
+    "ctaRegister": "Zarejestruj się",
+    "ctaLogin": "Zaloguj się",
+    "footerContact": "Kontakt: kontakt@fuelstats.example",
+    "terms": "Regulamin"
   },
-
-  "howItWorks": [
-    "Otwórz mapę i znajdź stacje w swojej okolicy",
-    "Porównaj aktualne ceny paliw",
-    "Wybierz najlepszą opcję i oszczędzaj"
-  ],
-
-  "ctaRegister": "Zarejestruj się",
-  "ctaLogin": "Zaloguj się",
-
-  "footerContact": "Kontakt: kontakt@fuelstats.example",
-  "privacy": "Polityka prywatności",
-  "terms": "Regulamin"
-}
+  "privacy": {
+    "title": "Polityka Prywatności",
+    "intro_header": "Wstęp",
+    "intro_text": "Szanujemy Twoją prywatność. Niniejsza polityka opisuje, w jaki sposób gromadzimy, wykorzystujemy i chronimy Twoje dane osobowe podczas korzystania z aplikacji FuelStats.",
+    "admin_header": "Administrator Danych",
+    "admin_text": "Administratorem Twoich danych osobowych jest FuelStats, z siedzibą w Legnica.",
+    "data_header": "Jakie dane zbieramy?",
+    "data_text": "Gdy logujesz się za pomocą Facebooka lub Google, otrzymujemy jedynie niezbędne informacje:",
+    "data_point_1": "Nazwa użytkownika",
+    "data_point_2": "Adres e-mail",
+    "data_point_3": "Zdjęcie profilowe (avatar)",
+    "purpose_header": "Cel przetwarzania",
+    "purpose_text": "Twoje dane są wykorzystywane wyłącznie do utworzenia konta użytkownika, umożliwienia logowania oraz identyfikacji autora zgłoszeń cen paliw.",
+    "cookies_header": "Pliki Cookies",
+    "cookies_text": "Używamy plików cookies w celu utrzymania sesji użytkownika (abyś nie musiał się logować za każdym razem) oraz do zapamiętywania preferencji językowych.",
+    "rights_header": "Twoje prawa",
+    "rights_text": "Masz prawo do wglądu w swoje dane, ich edycji oraz całkowitego usunięcia konta w dowolnym momencie z poziomu aplikacji.",
+    "contact_header": "Kontakt",
+    "contact_text": "W sprawach związanych z RODO i ochroną danych, skontaktuj się z nami:"
+  },
+  "deletion": {
+    "title": "Instrukcja usuwania danych",
+    "intro": "Zgodnie z zasadami Facebooka oraz RODO, masz prawo w każdej chwili zażądać usunięcia swoich danych z naszej aplikacji. Oto jak możesz to zrobić samodzielnie:",
+    "step1_title": "Zaloguj się",
+    "step1_desc": "Zaloguj się do aplikacji FuelStats na swoje konto.",
+    "step2_title": "Wejdź w ustawienia",
+    "step2_desc": "Kliknij na ikonę użytkownika/ustawień na górnym pasku nawigacyjnym.",
+    "step3_title": "Usuń konto",
+    "step3_desc": "Znajdź i kliknij przycisk „Usuń konto”. Twoje dane (e-mail, imię, powiązania z Facebookiem) zostaną trwale usunięte z naszej bazy.",
+    "manual_title": "Masz problem?",
+    "manual_desc": "Jeśli nie możesz usunąć konta samodzielnie, wyślij do nas wiadomość e-mail z prośbą o usunięcie danych na adres:"
+  }
 }
