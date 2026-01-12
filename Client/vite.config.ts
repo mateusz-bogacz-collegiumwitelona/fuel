@@ -5,11 +5,11 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
-  
+
   resolve: {
     dedupe: ["react", "react-dom", "react-router", "recharts"],
   },
-  
+
   optimizeDeps: {
     include: ["leaflet", "react", "react-dom", "recharts"],
   },
@@ -20,7 +20,7 @@ export default defineConfig({
     hmr: {
       clientPort: 443,
     },
-    allowedHosts: ["localhost", "nginx-dev"],
+    allowedHosts: ["localhost", "nginx-dev", "fuelly.com.pl"],
     watch: {
       usePolling: true,
     },
