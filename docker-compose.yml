@@ -42,6 +42,7 @@ services:
       - Mail__Password=${MAIL_PASSWORD}
       - Mail__From=${MAIL_FROM}
       - Mail__DisplayName=${MAIL_DISPLAY_NAME}
+      - Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command=Warning   
     ports:
       - "${API_PORT:-5111}:8080"
     networks:
