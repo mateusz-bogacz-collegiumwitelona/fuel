@@ -119,8 +119,8 @@ export default function Footer() {
               <li><Link to="/settings" className="link link-hover">{t("footer.links.settings")}</Link></li>
               <li><Link to="/map" className="link link-hover">{t("footer.links.map")}</Link></li>
               <li><Link to="/list" className="link link-hover">{t("footer.links.list")}</Link></li>
-              <li><Link to="/privacy" className="link link-hover">{t("footer.links.list")}</Link></li>
-              <li><Link to="/delete-account" className="link link-hover">{t("footer.links.list")}</Link></li>             
+              <li><Link to="/privacy" className="link link-hover">{t("footer.links.privacy")}</Link></li>
+              <li><Link to="/delete-account" className="link link-hover">{t("footer.links.delete-account")}</Link></li>             
             </ul>
 
             {/* For admin */}
