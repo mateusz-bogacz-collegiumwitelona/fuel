@@ -24,7 +24,7 @@ const FacebookLoginButton: React.FC<FacebookLoginButtonProps> = ({
     useEffect(() => {
         window.fbAsyncInit = function() {
             window.FB.init({
-                appId      : '1367518931827311',
+                appId      : '2092986161504990',
                 cookie     : true,
                 xfbml      : true,
                 version    : 'v18.0'
