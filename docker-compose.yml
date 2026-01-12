@@ -27,7 +27,6 @@ services:
       - ConnectionStrings__DefaultConnection=User ID=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};
       - Redis__Host=${REDIS_HOST}
       - Redis__Port=${REDIS_PORT}
-      - Mail__Host=mailpit
       - ASPNETCORE_URLS=http://+:8080
       - ASPNETCORE_HTTP_PORTS=8080
       - Blob__ConnectionString=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;
@@ -36,6 +35,13 @@ services:
       - ADMIN_EMAIL=${ADMIN_EMAIL}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+      - Mail__Host=${MAIL_HOST}
+      - Mail__Port=${MAIL_PORT}
+      - Mail__EnableSsl=${MAIL_ENABLE_SSL}
+      - Mail__Username=${MAIL_USERNAME}
+      - Mail__Password=${MAIL_PASSWORD}
+      - Mail__From=${MAIL_FROM}
+      - Mail__DisplayName=${MAIL_DISPLAY_NAME}
     ports:
       - "${API_PORT:-5111}:8080"
     networks:
