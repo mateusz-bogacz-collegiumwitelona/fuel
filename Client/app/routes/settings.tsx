@@ -6,18 +6,9 @@ import { API_BASE } from "../components/api";
 import { useUserGuard } from "../components/useUserGuard";
 import { useTranslation } from "react-i18next";
 
-type ProposalStats = {
-  totalProposals?: number;
-  approvedProposals?: number;
-  rejectedProposals?: number;
-  acceptedRate?: number;
-  updatedAt?: string;
-};
-
 type UserProfile = {
   userName?: string;
   email?: string;
-  proposalStatistics?: ProposalStats | null;
   createdAt?: string;
 };
 
@@ -36,7 +27,6 @@ export default function SettingsPage() {
   const [loadingUser, setLoadingUser] = React.useState(true);
   const [userError, setUserError] = React.useState<string | null>(null);
 
-  // form fields for account
   const [newUserName, setNewUserName] = React.useState("");
   const [changingName, setChangingName] = React.useState(false);
   const [nameMessage, setNameMessage] = React.useState<string | null>(null);
@@ -69,7 +59,6 @@ export default function SettingsPage() {
         });
 
         if (!res.ok) {
-          // fallback attempt
           const fallback = await fetch(`${API_BASE}/api/me`, {
             method: "GET",
             headers,
@@ -402,32 +391,6 @@ export default function SettingsPage() {
                       </div>
                     </form>
 
-                    {/* proposal stats (from /api/user response) */}
-                    <div className="bg-base-100 p-4 rounded">
-                      <h3 className="font-medium mb-2">{t("settings.proposal_stats_title")}</h3>
-                      {user?.proposalStatistics ? (
-                        <div className="grid md:grid-cols-4 gap-4">
-                          <div className="p-2 bg-base-200 rounded text-base-content text-center">
-                            <div className="font-bold">{user.proposalStatistics.totalProposals ?? 0}</div>
-                            <div className="text-sm">{t("settings.stats_all")}</div>
-                          </div>
-                          <div className="p-2 bg-base-200 rounded text-success text-center">
-                            <div className="font-bold">{user.proposalStatistics.approvedProposals ?? 0}</div>
-                            <div className="text-sm">{t("settings.stats_approved")}</div>
-                          </div>
-                          <div className="p-2 bg-base-200 rounded text-error text-center">
-                            <div className="font-bold">{user.proposalStatistics.rejectedProposals ?? 0}</div>
-                            <div className="text-sm">{t("settings.stats_rejected")}</div>
-                          </div>
-                          <div className="p-2 bg-base-200 text-info rounded text-center">
-                            <div className="font-bold">{user.proposalStatistics.acceptedRate ?? "-"}%</div>
-                            <div className="text-sm">{t("settings.stats_rate")}</div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-sm text-gray-400">{t("settings.stats_none")}</div>
-                      )}
-                    </div>
                   </div>
                 )}
               </div>
