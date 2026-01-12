@@ -52,7 +52,6 @@ export default function Dashboard(): JSX.Element {
       await Promise.all([
         fetchRequests(),
         fetchProposalStats(),
-        fetchNearestStations(),
       ]);
     })();
   }, [state]);
@@ -94,135 +93,6 @@ export default function Dashboard(): JSX.Element {
       ]);
     } finally {
       setRequestsLoading(false);
-    }
-  }
-
-  async function fetchNearestStations() {
-    setStationsLoading(true);
-    setStationsError(null);
-
-    const tryFetchWithCoords = async (lat: number, lon: number) => {
-      try {
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        };
-
-        let res = await fetch(`${API_BASE}/api/station/map/nearest`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ latitude: lat, longitude: lon }),
-          credentials: "include",
-        });
-
-        if (!res.ok) {
-          res = await fetch(
-            `${API_BASE}/api/station/map/nearest?lat=${encodeURIComponent(
-              lat,
-            )}&lon=${encodeURIComponent(lon)}`,
-            {
-              headers,
-              credentials: "include",
-            },
-          );
-        }
-
-        if (!res.ok) throw new Error(`stations-fetch-failed (${res.status})`);
-        const data = await res.json();
-
-        if (Array.isArray(data)) {
-          setStations(data);
-        } else if (data?.stations && Array.isArray(data.stations)) {
-          setStations(data.stations);
-        } else {
-          console.warn("Nieoczekiwany format danych stacji:", data);
-          setStations([]);
-        }
-      } catch (err) {
-        console.error("Błąd pobierania stacji z coords:", err);
-        throw err;
-      }
-    };
-
-    if (typeof navigator !== "undefined" && "geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const lat = pos.coords.latitude;
-          const lon = pos.coords.longitude;
-          try {
-            await tryFetchWithCoords(lat, lon);
-          } catch (err) {
-            setStationsError(
-              t("dashboard.fetchNearestError") ||
-                "Nie udało się pobrać najbliższych stacji z backendu.",
-            );
-            setStations(null);
-          } finally {
-            setStationsLoading(false);
-          }
-        },
-        async (err) => {
-          console.warn("Geolocation zablokowana/nieudana:", err);
-          try {
-            const headers: Record<string, string> = {
-              Accept: "application/json",
-            };
-
-            const res = await fetch(`${API_BASE}/api/station/map/nearest`, {
-              headers,
-              credentials: "include",
-            });
-            if (!res.ok) throw new Error("no-coords-fetch-failed");
-            const data = await res.json();
-            if (Array.isArray(data)) setStations(data);
-            else if (data?.stations && Array.isArray(data.stations))
-              setStations(data.stations);
-            else setStations([]);
-          } catch (err2) {
-            console.error(
-              "Fallback bez geolokacji nie powiódł się:",
-              err2,
-            );
-            setStationsError(
-              t("dashboard.noLocationAndFetchFailed") ||
-                "Brak dostępu do lokalizacji i nie udało się pobrać stacji.",
-            );
-            setStations(null);
-          } finally {
-            setStationsLoading(false);
-          }
-        },
-        { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
-      );
-    } else {
-      try {
-        const headers: Record<string, string> = {
-          Accept: "application/json",
-        };
-
-        const res = await fetch(`${API_BASE}/api/station/map/nearest`, {
-          headers,
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("no-geolocation");
-        const data = await res.json();
-        if (Array.isArray(data)) setStations(data);
-        else if (data?.stations && Array.isArray(data.stations))
-          setStations(data.stations);
-        else setStations([]);
-      } catch (err) {
-        console.error(
-          "Brak geolokacji i pobranie stacji nie powiodło się:",
-          err,
-        );
-        setStationsError(
-          t("dashboard.geolocationUnsupported") ||
-            "Twoja przeglądarka nie wspiera lokalizacji i nie udało się pobrać stacji.",
-        );
-        setStations(null);
-      } finally {
-        setStationsLoading(false);
-      }
     }
   }
 
@@ -405,59 +275,6 @@ export default function Dashboard(): JSX.Element {
               <div className="absolute z-10 text-2xl font-bold">{t("dashboard.list")}</div>
             </div>
           </a>
-        </section>
-
-        <section className="bg-base-300 p-6 rounded-xl shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-10">{t("dashboard.nearest")}</h2>
-
-          {stationsLoading ? (
-            <div>{t("dashboard.nearestload")}</div>
-          ) : stationsError ? (
-            <div className="text-red-400">{stationsError}</div>
-          ) : stations && stations.length > 0 ? (
-            <div className="grid md:grid-cols-3 gap-30">
-              {stations.map((s, idx) => (
-                <div key={s.id ?? `${s.brandName}-${idx}`} className="card bg-base-100 w-96 shadow-sm">
-                  <div className="card-body">
-                    <h2 className="card-title">{s.brandName}</h2>
-
-                    <p className="text-sm text-gray-600">
-                      {t("dashboard.street")} {s.street ?? "-"}{s.houseNumber !== undefined && s.houseNumber !== null ? ` ${s.houseNumber}` : ""}
-                    </p>
-
-                    {s.city && (
-                      <p className="text-sm text-gray-600">{t("dashboard.city")} {s.city}</p>
-                    )}
-
-                    <p className="text-sm text-gray-600">{t("dashboard.postalcode")} {s.postalCode ?? "-"}</p>
-
-                    {s.distanceMeters !== undefined && s.distanceMeters !== null && (
-                      <p className="text-sm text-gray-500">{t("dashboard.distance")} {formatDistance(s.distanceMeters)}</p>
-                    )}
-
-                    <div className="card-actions justify-center mt-2">
-                      <a
-                        href={`/map?lat=${s.latitude ?? ""}&lon=${s.longitude ?? ""}`}
-                        className="btn btn-outline"
-                      >
-                        {t("dashboard.showonmap")}
-                      </a>
-                      <Link
-                            to={`/station/${encodeURIComponent(s.brandName)}/${encodeURIComponent(s.city)}/${encodeURIComponent(
-                              s.street
-                              )}/${encodeURIComponent(s.houseNumber)}`}
-                              className="btn btn-outline btn-secondary"
-                              >
-                              {t("dashboard.stationdetails")}
-                        </Link>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-base-content">{t("dashboard.nostations")}</div>
-          )}
         </section>
 
         <section className="bg-base-300 p-6 rounded-xl shadow-md">
