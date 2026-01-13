@@ -183,7 +183,7 @@ namespace Services.Services
 
                 if (response == null)
                 {
-                    _logger.LogWarning("Price proposal with photo token {token} not found.", 
+                    _logger.LogWarning("Price proposal with photo token {token} not found.",
                         token);
                     return Result<GetPriceProposalResponse>.Bad(
                         "Not found",
@@ -276,8 +276,8 @@ namespace Services.Services
                         new List<string> { "User is not authorized to perform this action." });
                 }
 
-               var priceProposal = await _priceProposalRepository.FindPriceProposal(
-                   token);
+                var priceProposal = await _priceProposalRepository.FindPriceProposal(
+                    token);
 
                 if (priceProposal == null)
                 {

@@ -14,6 +14,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Services.Event;
+using Services.Event.Interfaces;
 using Services.Helpers;
 using Services.Interfaces;
 using Services.Services;
@@ -33,6 +35,7 @@ namespace Tests.ServicesTests
         private readonly Mock<ILogger<CacheService>> _cacheLoggerMock;
         private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
         private readonly Mock<IEmailSender> _emailMock;
+        private readonly Mock<IEventDispatcher> _eventDispatcherMock;
         private readonly CacheService _cache;
         private readonly PriceProposalServices _service;
         private readonly ITestOutputHelper _output;
@@ -47,7 +50,7 @@ namespace Tests.ServicesTests
             _proposalStatisticRepoMock = new Mock<IProposalStatisticRepository>();
             _loggerMock = new Mock<ILogger<PriceProposalServices>>();
             _cacheLoggerMock = new Mock<ILogger<CacheService>>();
-           
+
             var inMemorySettings = new Dictionary<string, string?>
             {
                 ["Frontend:Url"] = "http://localhost:4000",
@@ -59,12 +62,12 @@ namespace Tests.ServicesTests
             var configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(inMemorySettings)
                 .Build();
-            var emailBodys = new EmailBodys();
 
-            
+            // Mock interfejsu IEmailSender — prostsze i bez zależności konstrukcyjnych
             _emailMock = new Mock<IEmailSender>(MockBehavior.Strict);
 
-           
+            _eventDispatcherMock = new Mock<IEventDispatcher>(MockBehavior.Strict);
+
             var redisMock = new Mock<IConnectionMultiplexer>(MockBehavior.Strict);
             var dbMock = new Mock<IDatabase>(MockBehavior.Loose);
             var serverMock = new Mock<IServer>(MockBehavior.Loose);
@@ -77,7 +80,6 @@ namespace Tests.ServicesTests
 
             _cache = new CacheService(redisMock.Object, _cacheLoggerMock.Object);
 
-      
             var store = new Mock<IUserStore<ApplicationUser>>();
             _userManagerMock = new Mock<UserManager<ApplicationUser>>(
                 store.Object, null, null, null, null, null, null, null, null
@@ -91,7 +93,8 @@ namespace Tests.ServicesTests
                 _fuelTypeRepoMock.Object,
                 _proposalStatisticRepoMock.Object,
                 _emailMock.Object,
-                _cache
+                _cache,
+                _eventDispatcherMock.Object
             );
         }
 
@@ -133,7 +136,7 @@ namespace Tests.ServicesTests
             _output.WriteLine("Invalid file type returns 400 as expected.");
         }
 
-        [Fact]                  
+        [Fact]
         public async Task AddNewProposalAsync_ReturnsBad_WhenUserNotFound()
         {
             // Arrange
@@ -305,6 +308,8 @@ namespace Tests.ServicesTests
             _priceProposalRepoMock.Setup(p => p.FindPriceProposal("tok-1")).ReturnsAsync(priceProposal);
             _priceProposalRepoMock.Setup(p => p.ChangePriceProposalStatus(true, priceProposal, admin)).ReturnsAsync(true);
             _proposalStatisticRepoMock.Setup(p => p.UpdateTotalProposalsAsync(true, user.Id)).ReturnsAsync(true);
+
+            
             _emailMock.Setup(e => e.SendPriceProposalStatusEmail(
                 user.Email,
                 user.UserName,
@@ -312,6 +317,9 @@ namespace Tests.ServicesTests
                 It.IsAny<FindStationRequest>(),
                 priceProposal.ProposedPrice
             )).ReturnsAsync(true);
+
+           
+            _eventDispatcherMock.Setup(ed => ed.PublishAsync(It.IsAny<PriceProposalEvaluatedEvent>())).Returns(Task.CompletedTask);
 
             // Act
             var result = await _service.ChangePriceProposalStatus(adminEmail, true, "tok-1");
@@ -419,7 +427,7 @@ namespace Tests.ServicesTests
             Assert.Equal(15, result.Data.TotalCount);
             Assert.Equal(2, result.Data.TotalPages);
             Assert.Equal(2, result.Data.PageNumber);
-            Assert.Equal(5, result.Data.Items.Count); 
+            Assert.Equal(5, result.Data.Items.Count);
             _output.WriteLine("Repository returned 15 items and service paginated to page 2 with 5 items.");
         }
 

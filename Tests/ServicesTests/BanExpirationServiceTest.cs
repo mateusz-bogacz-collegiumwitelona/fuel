@@ -1,9 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
-using Data.Context;
+﻿using Data.Context;
 using Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +7,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Services.BackgroundServices;
+using Services.Email;
 using Services.Helpers;
+using System;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Tests.ServicesTests
@@ -50,7 +51,8 @@ namespace Tests.ServicesTests
             var config = new ConfigurationBuilder().AddInMemoryCollection().Build();
             var emailBody = new EmailBodys();
             var emailLogger = new Mock<ILogger<EmailSender>>().Object;
-            var emailSender = new EmailSender(emailLogger, config, emailBody);
+            var emailQueueMock = new Mock<IEmailQueue>().Object;
+            var emailSender = new EmailSender(emailLogger, config, emailBody, emailQueueMock);
 
             using (var sp = BuildServiceProvider(dbName, userManagerMock, emailSender))
             {
@@ -74,7 +76,7 @@ namespace Tests.ServicesTests
                         UserId = user.Id,
                         Reason = "Test",
                         BannedAt = DateTime.UtcNow,
-                        BannedUntil = DateTime.UtcNow.AddDays(1), 
+                        BannedUntil = DateTime.UtcNow.AddDays(1),
                         IsActive = true,
                         AdminId = Guid.NewGuid()
                     };
@@ -125,7 +127,8 @@ namespace Tests.ServicesTests
             var config = new ConfigurationBuilder().AddInMemoryCollection().Build();
             var emailBody = new EmailBodys();
             var emailLogger = new Mock<ILogger<EmailSender>>().Object;
-            var emailSender = new EmailSender(emailLogger, config, emailBody);
+            var emailQueueMock = new Mock<IEmailQueue>().Object; // Dodaj mock kolejki email
+            var emailSender = new EmailSender(emailLogger, config, emailBody, emailQueueMock);
 
             using (var sp = BuildServiceProvider(dbName, userManagerMock, emailSender))
             {
@@ -149,7 +152,7 @@ namespace Tests.ServicesTests
                         UserId = user.Id,
                         Reason = "Violation",
                         BannedAt = DateTime.UtcNow.AddDays(-3),
-                        BannedUntil = DateTime.UtcNow.AddDays(-1), 
+                        BannedUntil = DateTime.UtcNow.AddDays(-1),
                         IsActive = true,
                         AdminId = Guid.NewGuid()
                     };
@@ -194,7 +197,8 @@ namespace Tests.ServicesTests
             var config = new ConfigurationBuilder().AddInMemoryCollection().Build();
             var emailBody = new EmailBodys();
             var emailLogger = new Mock<ILogger<EmailSender>>().Object;
-            var emailSender = new EmailSender(emailLogger, config, emailBody);
+            var emailQueueMock = new Mock<IEmailQueue>().Object; // Dodaj mock kolejki email
+            var emailSender = new EmailSender(emailLogger, config, emailBody, emailQueueMock);
 
             using var sp = BuildServiceProvider(dbName, userManagerMock, emailSender);
             var loggerMock = new Mock<ILogger<BanExpirationService>>();
@@ -210,3 +214,4 @@ namespace Tests.ServicesTests
         }
     }
 }
+    

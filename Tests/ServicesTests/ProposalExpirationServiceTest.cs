@@ -28,7 +28,7 @@ namespace Tests.ServicesTests
 
         [Fact]
         public async Task ExpireOldProposalsAsync_NoExpired_ShouldNotModifyProposals()
-        {   
+        {
             // Arrange
             var dbName = Guid.NewGuid().ToString();
             using (var sp = BuildServiceProvider(dbName))
@@ -217,7 +217,7 @@ namespace Tests.ServicesTests
                 Assert.NotNull(task);
                 await task!;
 
-                
+
                 using (var scope = sp.CreateScope())
                 {
                     var ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -230,7 +230,7 @@ namespace Tests.ServicesTests
                     }
                 }
 
-                
+
                 using (var scope = sp.CreateScope())
                 {
                     var ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

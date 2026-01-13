@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Services.BackgrounServices
 {
-    public class ProposalExpirationService : BackgroundService 
+    public class ProposalExpirationService : BackgroundService
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<ProposalExpirationService> _logger;
