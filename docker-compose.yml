@@ -33,6 +33,7 @@ services:
       - Blob__ConnectionString=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;
       - FACEBOOK_APP_ID=${FACEBOOK_OAUTH_CLIENT_ID}
       - FACEBOOK_APP_SECRET=${FACEBOOK_OAUTH_CLIENT_SECRET}
+      - Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command=Warning
     ports:
       - "${API_PORT:-5111}:8080"
     networks:
