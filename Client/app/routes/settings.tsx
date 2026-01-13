@@ -289,7 +289,7 @@ export default function SettingsPage() {
 
                     <div className="bg-base-100 p-4 rounded">
                       <h3 className="font-medium mb-2">{t("settings.account_data_title")}</h3>
-                      <div className="grid md:grid-cols-2 gap-4">
+                      <div className="grid md:grid-2-cols gap-4">
                         <div>
                           <div className="text-sm text-gray-400">{t("settings.label_username")}</div>
                           <div className="font-medium">{user?.userName ?? "-"}</div>
