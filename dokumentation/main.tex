@@ -1,0 +1,1220 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{polski}
+\usepackage[polish]{babel}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{svg}
+\usepackage{titlesec}
+\usepackage[T1]{fontenc}
+\usepackage{longtable}
+\usepackage{array}
+
+\titleclass{\subsubsubsection}{straight}[\subsubsection]
+\newcounter{subsubsubsection}[subsubsection]
+\renewcommand\thesubsubsubsection{\thesubsubsection.\arabic{subsubsubsection}}
+\titleformat{\subsubsubsection}
+  {\normalfont\normalsize\bfseries}{\thesubsubsubsection}{1em}{}
+\titlespacing*{\subsubsubsection}{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+
+\setcounter{tocdepth}{4}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.95}
+
+\lstdefinestyle{mystyle}{
+	backgroundcolor=\color{backcolour},   
+	commentstyle=\color{codegreen},
+	keywordstyle=\color{blue},
+	stringstyle=\color{codepurple},
+	basicstyle=\ttfamily\scriptsize,
+	breakatwhitespace=false,         
+	breaklines=true,                 
+	captionpos=b,                    
+	keepspaces=true,                 
+	numbersep=5pt,                  
+	showspaces=false,                
+	showstringspaces=false,
+	showtabs=false,                  
+	tabsize=2,
+    inputencoding=utf8,
+    extendedchars=true,
+    literate={ą}{{\k{a}}}1 {ć}{{\'c}}1 {ę}{{\k{e}}}1 {ł}{{\l{}}}1 {ń}{{\'n}}1 {ó}{{\'o}}1 {ś}{{\'s}}1 {ż}{{\.z}}1 {ź}{{\'z}}1 {Ą}{{\k{A}}}1 {Ć}{{\'C}}1 {Ę}{{\k{E}}}1 {Ł}{{\L{}}}1 {Ń}{{\'N}}1 {Ó}{{\'O}}1 {Ś}{{\'S}}1 {Ż}{{\.Z}}1 {Ź}{{\'Z}}1
+}
+
+\lstset{style=mystyle}
+
+\begin{document}
+
+\begin{titlepage}
+\begin{center}
+\large
+    {\noindent Collegium Witelona Uczelnia Państwowa w Legnicy}\\
+    {\noindent Wydział Nauk Technicznych i Ekonomicznych}\\
+    {\noindent Kierunek: Informatyka}\\[2cm]
+    \includegraphics[width=5cm]{godlo.jpg}\\[2cm]
+    {\large\textbf{Projekt z przedmiotu "Projektowanie i programowanie systemów internetowych II"}}\\[0.3cm]
+    {\noindent Temat: FuelApp.}\\[2cm]
+    {\large\textbf{Autorzy}}\\
+    Mateusz Bogacz-Drewniak, nr. indeksu: 44491\\
+    Mateusz Chimkowski, nr. indeksu: 43831\\
+    Szymon Mikołajek, nr. indeksu: 41105 \\
+    Paweł Kruk, nr. indeksu: 43854 \\
+    Michał Nocuń, nr. indeksu: 40669 \\[2cm]
+\end{center}
+		
+\begin{flushright}
+    \begin{tabular}{l}
+        Prowadzący przedmiot\\
+        mgr inż. Krzysztof Rewak
+    \end{tabular}
+\end{flushright}
+		
+\vfill
+\begin{center}
+    {\noindent Legnica, 2025}
+    \end{center}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{Podział obowiązków i odpowiedzialności w zespole}
+
+Poniższa tabela przedstawia przypisanie ról oraz zakres odpowiedzialności poszczególnych członków zespołu realizującego projekt FuelApp.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|p{5cm}|p{10cm}|}
+\hline
+\textbf{Imię i Nazwisko} & \textbf{Pełniona rola i zakres obowiązków} \\ \hline
+Mateusz Bogacz-Drewniak & \textbf{Team Leader / Backend / DevOps (wsparcie)} \newline Zarządzanie zespołem, architektura systemu, implementacja API (.NET), konfiguracja Docker/CI, wsparcie merytoryczne przy konfiguracji środowiska uruchomieniowego. \\ \hline
+Mateusz Chimkowski & \textbf{Frontend / UX/UI} \newline Projektowanie interfejsu użytkownika, implementacja logiki po stronie klienta. \\ \hline
+Szymon Mikołajek & \textbf{Project Manager / Tester} \newline Nadzór nad harmonogramem, testy jednostkowe, weryfikacja zgodności z wymaganiami. \\ \hline
+Paweł Kruk & \textbf{Frontend / DevOps} \newline Implementacja logiki po stronie klienta, konfiguracja środowiska uruchomieniowego, wdrożenie i konfiguracja serwera. \\ \hline
+Michał Nocuń & \textbf{Tester} \newline Testy funkcjonalne, raportowanie błędów, weryfikacja scenariuszy użycia. \\ \hline
+\end{tabular}
+\caption{Podział ról w zespole projektowym}
+\end{table}
+
+\newpage
+
+\section{Wprowadzenie}
+
+\subsection{Cel systemu}
+Aplikacja webowa umożliwiająca użytkownikom przeglądanie, wyszukiwanie i aktualizowanie cen paliw na stacjach benzynowych w czasie rzeczywistym. System opiera się na modelu crowdsourcingu, gdzie społeczność zgłasza zmiany cen, które są weryfikowane przez administratorów na podstawie zdjęć pylonów cenowych.
+
+\subsection{Docelowi użytkownicy}
+\begin{itemize}
+    \item \textbf{Użytkownik} – zalogowana osoba, która bierze czynny udział w budowaniu bazy cen, zbiera punkty i zarządza swoim profilem.
+    \item \textbf{Administrator} – osoba odpowiedzialna za weryfikację zgłoszeń, zarządzanie stacjami, markami paliw oraz moderację użytkowników.
+\end{itemize}
+
+\subsection{Główne założenia biznesowe}
+\begin{itemize}
+    \item \textbf{Weryfikacja wizualna:} Każda propozycja ceny musi zawierać zdjęcie dowodowe (pylon stacji), co eliminuje fałszywe dane.
+    \item \textbf{System grywalizacji:} Ranking najlepszych użytkowników oparty na liczbie zaakceptowanych zgłoszeń (punktów).
+    \item \textbf{Geo-pozycjonowanie:} Wyszukiwanie stacji w oparciu o aktualną lokalizację użytkownika i promień wyszukiwania.
+    \item \textbf{Bezpieczeństwo:} Ochrona przed botami i nadużyciami poprzez system raportowania i blokowania kont (banowania).
+\end{itemize}
+
+\section{Aktorzy systemu}
+
+\begin{longtable}{|p{4cm}|p{11cm}|}
+\hline
+\textbf{Rola} & \textbf{Opis} \\
+\hline
+Gość & Niezalogowany użytkownik. Możliwość logowania i rejestracji (system i Facebook) oraz możliwość odzyskania hasła. \\
+\hline
+Użytkownik (User) & Zalogowany użytkownik. Może dodawać propozycje cen, zarządzać swoim kontem, zgłaszać innych użytkowników i przeglądać swoje statystyki. \\
+\hline
+Administrator (Admin) & Posiada pełne uprawnienia: edycja stacji, akceptacja cen, banowanie użytkowników, zarządzanie słownikami. \\
+\hline
+\end{longtable}
+
+\section{Funkcjonalności szczegółowe}
+
+\subsection{MODUŁ AUTENTYKACJI I REJESTRACJI}
+
+\subsubsection{Rejestracja klasyczna}
+\textbf{Aktorzy:} Gość \\
+\textbf{Opis:} Proces zakładania konta przy użyciu adresu email i hasła. \\
+\textbf{Przebieg:}
+\begin{enumerate}
+    \item Użytkownik wchodzi na podstronę rejestracji (\texttt{/register}).
+    \item Wypełnia formularz danymi:
+    \begin{itemize}
+        \item Nazwa użytkownika (unikalna).
+        \item Adres email.
+        \item Hasło (wymagane min. 6 znaków, duża litera, cyfra, znak specjalny).
+        \item Potwierdzenie hasła.
+    \end{itemize}
+    \item System weryfikuje unikalność emaila i loginu.
+    \item System tworzy konto i wysyła token weryfikacyjny na adres email.
+    \item Użytkownik klika w link z tokenem (\texttt{/confirm-email}).
+    \item System aktywuje konto i umożliwia logowanie.
+\end{enumerate}
+
+\subsubsection{Logowanie i Rejestracja przez Facebook}
+\textbf{Aktorzy:} Gość \\
+\textbf{Opis:} Szybkie logowanie/rejestracja przy użyciu OAuth. \\
+\textbf{Przebieg:}
+\begin{enumerate}
+    \item Użytkownik wybiera opcję "Zaloguj przez Facebook".
+    \item System przekierowuje do dostawcy tożsamości (Facebook).
+    \item Po pomyślnej autoryzacji Facebook zwraca token dostępu.
+    \item System backendowy weryfikuje token w Graph API.
+    \item Scenariusz A (Konto nie istnieje): System automatycznie tworzy konto, pobierając email i nazwę z Facebooka.
+    \item Scenariusz B (Konto istnieje): System loguje użytkownika.
+    \item System generuje ciasteczko sesyjne JWT (HttpOnly).
+\end{enumerate}
+
+\subsubsection{Odzyskiwanie hasła}
+\textbf{Aktorzy:} Gość \\
+\textbf{Przebieg:}
+\begin{enumerate}
+    \item Użytkownik podaje email w formularzu "Zapomniałem hasła".
+    \item System sprawdza, czy konto istnieje i jest aktywne.
+    \item System wysyła email z tokenem resetującym (ważny 24h).
+    \item Użytkownik wchodzi w link, podaje nowe hasło i je potwierdza.
+    \item Hasło zostaje nadpisane w bazie danych.
+\end{enumerate}
+
+\subsection{MODUŁ STACJI PALIW (PRZEGLĄDANIE)}
+
+\subsubsection{Wyszukiwanie stacji (Lista i Mapa)}
+\textbf{Aktorzy:} Użytkownik, Administrator \\
+\textbf{Opis:} Przeglądanie dostępnych stacji z możliwością filtrowania. \\
+\textbf{Przebieg:}
+\begin{enumerate}
+    \item Użytkownik wchodzi na widok mapy (\texttt{/map}) lub listy (\texttt{/list}).
+    \item Użytkownik definiuje filtry (opcjonalnie):
+    \begin{itemize}
+        \item Marka stacji (np. Orlen, BP).
+        \item Typ paliwa (np. LPG, ON).
+        \item Maksymalna cena.
+        \item Lokalizacja i promień wyszukiwania (w km).
+    \end{itemize}
+    \item System zwraca listę stacji pasujących do kryteriów.
+    \item Dla widoku listy: możliwe sortowanie po cenie (rosnąco/malejąco) lub dystansie.
+    \item Dla widoku mapy: wyświetlenie pinezek w odpowiednich koordynatach.
+\end{enumerate}
+
+\subsubsection{Szczegóły stacji (Profil stacji)}
+\textbf{Aktorzy:} Użytkownik, Administrator \\
+\textbf{Przebieg:}
+\begin{enumerate}
+    \item Użytkownik klika w wybraną stację.
+    \item System wyświetla profil stacji zawierający:
+    \begin{itemize}
+        \item Dane adresowe i markę.
+        \item Listę dostępnych paliw wraz z aktualnymi cenami.
+        \item Datę ostatniej aktualizacji ceny.
+    \end{itemize}
+\end{enumerate}
+
+\subsection{MODUŁ PROPOZYCJI CEN (CROWDSOURCING)}
+
+\subsubsection{Zgłaszanie nowej ceny}
+\textbf{Aktorzy:} Użytkownik, Administrator \\
+\textbf{Opis:} Proces aktualizacji ceny paliwa, wymagający dowodu w postaci zdjęcia. \\
+\textbf{Przebieg:}
+\begin{enumerate}
+    \item Użytkownik będąc na profilu stacji wybiera opcję "Zgłoś cenę".
+    \item Wybiera typ paliwa (np. PB95) z listy dostępnych na tej stacji.
+    \item Wpisuje nową cenę (format liczbowy).
+    \item Wgrywa zdjęcie pylonu cenowego (wymagane, formaty: JPG, PNG, WEBP).
+    \item Klika "Wyślij".
+    \item System zapisuje propozycję ze statusem "Oczekująca" (Pending).
+    \item Cena na stacji \textbf{nie} zmienia się automatycznie do momentu weryfikacji.
+\end{enumerate}
+
+\subsubsection{Przeglądanie statystyk i historii}
+\textbf{Aktorzy:} Użytkownik, Administrator \\
+\textbf{Przebieg:}
+\begin{enumerate}
+    \item Użytkownik wchodzi w zakładkę statystyk (\texttt{/proposals}).
+    \item System wyświetla:
+    \begin{itemize}
+        \item Całkowitą liczbę zgłoszeń.
+        \item Liczbę zgłoszeń zaakceptowanych i odrzuconych.
+        \item Wskaźnik skuteczności (Rate) i liczbę punktów rankingowych.
+    \end{itemize}
+\end{enumerate}
+
+\newpage
+
+\subsection{MODUŁ ADMINISTRACYJNY - ZARZĄDZANIE}
+
+\subsubsection{Weryfikacja propozycji cen}
+\textbf{Aktorzy:} Administrator \\
+\textbf{Opis:} Kluczowy proces zapewniający wiarygodność danych. \\
+\textbf{Przebieg:}
+\begin{enumerate}
+    \item Administrator wchodzi do panelu propozycji (\texttt{/proposals\_admin}).
+    \item System wyświetla listę oczekujących zgłoszeń.
+    \item Administrator otwiera szczegóły zgłoszenia: widzi proponowaną cenę oraz zdjęcie dowodowe.
+    \item Administrator podejmuje decyzję:
+    \begin{itemize}
+        \item \textbf{Akceptacja:} Cena na stacji zostaje zaktualizowana, status propozycji zmienia się na "Zaakceptowana", użytkownik otrzymuje punkty.
+        \item \textbf{Odrzucenie:} Cena na stacji pozostaje bez zmian, status propozycji "Odrzucona".
+    \end{itemize}
+    \item System uniemożliwia ponowną weryfikację tego samego zgłoszenia.
+\end{enumerate}
+
+\subsubsection{Zarządzanie stacjami (CRUD)}
+\textbf{Aktorzy:} Administrator \\
+\textbf{Przebieg (Dodawanie):}
+\begin{enumerate}
+    \item Administrator wypełnia formularz nowej stacji (Marka, Ulica, Miasto, Kod pocztowy, Koordynaty GPS).
+    \item Administrator definiuje początkowe paliwa i ich ceny.
+    \item System tworzy stację widoczną dla wszystkich użytkowników.
+\end{enumerate}
+\textbf{Przebieg (Edycja/Przypisanie paliwa):}
+\begin{enumerate}
+    \item Administrator może ręcznie zmienić cenę paliwa (z pominięciem kolejki propozycji).
+    \item Administrator może dodać nowy typ paliwa do istniejącej stacji (np. dodanie E85 do stacji, która go wcześniej nie miała).
+\end{enumerate}
+
+\subsubsection{Zarządzanie użytkownikami i Banowanie}
+\textbf{Aktorzy:} Administrator \\
+\textbf{Opis:} Narzędzia do utrzymania porządku w systemie. \\
+\textbf{Przebieg (Blokada konta):}
+\begin{enumerate}
+    \item Administrator wybiera użytkownika z listy (\texttt{/user\_admin}).
+    \item Klika opcję "Zablokuj" (Lock-out).
+    \item Podaje powód blokady oraz czas trwania (ilość dni lub blokada stała).
+    \item System blokuje dostęp użytkownikowi i wysyła mu email z powodem bana.
+    \item Wszystkie aktywne bany użytkownika są nadpisywane nowym.
+\end{enumerate}
+
+\subsubsection{Obsługa raportów (Zgłoszeń użytkowników)}
+\textbf{Aktorzy:} Użytkownik (zgłasza), Administrator (rozpatruje) \\
+\textbf{Przebieg:}
+\begin{enumerate}
+    \item Użytkownik A zgłasza Użytkownika B podając powód (np. spam, wulgarne nazwy).
+    \item Administrator widzi listę raportów w statusie "Pending".
+    \item Administrator może:
+    \begin{itemize}
+        \item \textbf{Zaakceptować raport:} Użytkownik B zostaje zbanowany (zgodnie z ustawieniami bana), a status raportu zmienia się na "Zaakceptowany".
+        \item \textbf{Odrzucić raport:} Brak konsekwencji dla Użytkownika B, status raportu "Odrzucony".
+    \end{itemize}
+\end{enumerate}
+
+\section{Ograniczenia i wymagania techniczne}
+
+\begin{enumerate}
+    \item \textbf{Zdjęcia:} Maksymalny rozmiar pliku to 5MB. Obsługiwane formaty: JPEG, PNG, WEBP.
+    \item \textbf{Sesja:} Token JWT jest ważny przez 3 godziny. Po tym czasie wymagane jest odświeżenie (Refresh Token) lub ponowne logowanie.
+    \item \textbf{Unikalność danych:} W systemie nie mogą istnieć dwaj użytkownicy o tym samym emailu lub nazwie.
+    \item \textbf{Uprawnienia:} Zwykły użytkownik nie ma dostępu do endpointów o ścieżce \texttt{/api/admin/*}.
+\end{enumerate}
+
+\newpage
+
+\section{Struktura interfejsu (Widoki)}
+
+System składa się z następujących głównych ekranów:
+
+\begin{itemize}
+    \item \textbf{Strefa Publiczna:}
+    \begin{itemize}
+        \item \texttt{/home} - Strona startowa.
+        \item \texttt{/map} - Mapa stacji.
+        \item \texttt{/list} - Wyszukiwarka listowa stacji.
+        \item \texttt{/station/...} - Szczegóły konkretnej stacji.
+        \item \texttt{/login, /register} - Ekrany autoryzacji.
+    \end{itemize}
+    
+    \item \textbf{Strefa Użytkownika:}
+    \begin{itemize}
+        \item \texttt{/dashboard} - Pulpit użytkownika.
+        \item \texttt{/proposals} - Historia własnych zgłoszeń.
+        \item \texttt{/settings} - Ustawienia konta.
+    \end{itemize}
+    
+    \item \textbf{Strefa Administratora:}
+    \begin{itemize}
+        \item \texttt{/admin-dashboard} - Panel główny.
+        \item \texttt{/proposals\_admin} - Panel weryfikacji cen (ze zdjęciami).
+        \item \texttt{/gas\_station\_admin} - Zarządzanie stacjami.
+        \item \texttt{/user\_admin} - Zarządzanie użytkownikami (bany, role).
+        \item \texttt{/brand\_admin} - Słownik marek paliw.
+    \end{itemize}
+\end{itemize}
+
+\newpage
+
+\section{Architektura Systemu}
+
+System został zaprojektowany w architekturze mikroserwisowej/kontenerowej z wykorzystaniem Docker Compose. Warstwa prezentacji (Frontend) komunikuje się z warstwą logiki (Backend) poprzez protokół HTTP, a całość infrastruktury jest odseparowana w dedykowanych kontenerach.
+
+\subsection{Komponenty Infrastruktury (Docker Services)}
+System składa się z następujących serwisów:
+
+\begin{itemize}
+    \item \textbf{Controllers (API):} Główny kontener backendowy (.NET), udostępniający REST API.
+    \item \textbf{Client (Frontend):} Kontener serwujący aplikację React (Node.js/Vite). W środowisku deweloperskim działa w trybie HMR (Hot Module Replacement).
+    \item \textbf{PostGIS (Database):} Baza danych PostgreSQL rozszerzona o moduł przestrzenny PostGIS do wydajnego przetwarzania danych geolokalizacyjnych.
+    \item \textbf{Redis (Cache):} Szybka baza klucz-wartość wykorzystywana do cache'owania zapytań i przechowywania sesji rozproszonych.
+    \item \textbf{Azurite (Blob Storage):} Emulator usługi Azure Blob Storage, służący do przechowywania plików binarnych (zdjęcia pylonów).
+    \item \textbf{Nginx (Proxy \& Web Server):} Serwer WWW działający jako Reverse Proxy, kierujący ruch do odpowiednich kontenerów oraz serwujący aplikację frontendową w środowisku produkcyjnym.
+    \item \textbf{Certbot:} Kontener odpowiedzialny za automatyczne generowanie i odnawianie certyfikatów SSL (Let's Encrypt) w środowisku produkcyjnym.
+    \item \textbf{Mailpit (SMTP):} Narzędzie do przechwytywania wiadomości email (wykorzystywane tylko w środowisku deweloperskim).
+\end{itemize}
+
+\subsection{Architektura Wewnętrzna Backend (N-Layer)}
+Aplikacja backendowa (serwis \texttt{Controllers}) została zaimplementowana w architekturze wielowarstwowej (N-Layer), co zapewnia separację odpowiedzialności (SoC), testowalność i łatwość utrzymania.
+
+\begin{enumerate}
+    \item \textbf{Warstwa Prezentacji (Presentation Layer / API):}
+    \begin{itemize}
+        \item \textbf{Rola:} Obsługa żądań HTTP, walidacja wejściowa, autoryzacja (JWT).
+        \item \textbf{Komponenty:} \texttt{Controllers} (np. \texttt{StationController}), \texttt{Middleware}, \texttt{DTOs}.
+    \end{itemize}
+
+    \item \textbf{Warstwa Logiki Biznesowej (Service Layer / BLL):}
+    \begin{itemize}
+        \item \textbf{Rola:} Przetwarzanie danych, realizacja procesów biznesowych (np. algorytmy punktacji), integracja z zewnętrznymi serwisami.
+        \item \textbf{Komponenty:} \texttt{Services} (np. \texttt{StationService}), \texttt{Interfaces}.
+    \end{itemize}
+
+    \item \textbf{Warstwa Dostępu do Danych (Data Access Layer / DAL):}
+    \begin{itemize}
+        \item \textbf{Rola:} Bezpośrednia komunikacja z bazą danych PostgreSQL, operacje CRUD.
+        \item \textbf{Komponenty:} \texttt{DbContext} (Entity Framework Core), \texttt{Repositories}.
+    \end{itemize}
+
+    \item \textbf{Warstwa Domeny (Domain Layer):}
+    \begin{itemize}
+        \item \textbf{Rola:} Definicja kształtu danych w systemie.
+        \item \textbf{Komponenty:} \texttt{Entities} (\texttt{User}, \texttt{Station}), \texttt{Enums}.
+    \end{itemize}
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[
+            width=1.0\textwidth,
+            height=0.6\textheight,
+            keepaspectratio]{architecture_diagram.png}
+    \caption{Diagram architektury backendu (miejsce na obraz)}
+    \label{fig:architecture}
+\end{figure}
+
+\newpage
+\section{Stos Technologiczny (Tech Stack)}
+
+\subsection{Backend (API)}
+\begin{itemize}
+    \item \textbf{Platforma:} .NET 8.0 (ASP.NET Core Web API).
+    \item \textbf{ORM:} Entity Framework Core z providerem PostgreSQL (\texttt{Npgsql}).
+    \item \textbf{Storage Client:} Azure SDK for .NET (obsługa Blob Storage/Azurite).
+    \item \textbf{Cache Client:} StackExchange.Redis.
+    \item \textbf{Email Service:} Brevo SMTP (produkcja) / Mailpit (dev).
+    \item \textbf{Dokumentacja:} Swagger / OpenAPI 3.0.
+\end{itemize}
+
+\subsection{Frontend (Klient)}
+\begin{itemize}
+    \item \textbf{Framework:} React + TypeScript.
+    \item \textbf{Build Tool:} Vite.
+    \item \textbf{Styling:} Tailwind CSS.
+    \item \textbf{Mapy:} Leaflet + OpenStreetMap.
+\end{itemize}
+
+\subsection{Infrastruktura i Wersje}
+\begin{itemize}
+    \item \textbf{OS Serwera:} Linux (Ubuntu Server).
+    \item \textbf{Konteneryzacja:} Docker, Docker Compose V2.
+    \item \textbf{Baza Danych:} PostgreSQL 17 + PostGIS 3.5.
+    \item \textbf{Cache:} Redis 8.2.
+    \item \textbf{Serwer WWW/Proxy:} Nginx.
+    \item \textbf{SSL:} Certbot (Let's Encrypt).
+\end{itemize}
+
+\section{Model Danych i Baza Danych}
+
+\subsection{Geolokalizacja i PostGIS}
+Wykorzystanie rozszerzenia PostGIS jest kluczowe dla funkcjonalności mapy.
+\begin{itemize}
+    \item \textbf{Typ danych:} Współrzędne stacji przechowywane są jako typy geometryczne/geograficzne PostGIS (np. \texttt{geometry(Point, 4326)}).
+    \item \textbf{Indeksowanie:} Zastosowanie indeksów przestrzennych (GIST) dla szybkiego wyszukiwania "w pobliżu" (funkcja \texttt{ST\_DWithin}).
+\end{itemize}
+
+\subsection{Główne Encje}
+\begin{itemize}
+    \item \textbf{Station:} Zawiera atrybuty geograficzne oraz relacje do marki.
+    \item \textbf{FuelPrice:} Przechowuje historię cen dla danej stacji.
+    \item \textbf{PriceProposal:} Powiązana z systemem plików (Azurite) poprzez identyfikator zdjęcia.
+    \item \textbf{User (Identity):} Standardowy model ASP.NET Identity przechowywany w PostgreSQL.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[
+            width=0.9\textwidth,
+            height=0.7\textheight
+            ]{erd-diagram.png}
+    \caption{Diagram związków encji (ERD) bazy danych}
+    \label{fig:erd}
+\end{figure}
+
+\newpage
+\section{Interfejs API i Komunikacja}
+
+\subsection{Konfiguracja Połączeń}
+Kontener API komunikuje się z usługami zależnymi za pomocą zmiennych środowiskowych zdefiniowanych w pliku \texttt{docker-compose.yml}:
+\begin{itemize}
+    \item \textbf{Baza danych:} \texttt{ConnectionStrings\_\_DefaultConnection}.
+    \item \textbf{Redis:} \texttt{Redis\_\_Host} oraz \texttt{Redis\_\_Port}.
+    \item \textbf{Azure Blobs:} \texttt{Blob\_\_ConnectionString} (wskazujący na kontener \texttt{azurite}).
+    \item \textbf{SMTP:} Zmienne z sekcji \texttt{Mail\_\_*} (Host, Port, Username, Password, SSL).
+\end{itemize}
+
+\subsection{Obsługa plików (Blob Storage)}
+Endpoint \texttt{POST /api/station/price-proposal/add}:
+\begin{itemize}
+    \item Plik graficzny jest przesyłany do API jako \texttt{multipart/form-data}.
+    \item API łączy się z kontenerem Azurite (lub usługą Azure w chmurze) i zapisuje plik.
+    \item System może generować publiczny URL lub SAS Token, aby umożliwić pobranie zdjęcia.
+\end{itemize}
+
+\subsection{Cache (Redis)}
+Redis wykorzystywany jest do:
+\begin{itemize}
+    \item Przechowywania wyników kosztownych zapytań (np. lista marek, konfiguracja).
+    \item Przechowywania sesji rozproszonych (Distributed Cache), co pozwala na skalowanie aplikacji (stateless API).
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[
+            width=1.0\textwidth,
+            height=0.8\textheight]{dataflow_diagram.png}
+    \caption{Diagram przepływu danych (Dataflow) w systemie }
+    \label{fig:dataflow}
+\end{figure}
+
+\newpage
+
+\newpage
+
+\section{Architektura i implementacja Backendu}
+
+\subsection{Architektura i odpowiedzialność}
+
+Backend aplikacji FuelApp stanowi centralny punkt logiki biznesowej systemu. Został zrealizowany w oparciu o platformę .NET 8 w architekturze warstwowej (N-Tier). Jego głównymi zadaniami są przetwarzanie danych, zapewnienie bezpiecznej komunikacji z bazą danych, realizacja złożonych reguł biznesowych oraz udostępnianie interfejsu REST API, który jest konsumowany przez aplikację frontendową.
+
+Architektura projektu promuje ścisłą separację odpowiedzialności (ang. \textit{Separation of Concerns}), co zwiększa czytelność kodu, jego testowalność oraz ułatwia przyszły rozwój i utrzymanie. Projekt został podzielony na główne moduły logiczne (warstwy):
+
+\begin{itemize}
+    \item \textbf{API (Warstwa Prezentacji):} Punkt wejścia dla żądań HTTP. Zawiera kontrolery REST, konfigurację potoku middleware (obsługa błędów, CORS, Rate Limiting), mechanizmy uwierzytelniania oraz konfigurację kontenera wstrzykiwania zależności (DI).
+    \item \textbf{Services (Warstwa Logiki Biznesowej):} Serce aplikacji implementujące wszystkie reguły biznesowe. Warstwa ta odpowiada za walidację danych wejściowych, koordynację działań między repozytoriami a innymi komponentami infrastruktury (np. cache Redis, system zdarzeń, serwis wysyłki e-mail czy Azure Blob Storage).
+    \item \textbf{Data (Warstwa Dostępu do Danych):} Abstrahuje bezpośredni dostęp do bazy danych. Zawiera definicje modeli domenowych (encji), kontekst bazy danych (Entity Framework Core) oraz repozytoria wykonujące bezpośrednie zapytania SQL/LINQ.
+    \item \textbf{DTO (Data Transfer Objects):} Proste obiekty służące do przesyłania danych między warstwami oraz definiujące kontrakty żądań i odpowiedzi API, oddzielając modele domenowe od modeli widoku.
+\end{itemize}
+
+\subsection{Użyte technologie}
+
+Poniżej zestawienie kluczowych technologii i bibliotek wykorzystanych w warstwie backendowej:
+
+\begin{itemize}
+    \item \textbf{Platforma:} .NET 8.0 (ASP.NET Core Web API);
+    \item \textbf{Baza danych:} PostgreSQL 16+ (z rozszerzeniem PostGIS dla danych geograficznych);
+    \item \textbf{ORM (Object-Relational Mapping):} Microsoft.EntityFrameworkCore v. 8.0.20 (wraz z Npgsql.EntityFrameworkCore.PostgreSQL v. 8.0.11 i NetTopologySuite dla obsługi geometrii);
+    \item \textbf{Tożsamość i autoryzacja:} ASP.NET Core Identity v. 8.0.20 oraz JWT Bearer Authentication;
+    \item \textbf{Caching (rozproszony):} Redis (obsługiwany przez klienta NRedisStack v. 1.1.1);
+    \item \textbf{Logowanie:} Serilog v. 4.3.0 (z zapisem strukturalnym do plików, konsoli oraz bazy PostgreSQL poprzez niestandardowy sink);
+    \item \textbf{Storage plików:} Azure Blob Storage (biblioteka Azure.Storage.Blobs v. 12.26.0);
+    \item \textbf{Zadania w tle:} Hosted Services (klasy dziedziczące po BackgroundService);
+    \item \textbf{Dokumentacja API:} Swagger/OpenAPI (Swashbuckle v. 6.6.2).
+\end{itemize}
+
+\subsection{Przepływ danych i kluczowe komponenty}
+
+Podstawowy przepływ żądania HTTP w aplikacji realizowany jest według schematu:
+\begin{center}
+\texttt{Klient HTTP $\rightarrow$ Kontroler (API) $\rightarrow$ Serwis (Logika) $\rightarrow$ Repozytorium (Dane) $\rightarrow$ Baza Danych}
+\end{center}
+
+\textbf{Kontrolery} (np. \texttt{StationController}) są punktami wejścia API. Ich rola ogranicza się do przyjęcia żądania, wstępnej walidacji modelu (DTO) za pomocą atrybutów DataAnnotations i przekazania sterowania do odpowiedniego serwisu.
+
+\textbf{Serwisy} zawierają właściwą logikę aplikacji. To tutaj podejmowane są decyzje, sprawdzane złożone warunki biznesowe, a także wykorzystywane mechanizmy optymalizacyjne, takie jak Caching (wzorzec \textit{Cache-Aside} implementowany przez \texttt{CacheService}) czy Event Dispatcher do asynchronicznego powiadamiania innych części systemu o zmianach.
+
+\textbf{Repozytoria} (np. \texttt{StationRepository}) stanowią warstwę abstrakcji nad Entity Framework Core. Dzięki nim logika biznesowa nie operuje bezpośrednio na \texttt{DbContext}, co ułatwia testowanie i centralizuje zapytania do bazy. Repozytoria odpowiadają za efektywne pobieranie danych (np. używając projekcji \texttt{.Select()}) i zarządzanie transakcjami.
+
+\subsubsection{Implementacja warstwy serwisu z wykorzystaniem Cache-Aside}
+
+Poniższy fragment kodu (\texttt{StationServices.cs}) ukazuje, jak serwis wykorzystuje repozytorium oraz mechanizm cache'owania do pobrania danych stacji. Zastosowano tu wzorzec \textit{Cache-Aside}: najpierw sprawdzana jest pamięć Redis, a dopiero w przypadku braku danych (cache miss) następuje odpytanie bazy danych, a wynik jest zapisywany w cache na przyszłość.
+
+\newpage
+
+\begin{lstlisting}[language={[Sharp]C}, caption=Przykład użycia Cache-Aside w serwisie StationServices]
+public async Task<Result<GetStationInfoForEditResponse>> GetStationInfoForEdit(FindStationRequest request)
+{
+    try
+    {
+        // Generowanie unikalnego klucza dla cache na podstawie parametrow zadania
+        var cacheKey = _cache.GenerateCacheKey(
+            $"{CacheService.CacheKeys.StationPrefix}edit:{request.BrandName}:{request.City}:{request.Street}:{request.HouseNumber}"
+        );
+
+        // Proba pobrania z Redis. Jesli klucz nie istnieje, wykonaj podana funkcje (zapytanie do repozytorium),
+        // zapisz jej wynik w cache i zwroc dane.
+        var result = await _cache.GetOrSetAsync(
+            cacheKey,
+            async () => await _stationRepository.GetStationInfoForEdit(request), // Wywolanie repozytorium
+            CacheService.CacheExpiry.Short
+        );
+
+        if (result == null)
+        {
+             // Obsluga sytuacji, gdy stacja nie zostala znaleziona
+             _logger.LogWarning("Station not found for editing.");
+             return Result<GetStationInfoForEditResponse>.Bad("Station not found.", StatusCodes.Status404NotFound, ...);
+        }
+
+        // Zwrocenie wyniku opakowanego w ustandaryzowany obiekt Result<T>
+        return Result<GetStationInfoForEditResponse>.Good("Station info retrieved successfully.", StatusCodes.Status200OK, result);
+    }
+    catch (Exception ex)
+    {
+        // Globalna obsluga bledow w serwisie i logowanie wyjatku
+        _logger.LogError(ex, $"An error occurred while retrieving station info for edit...");
+        return Result<GetStationInfoForEditResponse>.Bad("An error occurred...", StatusCodes.Status500InternalServerError, ...);
+    }
+}
+\end{lstlisting}
+
+\newpage
+
+\subsubsection{Implementacja warstwy repozytorium z projekcją danych}
+
+Repozytorium wykonuje rzeczywiste zapytanie do bazy danych. W poniższym przykładzie (\texttt{StationRepository.cs}) użyto projekcji (metoda \texttt{.Select}), aby pobrać z bazy tylko te kolumny, które są wymagane przez DTO odpowiedzi, co znacząco zwiększa wydajność zapytania poprzez redukcję przesyłanych danych.
+
+\begin{lstlisting}[language={[Sharp]C}, caption=Zapytanie EF Core z projekcją w StationRepository]
+public async Task<GetStationInfoForEditResponse> GetStationInfoForEdit(FindStationRequest request)
+    => await _context.Stations
+        // Dolaczenie powiazanych encji (Eager Loading)
+        .Include(s => s.Brand)
+        .Include(s => s.Address)
+        .Include(s => s.FuelPrice)
+            .ThenInclude(fp => fp.FuelType)
+        .Where(s =>
+            // Filtrowanie po unikalnych cechach stacji (case-insensitive)
+            s.Brand.Name.ToLower() == request.BrandName.ToLower() &&
+            s.Address.Street.ToLower() == request.Street.ToLower() &&
+            s.Address.HouseNumber.ToLower() == request.HouseNumber.ToLower() &&
+            s.Address.City.ToLower() == request.City.ToLower()
+        )
+        // Projekcja wyniku bezposrednio do obiektu DTO
+        .Select(s => new GetStationInfoForEditResponse
+        {
+            BrandName = s.Brand.Name,
+            Street = s.Address.Street,
+            HouseNumber = s.Address.HouseNumber,
+            City = s.Address.City,
+            Latitude = s.Address.Location.Y, // Mapowanie koordynatow z typu geometrycznego
+            Longitude = s.Address.Location.X,
+            FuelType = s.FuelPrice.Select(fp => new FindFuelRequest
+            {
+                Code = fp.FuelType.Code,
+                Price = fp.Price
+            }).ToList()
+        })
+        .FirstOrDefaultAsync();
+\end{lstlisting}
+
+\subsection{Kluczowe mechanizmy backendu}
+
+\subsubsection{Baza danych i dane geoprzestrzenne}
+Backend wykorzystuje PostgreSQL jako główny magazyn relacyjny. Kluczowym aspektem projektu jest użycie rozszerzenia \textbf{PostGIS} oraz biblioteki \texttt{NetTopologySuite} zintegrowanej z Entity Framework Core. Umożliwia to przechowywanie lokalizacji stacji jako natywnych typów geometrycznych (\texttt{geometry(Point, 4326)}) i wykonywanie wydajnych zapytań przestrzennych bezpośrednio na poziomie bazy danych – na przykład znajdowanie stacji w określonym promieniu od użytkownika lub sortowanie wyników po dystansie.
+
+\subsubsection{Uwierzytelnianie i Autoryzacja}
+System opiera się na bezstanowym mechanizmie tokenów JWT (JSON Web Token). Wykorzystano wbudowany w ASP.NET Core system Identity do zarządzania użytkownikami, rolami i claimami. Zaimplementowano również autoryzację przez zewnętrznych dostawców (Google, Facebook) oraz system Refresh Tokenów, pozwalający na bezpieczne odświeżanie sesji użytkownika bez konieczności ponownego wpisywania danych logowania.
+
+\subsubsection{Caching (Redis)}
+Aby odciążyć bazę danych przy częstych operacjach odczytu (np. wyświetlanie mapy stacji, list cen), zastosowano pamięć podręczną Redis. Zaimplementowano własny serwis pomocniczy \texttt{CacheService}, który ułatwia stosowanie wzorca "Cache-Aside", zarządzanie kluczami oraz inwalidację cache'u. Przykładowo, dodanie nowej stacji lub zmiana ceny paliwa powoduje automatyczne usunięcie powiązanych wpisów z cache (np. list stacji dla danego miasta), wymuszając ich odświeżenie przy kolejnym żądaniu.
+
+\subsubsection{Przetwarzanie w tle i architektura zdarzeń (Event-Driven)}
+Aplikacja wykorzystuje mechanizm \texttt{IHostedService} (Background Services) do wykonywania zadań cyklicznych w tle, niezależnie od żądań HTTP. Przykłady obejmują \newline \texttt{BanExpirationService} (automatyczne odblokowywanie użytkowników po wygaśnięciu bana) czy \texttt{ProposalExpirationService} (odrzucanie starych propozycji cenowych).
+
+Dodatkowo zastosowano wewnętrzny \textbf{Event Dispatcher} (implementacja wzorca Mediator). Pozwala on na asynchroniczną reakcję na zdarzenia w systemie w celu zachowania niskiego sprzężenia komponentów. Na przykład, zdarzenie rejestracji użytkownika (\texttt{UserRegisteredEvent}) jest publikowane przez serwis użytkowników, a niezależny handler (\texttt{SendRegistrationEmailHandler}) odbiera je i kolejkuje wiadomość powitalną, nie blokując głównego wątku obsługi rejestracji.
+
+\subsubsection{Integracje zewnętrzne i kolejkowanie}
+Backend integruje się z usługą Azure Blob Storage (w środowisku deweloperskim emulowaną przez Azurite) w celu przechowywania plików binarnych, takich jak zdjęcia weryfikacyjne stacji. Wysyłka wiadomości e-mail (SMTP) jest realizowana asynchronicznie poprzez wbudowaną kolejkę w pamięci (\texttt{InMemoryEmailQueue}) i przetwarzana przez dedykowany wątek roboczy w tle (\texttt{EmailBackgroundWorker}), co zapewnia wysoką responsywność API nawet przy problemach z zewnętrznym serwerem pocztowym.
+
+\section{Architektura i implementacja Frontendu}
+
+\subsection{Architektura i odpowiedzialność}
+
+Warstwa kliencka aplikacji FuelApp została zrealizowana jako nowoczesna, dynamiczna aplikacja jednostronicowa (ang. \textit{Single Page Application} - SPA). Działa ona całkowicie niezależnie od warstwy backendowej, komunikując się z nią wyłącznie za pośrednictwem bezstanowego interfejsu REST API.
+
+Główną odpowiedzialnością frontendu jest zapewnienie responsywnego i intuicyjnego interfejsu użytkownika (UI/UX), wizualizacja danych geograficznych na interaktywnej mapie, obsługa formularzy (logowanie, dodawanie propozycji cen) oraz zarządzanie stanem aplikacji po stronie klienta. Architektura oparta jest na komponentach, co pozwala na wielokrotne użycie elementów interfejsu (np. nagłówek, stopka, komponent mapy) i ułatwia utrzymanie kodu.
+
+\subsection{Użyte technologie}
+
+Stos technologiczny warstwy frontendowej został dobrany pod kątem wydajności, bezpieczeństwa typowania oraz szybkości developmentu. Kluczowe zależności zdefiniowane w pliku \texttt{package.json}:
+
+\begin{itemize}
+    \item \textbf{Framework i Routing:} React 19 wraz z React Router v7 (biblioteki \texttt{react}, \texttt{react-dom}, \texttt{@react-router/*}) - do budowania interfejsu użytkownika i zarządzania nawigacją w aplikacji SPA.
+    \item \textbf{Build Tool:} Vite 7 (narzędzie do szybkiego budowania i serwowania aplikacji w środowisku deweloperskim z obsługą HMR - Hot Module Replacement).
+    \item \textbf{Język:} TypeScript (nadzbiór JavaScript dodający statyczne typowanie, co znacząco redukuje ilość błędów).
+    \item \textbf{Styling:} Tailwind CSS v4 wraz z pluginem daisyUI (framework CSS typu \textit{utility-first} przyspieszający tworzenie responsywnych i estetycznych widoków).
+    \item \textbf{Mapy:} Leaflet v1.9 (lekka biblioteka do obsługi interaktywnych map OpenStreetMap) zintegrowana z Reactem.
+    \item \textbf{Internacjonalizacja (i18n):} \texttt{i18next} i \texttt{react-i18next} (do obsługi wielojęzyczności aplikacji - polski i angielski).
+    \item \textbf{Wykresy:} Recharts (do wizualizacji danych statystycznych).
+    \item \textbf{Komunikacja HTTP:} Natywny \texttt{fetch} API (do komunikacji z backendem, z obsługą ciasteczek \texttt{credentials: "include"}).
+\end{itemize}
+
+\subsection{Kluczowe koncepcje i implementacja}
+
+\subsubsection{Routing i struktura aplikacji}
+
+Aplikacja wykorzystuje najnowszą wersję React Router v7, gdzie definicja ścieżek znajduje się w pliku \texttt{routes.ts}. Struktura oparta jest na systemie plików, co upraszcza zarządzanie widokami. Główny komponent layoutu, \texttt{root.tsx}, definiuje wspólną strukturę HTML, nagłówki, style (w tym globalny \texttt{app.css} z dyrektywami Tailwind) oraz dostawcę kontekstu motywu (\texttt{ThemeProvider}).
+
+\begin{lstlisting}[language=JavaScript, caption=Przykładowa definicja ścieżek w routes.ts]
+import { type RouteConfig, index, route } from "@react-router/dev/routes";
+
+export default [
+  index("routes/home.tsx"), // Strona glowna
+  route("login", "routes/login.tsx"),
+  route("dashboard", "routes/dashboard.tsx"),
+  // Sciezki administracyjne
+  route("admin", "routes/admin-dashboard.tsx"),
+  route("admin/stations", "routes/gas-station-admin.tsx"),
+  // Sciezka z parametrami (szczegoly stacji)
+  route("station/:brandName/:city/:street/:houseNumber", "routes/station.tsx"),
+  // ... pozostale trasy
+] satisfies RouteConfig;
+\end{lstlisting}
+
+\subsubsection{Zabezpieczanie widoków (Custom Hooks)}
+
+Dostęp do części aplikacji wymagających autoryzacji (np. pulpit użytkownika, panel administratora) jest kontrolowany za pomocą własnych hooków (Custom Hooks). Zamiast tradycyjnych komponentów opakowujących, zastosowano podejście oparte na hookach \texttt{useUserGuard} i \texttt{useAdminGuard}, które są wywoływane na początku komponentu strony.
+
+Hooki te asynchronicznie odpytują endpoint \texttt{/api/me} w celu weryfikacji bieżącej sesji użytkownika (przesyłając ciasteczko \texttt{HttpOnly} z tokenem JWT). W zależności od odpowiedzi serwera i roli użytkownika, hook zwraca stan (\texttt{checking}, \texttt{allowed}, \texttt{redirected}) i w razie potrzeby automatycznie przekierowuje użytkownika (np. na stronę logowania).
+
+\begin{lstlisting}[language=JavaScript, caption=Fragment hooka useAdminGuard.ts zabezpieczającego panel administratora]
+export function useAdminGuard() {
+  const [state, setState] = React.useState<AdminGuardState>("checking");
+  // ...
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const me = await fetchMe(); // Zapytanie do /api/me z credentials: "include"
+
+        if (!me) {
+          // Brak sesji -> przekierowanie do logowania
+          window.location.href = "/login";
+          setState("redirected");
+          return;
+        }
+
+        // Normalizacja i sprawdzenie roli
+        const role = extractRoleLoose(me);
+        if (role !== "Admin") {
+          // Zalogowany, ale brak uprawnien admina -> przekierowanie do dashboardu
+          window.location.href = "/dashboard";
+          setState("redirected");
+          return;
+        }
+
+        setState("allowed"); // Dostep przyznany
+      } catch (err) {
+        // Obsluga bledow...
+      }
+    })();
+  }, []);
+
+  return { state, email };
+}
+\end{lstlisting}
+
+Użycie tego hooka w komponencie widoku (\texttt{admin-dashboard.tsx}) jest proste i deklaratywne:
+\begin{lstlisting}[language=JavaScript]
+export default function AdminDashboard() {
+  // ...
+  const { state, email } = useAdminGuard();
+
+  if (state === "checking") {
+    // Wyswietlenie spinnera podczas weryfikacji uprawnien
+    return (/* ... */ <span className="loading loading-spinner loading-lg" /> /* ... */);
+  }
+
+  if (state !== "allowed") {
+    // Jesli dostep nie jest przyznany, nie renderuj nic (hook juz przekierowal)
+    return null;
+  }
+  
+  // Renderowanie wlasciwego panelu administratora
+  return ( /* ... */ );
+}
+\end{lstlisting}
+
+\subsubsection{Integracja z mapami (Leaflet)}
+
+Serce aplikacji stanowi interaktywna mapa, zaimplementowana w komponencie \texttt{GlobalMapContent.tsx}. Wykorzystuje ona bibliotekę Leaflet w sposób imperatywny, inicjalizując mapę i warstwę markerów wewnątrz hooka \texttt{useEffect}. Komponent ten odpowiada za:
+
+\begin{itemize}
+    \item Inicjalizację mapy z kafelkami OpenStreetMap.
+    \item Konfigurację domyślnych ikon markerów.
+    \item Dynamiczne aktualizowanie markerów na podstawie przekazanej propsami listy stacji (\texttt{stations}).
+    \item Kolorowanie markerów w zależności od marki stacji (np. Orlen na czerwono, BP na zielono).
+    \item Tworzenie interaktywnych dymków (popupów) z informacjami o stacji i linkiem do jej szczegółów.
+\end{itemize}
+
+\subsubsection{Zarządzanie stanem globalnym (Motyw i Język)}
+
+Aplikacja wykorzystuje React Context API do zarządzania globalnym stanem motywu (jasny/ciemny). Komponent \texttt{ThemeProvider} (w \texttt{ThemeContext.tsx}) przechowuje aktualny motyw w stanie lokalnym oraz w \texttt{localStorage}, a także aplikuje odpowiedni atrybut \texttt{data-theme} na elemencie \texttt{<html>}, co jest wykorzystywane przez Tailwind CSS i daisyUI.
+
+Obsługa wielojęzyczności (i18n) jest realizowana za pomocą biblioteki \texttt{i18next}. Konfiguracja w pliku \texttt{i18n.ts} obejmuje wykrywanie języka przeglądarki, ładowanie tłumaczeń z plików JSON (\texttt{i18next-http-backend}) oraz integrację z Reactem. Zmiana języka w nagłówku aplikacji natychmiastowo aktualizuje wszystkie teksty w interfejsie.
+
+\newpage
+
+\section{Weryfikacja i Testowanie Systemu}
+
+Projekt zawiera kompleksowe testy weryfikujące poprawność działania logiki biznesowej aplikacji na najniższym poziomie (testy jednostkowe) oraz komunikację pomiędzy front-endem a back-endem (testy integracyjne API). Umożliwiają one wczesne wykrywanie błędów, ułatwiają rozwój projektu oraz zwiększają jego stabilność.
+
+Testy zostały podzielone na:
+\begin{itemize}
+    \item testy metod repozytoriów,
+    \item testy metod serwisów,
+    \item testy endpointów kontrolerów.
+\end{itemize}
+
+\subsection{Technologie użyte w testach}
+\begin{itemize}
+    \item \textbf{Język testów:} C\#
+    \item \textbf{Framework testów back-endu:} xUnit v. 2.5.3
+    \item \textbf{Mocking:} Moq v. 4.20.72
+    \item \textbf{Dodatkowe biblioteki:}
+    \begin{itemize}
+        \item Microsoft.EntityFrameworkCore.InMemory v. 8.0.20
+        \item Microsoft.AspNetCore.Mvc.Testing v. 8.0.22
+    \end{itemize}
+\end{itemize}
+
+\subsection{Testy jednostkowe (Unit Tests)}
+Testy jednostkowe opierają się na trzech filarach:
+\begin{enumerate}
+    \item \textbf{Framework xUnit} - udostępnia narzędzia do strukturyzacji testów i ich uruchamiania.
+    \item \textbf{Biblioteka InMemory} - pozwala na tworzenie bazy danych w pamięci RAM.
+    \item \textbf{Moq} - umożliwia tworzenie sztucznych obiektów (mocków), definiowanie ich zachowania oraz weryfikację interakcji.
+\end{enumerate}
+
+W testach jednostkowych weryfikowane są pojedyncze metody repozytoriów i serwisów. Aby wykonać test, należy najpierw stworzyć odpowiednie środowisko testowe, używając wyżej wymienionych narzędzi. Tworzone jest repozytorium korzystające z bazy danych w pamięci, a w miejsca zależności, na których testowaniu nam nie zależy (np. Logger, UserManager), podstawiane są mocki. Daje to pełną kontrolę nad zawartością bazy danych i pozwala precyzyjnie sprawdzić, czy testowana metoda poprawnie wykonuje przewidziane zadanie.
+
+\subsubsection{Przykładowa konfiguracja środowiska testowego}
+\begin{lstlisting}[language={[Sharp]C}, caption=Konfiguracja UserRepositoryTest]
+public class UserRepositoryTest
+{
+    private readonly ApplicationDbContext _context; // baza danych in-memory
+    private readonly Mock<ILogger<UserRepository>> _loggerMock; // mock loggera
+    private readonly UserRepository _repository; 
+    private readonly ITestOutputHelper _output; // output do konsoli xUnit
+    private readonly Mock<UserManager<ApplicationUser>> _userManagerMock; // mock UM
+
+    public UserRepositoryTest(ITestOutputHelper output)
+    {
+        _output = output;
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning)).Options;
+        _context = new ApplicationDbContext(options);
+        _loggerMock = new Mock<Ilogger<UserRepository>>();
+        var _userMock = new Mock<IUserStore<ApplicationUser>>();
+        _userManagerMock = new Mock<UserManager<ApplicationUser>>(_userMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
+        _repository = new UserRepository(_context, _loggerMock.Object, _userManagerMock.Object); 
+    }
+}
+\end{lstlisting}
+
+\subsubsection{Struktura testu (AAA)}
+Każda metoda testowa, oznaczona atrybutem \texttt{[Fact]}, zbudowana jest według wzorca Arrange-Act-Assert:
+\begin{itemize}
+    \item \textbf{Arrange:} Operacje przygotowawcze, np. seedowanie bazy danych danymi testowymi.
+    \item \textbf{Act:} Wywołanie testowanej metody.
+    \item \textbf{Assert:} Weryfikacja wyników operacji.
+\end{itemize}
+
+\newpage
+
+\begin{lstlisting}[language={[Sharp]C}, caption=Przykładowy test jednostkowy metody DeleteUserAsync]
+[Fact]
+public async Task DeleteUserAsyncTest_SuccessIfUserDeleted()
+{
+    //Arrange
+    var user1 = new ApplicationUser
+    {
+        Id = Guid.NewGuid(),
+        Email = "user1@test.com",
+        UserName = "user1",
+        CreatedAt = DateTime.UtcNow.AddDays(-1),
+        IsDeleted = false
+    };
+    _context.Users.Add(user1);
+    await _context.SaveChangesAsync();
+
+    //Act
+    var result = await _repository.DeleteUserAsync(user1);
+
+    //Assert
+    var userUpdate = await _context.Users.FirstAsync();
+    Assert.True(result.Succeeded);
+    Assert.Equal(user1.Id, userUpdate.Id);
+    Assert.True(userUpdate.IsDeleted);
+    Assert.NotNull(userUpdate.DeletdAt);
+    _output.WriteLine("Success, DeleteUserAsync changes flags in a deleted user correctly");
+}
+\end{lstlisting}
+Powyższy test weryfikuje, czy metoda \texttt{DeleteUserAsync} poprawnie oznacza użytkownika jako usuniętego (soft delete) zamiast fizycznie usuwać go z bazy. Metody są testowane pod kątem wielu przypadków brzegowych (np. dla istniejącego i nieistniejącego użytkownika).
+
+\subsection{Testy integracyjne API}
+Testy API polegają na weryfikacji działania pojedynczych endpointów kontrolerów. Aby uniknąć korzystania z prawdziwego, zewnętrznego serwera, wykorzystana została biblioteka \texttt{Microsoft.AspNetCore.Mvc.Testing}.
+
+Pozwala ona na stworzenie serwera oraz klienta HTTP w pamięci, dzięki utworzeniu fabryki niestandardowej \texttt{WebApplicationFactory}. Umożliwia to wysyłanie żądań na endpointy aplikacji. Następnie weryfikowana jest odpowiedź serwera poprzez sprawdzenie zwróconego kodu statusu HTTP oraz ewentualne sprawdzenie, czy zadanie zostało wykonane (poprzez dostęp do bazy danych in-memory lub odczytanie danych zwrotnych w formacie JSON).
+
+Podejście to pozwala na tworzenie nowej, odizolowanej instancji serwera i zbioru danych dla każdego testu osobno, dzięki czemu unikamy problemów takich jak przypadkowe usunięcie lub modyfikacja danych przez inne testy.
+
+\newpage
+
+\subsubsection{Przykładowa konfiguracja klienta testowego}
+\begin{lstlisting}[language={[Sharp]C}, caption=Konfiguracja ProposalStatisticControllerTest]
+public class ProposalStatisticControllerTest : IAsyncLifetime
+{
+    private HttpClient _client;
+    private CustomAppFact _factory;
+
+    public async Task InitializeAsync()
+    {
+        _factory = new CustomAppFact();
+        _client = _factory.CreateClient();
+        // Symulacja uwierzytelnionego użytkownika
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", "test-user-token");
+        await Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        _client?.Dispose();
+        await _factory.DisposeAsync();
+    }
+}
+\end{lstlisting}
+
+\subsubsection{Przykładowy test endpointu}
+\begin{lstlisting}[language={[Sharp]C}, caption=Test weryfikujący błędne żądanie (Bad Request)]
+[Fact]
+public async Task GetTopUserListAsyncTest_400()
+{
+    //Arrange
+    // Nieprawidłowe parametry paginacji
+    var requestUri = "/api/proposal-statistic/top-users?PageNumber=0&PageSize=0";
+
+    // Act
+    var response = await _client.GetAsync(requestUri);
+
+    //Assert
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+}
+\end{lstlisting}
+Każdy z endpointów testowany jest w wielu ścieżkach wykonania, w zależności od ilości przewidzianych odpowiedzi. Oznacza to, że weryfikowane są ścieżki zwracające statusy takie jak 200 OK, 404 Not Found, 400 Bad Request, 401 Unauthorized itd.
+
+\newpage
+
+\section{Bezpieczeństwo}
+
+\begin{itemize}
+    \item \textbf{Uwierzytelnianie:} JWT (Json Web Token) + Refresh Token (przechowywany w bezpiecznym ciasteczku HTTP-only).
+    \item \textbf{OAuth:} Integracja z Facebookiem i Google (sekrety aplikacji przekazywane bezpiecznie w zmiennych środowiskowych).
+    \item \textbf{Zarządzanie sekretami:} W środowisku produkcyjnym sekrety (hasła DB, klucze API, SMTP) są przechowywane w pliku \texttt{.env} na serwerze i wstrzykiwane do kontenerów. Plik \texttt{.env} jest wykluczony z repozytorium.
+    \item \textbf{Izolacja sieci:} Wszystkie serwisy backendowe komunikują się wewnątrz prywatnej sieci Dockerowej \texttt{dev} (driver: bridge). Jedynym punktem wejścia z zewnątrz są porty serwera Nginx (80/443).
+    \item \textbf{SSL/TLS:} Cały ruch produkcyjny jest szyfrowany za pomocą certyfikatów Let's Encrypt, zarządzanych automatycznie przez kontener Certbot.
+    \item \textbf{Rate Limiting:} API posiada wbudowane mechanizmy ograniczania liczby żądań (np. dla endpointów logowania), chroniące przed atakami typu brute-force.
+\end{itemize}
+
+
+\section{Instrukcja lokalnego uruchomienia systemu (Środowisko deweloperskie)}
+
+Poniższa instrukcja opisuje proces uruchomienia pełnego środowiska deweloperskiego aplikacji FuelApp na lokalnej maszynie przy użyciu technologii Docker.
+
+\textbf{Wymagania wstępne:}
+\begin{itemize}
+    \item Zainstalowany i działający Docker oraz Docker Compose.
+    \item Zainstalowany klient Git.
+    \item Dostęp do internetu w celu pobrania obrazów kontenerów.
+\end{itemize}
+
+\subsection{Krok 1: Pobranie repozytorium}
+
+Rozpocznij od sklonowania repozytorium projektu na swój lokalny komputer. Otwórz terminal i wykonaj następujące polecenia:
+
+\begin{lstlisting}[language=bash]
+# Inicjalizacja pustego repozytorium git (opcjonalnie, jesli nie klonujesz bezposrednio)
+git init 
+
+# Dodanie zdalnego repozytorium
+git remote add origin https://github.com/mateusz-bogacz-collegiumwitelona/fuel
+
+# Pobranie metadanych ze zdalnego repozytorium
+git fetch
+
+# Przelaczenie na galaz glowna (main), ktora zawiera stabilna wersje deweloperska
+git switch main 
+\end{lstlisting}
+
+\subsection{Krok 2: Konfiguracja zmiennych środowiskowych (Główny katalog)}
+
+W głównym katalogu projektu znajduje się plik wzorcowy \texttt{.env.example}. Należy stworzyć na jego podstawie plik \texttt{.env}, który będzie zawierał lokalną konfigurację dla kontenerów Dockera.
+
+\begin{lstlisting}[language=bash]
+# Kopiowanie pliku przykladowego do wlasciwego pliku konfiguracyjnego
+cp .env.example .env
+\end{lstlisting}
+
+Następnie otwórz nowo utworzony plik \texttt{.env} w dowolnym edytorze tekstu. Poniżej znajduje się domyślna konfiguracja dla środowiska deweloperskiego. Upewnij się, że porty nie są zajęte przez inne usługi na Twoim komputerze.
+
+Aby uruchomić logowanie przez Facebooka i Google, musisz uzupełnić sekcje \texttt{\#facebook oauth} oraz \texttt{\#google oauth} swoimi sekretami aplikacji (uzyskanymi odpowiednio z Meta for Developers i Google Cloud Console). Jeśli nie posiadasz tych danych, funkcjonalność logowania społecznościowego nie będzie działać, ale reszta aplikacji uruchomi się poprawnie.
+
+\begin{lstlisting}[language=bash, caption=Zawartość głównego pliku .env]
+# .net API
+API_PORT=5111
+
+# postgres/postgis configuration
+POSTGRES_USER=user
+POSTGRES_PASSWORD=pass
+POSTGRES_DB=database
+POSTGRES_PORT=5432
+POSTGRES_HOST=postgis
+
+# mailpit (SMTP testing tool)
+MAILPIT_PORT=63854
+
+# redis cache
+REDIS_HOST=redis
+REDIS_PORT=6379 
+
+# nginx proxy
+NGINX_HTTP_PORT=8080
+NGINX_HTTPS_PORT=443
+
+# client frontend
+CLIENT_PORT=4000
+
+# azurite (Azure Blob Storage emulator)
+AZURITE_BLOB_PORT=10000
+AZURITE_QUEUE_PORT=10001
+AZURITE_TABLE_PORT=10002
+
+# facebook oauth (UZUPELNIJ WLASNYMI DANYMI)
+FACEBOOK_OAUTH_CLIENT_ID=TwojFacebookClientId
+FACEBOOK_OAUTH_CLIENT_SECRET=TwojFacebookClientSecret
+
+# google oauth (UZUPELNIJ WLASNYMI DANYMI)
+GOOGLE_CLIENT_ID=TwojGoogleClientId
+GOOGLE_CLIENT_SECRET=TwojGoogleClientSecret
+\end{lstlisting}
+
+\newpage
+
+\subsection{Krok 3: Konfiguracja zmiennych środowiskowych (Frontend)}
+
+Aplikacja frontendowa (React) również wymaga osobnej konfiguracji dla mechanizmów OAuth. Przejdź do katalogu \texttt{Client} i utwórz tam plik \texttt{.env} na podstawie dostarczonego przykładu.
+
+\begin{lstlisting}[language=bash]
+cd Client
+cp .env.example .env
+\end{lstlisting}
+
+Edytuj plik \texttt{Client/.env} i wpisz te same identyfikatory klientów (Client ID), których użyłeś w głównym pliku \texttt{.env}.
+
+\begin{lstlisting}[language=bash, caption=Zawartość pliku Client/.env]
+VITE_FACEBOOK_CLIENT_ID=TwojFacebookClientId
+VITE_GOOGLE_CLIENT_ID=TwojGoogleClientId
+\end{lstlisting}
+
+\subsection{Krok 4: Budowanie i uruchomienie aplikacji}
+
+Po poprawnej konfiguracji zmiennych środowiskowych wróć do głównego katalogu projektu i uruchom środowisko za pomocą Docker Compose. Proces ten może potrwać kilka minut, ponieważ system musi pobrać obrazy bazowe, zbudować aplikację backendową i frontendową oraz przeprowadzić inicjalne migracje bazy danych.
+
+\begin{lstlisting}[language=bash]
+# Powrot do glownego katalogu
+cd ..
+
+# Budowanie obrazow kontenerow
+docker compose build
+
+# Uruchomienie srodowiska w trybie detached (w tle)
+docker compose up -d
+\end{lstlisting}
+
+Po zakończeniu procesu, aplikacja będzie dostępna pod adresem:
+\begin{center}
+\textbf{\url{http://localhost:8080}}
+\end{center}
+
+Dodatkowo, narzędzie do podglądu wiadomości e-mail (Mailpit) będzie dostępne pod adresem \url{http://localhost:63854}.
+
+\section{Instrukcja zdalnego wdrożenia systemu na serwerze VPS}
+
+Poniższa instrukcja zakłada, że serwer VPS spełnia wymagania wstępne (OS Linux, Docker, domena wskazująca na IP serwera, dostęp do Brevo SMTP).
+
+\subsection{Krok 1: Przygotowanie repozytorium na serwerze}
+Zaloguj się na serwer VPS i sklonuj repozytorium projektu, przełączając się na gałąź produkcyjną.
+
+\begin{lstlisting}[language=bash]
+git clone git@github.com:mateusz-bogacz-collegiumwitelona/fuel.git project
+cd project
+git switch production
+# W przypadku aktualizacji istniejącego wdrożenia:
+# git pull
+\end{lstlisting}
+
+\subsection{Krok 2: Konfiguracja pliku .env}
+Utwórz plik \texttt{.env} w głównym katalogu projektu na serwerze. Skopiuj do niego zawartość szablonu i uzupełnij własnymi danymi (hasła, klucze SMTP, domena).
+
+\begin{lstlisting}[language=bash]
+nano .env
+\end{lstlisting}
+
+\textbf{Przykładowy szablon pliku .env:}
+\begin{lstlisting}[language=bash]
+#.net
+API_PORT=5111
+ASPNETCORE_ENVIRONMENT=Production
+ADMIN_EMAIL=ADMIN_EMAIL
+ADMIN_PASSWORD=ADMIN_PASSWORD
+
+#postgres/postgis and redis
+POSTGRES_USER=user
+POSTGRES_PASSWORD=pass
+POSTGRES_DB=database
+POSTGRES_PORT=5432
+POSTGRES_HOST=postgis
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+#frontend
+NGINX_HTTP_PORT=80
+NGINX_HTTPS_PORT=443
+CLIENT_PORT=4000
+FRONTEND_PUBLIC_URL=URL_FORM_CLIENT_APP
+
+#azurite
+AZURITE_BLOB_PORT=10000
+AZURITE_QUEUE_PORT=10001
+AZURITE_TABLE_PORT=10002
+
+#social media
+FACEBOOK_OAUTH_CLIENT_ID=FACEBOOK_OAUTH_CLIENT_ID
+FACEBOOK_OAUTH_CLIENT_SECRET=FACEBOOK_OAUTH_CLIENT_SECRET
+GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET
+
+#Brevo
+MAIL_HOST=smtp-relay.brevo.com
+MAIL_PORT=587
+MAIL_USERNAME=USERNAME_BREVO
+MAIL_PASSWORD=PASSWORD_BREVO
+MAIL_FROM=EMAIL_FROM_BREVO
+MAIL_DISPLAY_NAME=DISPLAY_NAME_BREVO
+MAIL_ENABLE_SSL=true
+\end{lstlisting}
+
+W folderze Client też należy utworzyć plik .env i skopjować do niego zawartość szablonu i uzupełnić własnymi danymi 
+
+\begin{lstlisting}[language=bash]
+nano .env
+\end{lstlisting}
+
+\textbf{Przykładowy szablon pliku .env:}
+\begin{lstlisting}[language=bash]
+VITE_FACEBOOK_CLIENT_ID=FACEBOOK_OAUTH_CLIENT_ID
+VITE_GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID
+\end{lstlisting}
+
+\subsection{Krok 3: Konfiguracja domeny w Nginx}
+Edytuj plik konfiguracyjny Nginx, aby wpisać swoją domenę.
+
+\begin{lstlisting}[language=bash]
+cd templates
+nano default.conf
+\end{lstlisting}
+
+Zamień w pliku wszystkie wystąpienia \texttt{TWOJA\_DOMENA.PL} (oraz \texttt{www.TWOJA\_DOMENA.PL}) na swoją rzeczywistą domenę.
+
+\subsection{Krok 4: Uruchomienie aplikacji (HTTP)}
+Zbuduj i uruchom kontenery. Na tym etapie Nginx wystartuje na porcie 80.
+
+\begin{lstlisting}[language=bash]
+# Wróć do głównego katalogu
+cd ~/project
+docker compose build
+docker compose up -d
+\end{lstlisting}
+
+\subsection{Krok 5: Generowanie certyfikatów SSL}
+Użyj jednorazowego kontenera Certbot do wygenerowania certyfikatów Let's Encrypt.
+
+\textbf{Ważne:} Zamień \texttt{TWOJA\_DOMENA.PL} na swoją domenę, a \texttt{EMAIL@ADMIN.PL} na swój adres email.
+
+\begin{lstlisting}[language=bash]
+docker compose run --rm certbot certonly \
+  --webroot \
+  --webroot-path /var/www/certbot \
+  -d TWOJA_DOMENA.PL \
+  -d www.TWOJA_DOMENA.PL \
+  --email EMAIL@ADMIN.PL \
+  --agree-tos \
+  --no-eff-email \
+  --force-renewal
+\end{lstlisting}
+
+\subsection{Krok 6: Uruchomienie HTTPS}
+Zrestartuj kontener Nginx, aby załadować nowe certyfikaty.
+
+\begin{lstlisting}[language=bash]
+docker compose restart web
+\end{lstlisting}
+
+Aplikacja jest teraz dostępna pod bezpiecznym adresem \texttt{https://TWOJA\_DOMENA.PL}.
+
+\section{Wnioski projektowe}
+\subsection{Wnioski członka zespołu: Michał Nocuń (Tester)}
+Projekt nauczył mnie działania w zespole. Bardzo dobrze współpracowało mi się z moją grupą, każdy był komunikatywny, sumienny, gotowy na dialog, otwarty na zmiany czy nowe sugestie oraz pomocny.
+Jako tester nabyłem wiele umiejętności twardych. Zaznajomiłem się z typami testów oprogramowania, poznałem frameworki do testów jednostkowych oraz integracyjnych. Praca testera uświadomiła mi, jak ważną rolę pełnią testy oprogramowania w procesie deweloperskim. Dzięki testom jesteśmy w stanie wcześnie wyłapać błędy i poprawić je, zanim kod zostanie bardziej rozbudowany lub co gorsza trafi do produkcji.
+Uważam, że projekt, nad którym pracowaliśmy, jest bardzo ciekawy. Nasza aplikacja internetowa jest bardzo użyteczna dla wszystkich kierowców. Istnieje też wiele opcji rozbudowy w przyszłości – na przykład dodanie do mapy lokalizacji mechaników, których użytkownicy mogą oceniać i komentować, numery kontaktowe do ubezpieczycieli czy szablony dokumentów, jak na przykład protokół szkody.
+
+\newpage
+
+\subsection{Wnioski członka zespołu: Szymon Mikołajek (Tester / Project Manager)}
+Podczas realizacji projektu zapoznałem się z podstawami tworzenia testów jednostkowych z wykorzystaniem frameworka xUnit oraz zrozumiałem, jak istotną rolę odgrywają one w zapewnieniu poprawnej funkcjonalności aplikacji. Nabyłem również podstawową wiedzę z zakresu pisania testów frontendowych przy użyciu narzędzia Selenium, które pozwalają automatycznie weryfikować poprawność interakcji użytkownika z aplikacją. Testy te umożliwiają wykrywanie błędów w UI, co bezpośrednio przekłada się na poprawę doświadczenia użytkownika.
+
+\subsection{Wnioski członka zespołu: Paweł Kruk (Frontend / DevOps)}
+Realizacja projektu pozwoliła na praktyczne opanowanie podstaw biblioteki React. Zastosowanie modelu Single Page Application zapewniło płynność działania interfejsu bez konieczności przeładowywania strony. Problemy z wydajnością gotowych wrapperów (np. react-leaflet) rozwiązano poprzez natywną implementację biblioteki Leaflet. Kluczowe okazały się hooki: useRef umożliwił stabilny dostęp do elementu DOM mapy bez zbędnych przerenderowań.
+
+\subsection{Wnioski członka zespołu: Mateusz Chimkowski (Frontend / UX / UI Designer)}
+Projekt pozwolił mi znacząco rozwinąć umiejętności pracy zespołowej i techniczne związane z tworzeniem frontendu. W praktyce pracowałem z Vite + React, poznałem podstawy Tailwind/DaisyUI, poprawiłem umiejętność pisania zapytań do API oraz ulepszyłem strukturę i optymalizację plików projektu. Zespół był dobrze zorganizowany - spotkania były regularne, komunikacja sprawna, a nowy członek szybko został włączony i wsparty przez resztę grupy. Projekt poszedł lepiej niż w zeszłym roku, nauczyłem się kilku nowych rzeczy i jestem zadowolony z efektu.
+
+\subsection{Wnioski członka zespołu: Mateusz Bogacz-Drewniak (Team Leader / Backend / DevOps wsparcie)}
+Pełnienie roli Team Leadera oraz głównego architekta backendu wymagało ode mnie spojrzenia na projekt w sposób holistyczny. Moim priorytetem było zaprojektowanie skalowalnej i łatwej w utrzymaniu architektury (N-Tier w .NET 8), która umożliwiłaby bezkonfliktową, równoległą pracę zespołów frontendowego i backendowego. Decyzja o ścisłej separacji warstw i wykorzystaniu DTO okazała się kluczowa dla stabilności kontraktów API.
+
+Od strony technicznej największym wyzwaniem, a zarazem sukcesem, było wdrożenie zaawansowanych mechanizmów infrastrukturalnych. Zintegrowałem bazę PostgreSQL z rozszerzeniem PostGIS, co umożliwiło wydajne wykonywanie zapytań geoprzestrzennych – serca naszej aplikacji. Zaimplementowałem również caching rozproszony w oparciu o Redis (wzorzec Cache-Aside) oraz wprowadziłem architekturę sterowaną zdarzeniami (Event-Driven z wykorzystaniem wzorca Mediator) do obsługi procesów w tle, co znacząco odciążyło główny wątek aplikacji.
+
+W obszarze DevOps przygotowałem kompleksową konfigurację Docker Compose, która zautomatyzowała uruchamianie całego stosu technologicznego (w tym emulatora Azure Blob Storage, bazy danych i serwera Nginx z obsługą SSL), co drastycznie przyspieszyło proces onboardingu nowych członków zespołu i ujednoliciło środowiska deweloperskie. Projekt był dla mnie cennym doświadczeniem w godzeniu zaawansowanych zadań technicznych z odpowiedzialnością za koordynację pracy zespołu.
+
+\end{document}
