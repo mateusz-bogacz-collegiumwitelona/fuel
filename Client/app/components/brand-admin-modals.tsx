@@ -71,11 +71,11 @@ export function AddBrandModal({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t("brand-admin.add_title")}>
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("brandadmin.add_title")}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="form-control">
           <label className="label">
-            <span className="label-text">{t("brand-admin.add_label_name")}</span>
+            <span className="label-text">{t("brandadmin.add_label_name")}</span>
           </label>
           <input
             className="input input-bordered input-sm w-full"
@@ -91,10 +91,10 @@ export function AddBrandModal({
             className="btn btn-ghost btn-sm"
             onClick={onClose}
           >
-            {t("brand-admin.cancel")}
+            {t("brandadmin.cancel")}
           </button>
           <button type="submit" className="btn btn-primary btn-sm">
-            {t("brand-admin.save")}
+            {t("brandadmin.save")}
           </button>
         </div>
       </form>
@@ -132,16 +132,16 @@ export function EditBrandModal({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t("brand-admin.edit_title")}>
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("brandadmin.edit_title")}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm">
-          <span className="text-sm">{t("brand-admin.current_name_label")}</span>{" "}
+          <span className="text-sm">{t("brandadmin.current_name_label")}</span>{" "}
           <span className="font-semibold">{brand.name}</span>
         </p>
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text">{t("brand-admin.edit_new_name_label")}</span>
+            <span className="label-text">{t("brandadmin.edit_new_name_label")}</span>
           </label>
           <input
             className="input input-bordered input-sm w-full"
@@ -157,10 +157,10 @@ export function EditBrandModal({
             className="btn btn-ghost btn-sm"
             onClick={onClose}
           >
-            {t("brand-admin.cancel")}
+            {t("brandadmin.cancel")}
           </button>
           <button type="submit" className="btn btn-primary btn-sm">
-            {t("brand-admin.save_changes")}
+            {t("brandadmin.save_changes")}
           </button>
         </div>
       </form>
@@ -185,13 +185,13 @@ export function DeleteBrandModal({
   if (!brand) return null;
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title={t("brand-admin.delete_title")}>
+    <BaseModal isOpen={isOpen} onClose={onClose} title={t("brandadmin.delete_title")}>
       <p className="mb-4">
-        {t("brand-admin.delete_confirm", { name: brand.name })}
+        {t("brandadmin.delete_confirm", { name: brand.name })}
       </p>
 
       <p className="text-xs text-error mb-4">
-        {t("brand-admin.delete_warning")}
+        {t("brandadmin.delete_warning")}
       </p>
 
       <div className="flex justify-end gap-2 pt-2">
@@ -200,14 +200,14 @@ export function DeleteBrandModal({
           type="button"
           onClick={onClose}
         >
-          {t("brand-admin.cancel")}
+          {t("brandadmin.cancel")}
         </button>
         <button
           className="btn btn-error btn-sm"
           type="button"
           onClick={onConfirm}
         >
-          {t("brand-admin.delete_confirm_button")}
+          {t("brandadmin.delete_confirm_button")}
         </button>
       </div>
     </BaseModal>

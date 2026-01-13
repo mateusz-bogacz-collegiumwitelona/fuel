@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Services.Event.Interfaces;
 using Services.Helpers;
 using Services.Interfaces;
 using Services.Services;
@@ -35,6 +36,7 @@ namespace Tests.ServicesTests
         private readonly Mock<IHttpContextAccessor> _httpContextAccessorMock;
         private readonly Mock<IRefreshTokenRepository> _refreshTokenRepositoryMock;
         private readonly Mock<ITokenFactory> _tokenFactoryMock;
+        private readonly Mock<IEventDispatcher> _eventDispatcherMock;
         private readonly LoginRegisterServices _service;
 
         public LoginRegisterServicesTest()
@@ -49,6 +51,7 @@ namespace Tests.ServicesTests
             _httpContextAccessorMock = new Mock<IHttpContextAccessor>();
             _refreshTokenRepositoryMock = new Mock<IRefreshTokenRepository>();
             _tokenFactoryMock = new Mock<ITokenFactory>();
+            _eventDispatcherMock = new Mock<IEventDispatcher>();
 
             _service = new LoginRegisterServices(
                 _userManagerMock.Object,
@@ -61,7 +64,8 @@ namespace Tests.ServicesTests
                 _userRepositoryMock.Object,
                 _httpContextAccessorMock.Object,
                 _refreshTokenRepositoryMock.Object,
-                _tokenFactoryMock.Object
+                _tokenFactoryMock.Object,
+                _eventDispatcherMock.Object
             );
         }
 
@@ -667,4 +671,5 @@ namespace Tests.ServicesTests
       
     }
 }
+
 

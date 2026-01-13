@@ -5,15 +5,15 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
- 
+  
   resolve: {
-    dedupe: ["react", "react-dom", "react-router"],
+    dedupe: ["react", "react-dom", "react-router", "recharts"],
   },
   
   optimizeDeps: {
-    include: ["leaflet", "react", "react-dom"],
+    include: ["leaflet", "react", "react-dom", "recharts"],
   },
-  
+
   server: {
     port: 4000,
     host: "0.0.0.0",

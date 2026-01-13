@@ -119,7 +119,6 @@ export default function Footer() {
               <li><Link to="/settings" className="link link-hover">{t("footer.links.settings")}</Link></li>
               <li><Link to="/map" className="link link-hover">{t("footer.links.map")}</Link></li>
               <li><Link to="/list" className="link link-hover">{t("footer.links.list")}</Link></li>
-              <li><Link to="/proposals" className="link link-hover">{t("footer.links.proposals")}</Link></li>
             </ul>
 
             {/* For admin */}

@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Link } from "react-router";
 import Header from "../components/header";
 import Footer from "../components/footer";
 import { useAdminGuard } from "../components/useAdminGuard";
@@ -6,14 +7,11 @@ import { useTranslation } from "react-i18next";
 
 export default function AdminDashboard() {
   const { t } = useTranslation();
+  React.useEffect(() => {
+    document.title = t("footer.links.admindashboard") + " - FuelStats";
+  }, [t]);
   const { state, email } = useAdminGuard();
 
-  const handleLogout = () => {
-    try {
-      localStorage.removeItem("email");
-    } catch {}
-    window.location.href = "/login";
-  };
 
   if (state === "checking") {
     return (
@@ -26,6 +24,7 @@ export default function AdminDashboard() {
   if (state !== "allowed") {
     return null;
   }
+  
   return (
     <div className="min-h-screen bg-base-200 text-base-content flex flex-col">
       <Header />
@@ -45,18 +44,18 @@ export default function AdminDashboard() {
         <div className="bg-base-300 rounded-xl p-6 shadow-md mb-8">
           <p className="mb-4 text-lg">{t("admin.welcome")}</p>
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-            <a href="/admin/brands" className="btn btn-primary w-full">
+            <Link to="/admin/brands" className="btn btn-primary w-full">
               {t("admin.brand_panel")}
-            </a>
-            <a href="/admin/users" className="btn btn-primary w-full">
+            </Link>
+            <Link to="/admin/users" className="btn btn-primary w-full">
               {t("admin.user_panel")}
-            </a>
-            <a href="/admin/stations" className="btn btn-primary w-full">
+            </Link>
+            <Link to="/admin/stations" className="btn btn-primary w-full">
               {t("admin.gas_station_panel")}
-            </a>
-            <a href="/admin/proposals" className="btn btn-primary w-full">
+            </Link>
+            <Link to="/admin/proposals" className="btn btn-primary w-full">
               {t("admin.proposal_panel")}
-            </a>
+            </Link>
           </div>
         </div>
       </main>

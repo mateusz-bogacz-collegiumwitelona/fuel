@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Services.Helpers;
+using Services.Interfaces;
 using Services.Services;
 using StackExchange.Redis;
 using System;
@@ -24,7 +25,7 @@ namespace Tests.ServicesTests
         private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
         private readonly Mock<RoleManager<IdentityRole<Guid>>> _roleManagerMock;
         private readonly Mock<ILogger<UserServices>> _loggerMock;
-        private readonly Mock<EmailSender> _emailMock;
+        private readonly Mock<IEmailSender> _emailMock;
         private readonly CacheService _cache;
         private readonly UserServices _service;
 
@@ -359,28 +360,9 @@ namespace Tests.ServicesTests
             );
         }
 
-        private Mock<EmailSender> CreateEmailSenderMock()
+        private Mock<IEmailSender> CreateEmailSenderMock()
         {
-            var inMemorySettings = new Dictionary<string, string?>
-            {
-                ["Frontend:Url"] = "http://localhost:4000", 
-                ["Mail:Host"] = "",
-                ["Mail:Port"] = "1025",
-                ["Mail:EnableSsl"] = "false",
-                ["Mail:From"] = ""
-            };
-
-            var configuration = new ConfigurationBuilder()
-                .AddInMemoryCollection(inMemorySettings)
-                .Build();
-
-            var emailBodys = new EmailBodys();
-
-            return new Mock<EmailSender>(
-                Mock.Of<ILogger<EmailSender>>(),
-                configuration,
-                emailBodys
-            );
+            return new Mock<IEmailSender>(MockBehavior.Loose);
         }
 
         private CacheService CreateCacheServiceMock()
