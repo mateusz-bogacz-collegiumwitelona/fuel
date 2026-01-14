@@ -47,6 +47,8 @@ builder.Host.UseSerilog((ctx, services, config) =>
 {
     config
     .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", Serilog.Events.LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
     .WriteTo.Console()
     .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day)
     .WriteTo.Sink(
@@ -80,7 +82,7 @@ builder.Services.AddRateLimiter(options =>
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
     {
         var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        
+
         return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 200,
@@ -99,7 +101,7 @@ builder.Services.AddRateLimiter(options =>
     });
 
 
-    options.AddFixedWindowLimiter("upload", options => { 
+    options.AddFixedWindowLimiter("upload", options => {
         options.PermitLimit = 10;
         options.Window = TimeSpan.FromMinutes(1);
         options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
@@ -255,7 +257,6 @@ builder.Services.AddSingleton(sp =>
 //configure facebook auth settings
 builder.Services.Configure<Microsoft.AspNetCore.Authentication.Google.GoogleOptions>(
     builder.Configuration.GetSection("Google"));
-
 //register repo 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IStationRepository, StationRepository>();
@@ -287,7 +288,7 @@ builder.Services.AddScoped<EmailBodys>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenFactory, TokenFactory>();
 builder.Services.AddScoped<CacheService>();
-builder.Services.AddScoped<IStorage, BlobApiHelper>(); 
+builder.Services.AddScoped<IStorage, BlobApiHelper>();
 builder.Services.AddScoped<GoogleAuthClient>();
 
 //register background services
@@ -310,7 +311,6 @@ builder.Services.AddTransient<IEventHandler<UserBannedEvent>, InvalidateBannedUs
 builder.Services.AddTransient<IEventHandler<UserUnlockedEvent>, NotifyUserUnlockHandler>();
 builder.Services.AddTransient<IEventHandler<UserUnlockedEvent>, InvalidateUnlockedUserCacheHandler>();
 
-//controllers and swagger
 builder.Services.AddControllers(op =>
 {
     var policy = new AuthorizationPolicyBuilder()
@@ -341,57 +341,20 @@ builder.Services.AddControllers(op =>
 });
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-        Scheme = "Bearer",
-        BearerFormat = "JWT",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "JWT Authorization header using the Bearer scheme."
-    });
 
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    c.IncludeXmlComments(xmlPath);
-});
 
 var app = builder.Build();
 
 app.UseForwardedHeaders();
 
 var cliArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
-if (cliArgs.Length > 0)
+if (!app.Environment.IsEnvironment("Testing") && cliArgs.Length > 0)
 {
     var commandRunner = new CommandRunner(app.Services);
     await commandRunner.RunAsync(cliArgs);
     Environment.Exit(0);
 }
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
 
 //auto migration and seeding
@@ -431,3 +394,5 @@ app.UseHttpsRedirection();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }
