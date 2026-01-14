@@ -32,19 +32,7 @@ services:
       - Blob__ConnectionString=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;
       - FACEBOOK_APP_ID=${FACEBOOK_OAUTH_CLIENT_ID}
       - FACEBOOK_APP_SECRET=${FACEBOOK_OAUTH_CLIENT_SECRET}
-      - ADMIN_EMAIL=${ADMIN_EMAIL}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
-      - Mail__Host=${MAIL_HOST}
-      - Mail__Port=${MAIL_PORT}
-      - Mail__EnableSsl=${MAIL_ENABLE_SSL}
-      - Mail__Username=${MAIL_USERNAME}
-      - Mail__Password=${MAIL_PASSWORD}
-      - Mail__From=${MAIL_FROM}
-      - Mail__DisplayName=${MAIL_DISPLAY_NAME}
       - Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command=Warning
-      - Frontend__Url=${FRONTEND_PUBLIC_URL}
-      - Blob__PublicUrl=/blobs/fuel-prices
     ports:
       - "${API_PORT:-5111}:8080"
     networks:
