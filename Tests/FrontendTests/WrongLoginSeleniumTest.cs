@@ -2,7 +2,7 @@
 using Xunit;
 using Tests.Selenium.Pages;
 
-namespace Tests.Selenium
+namespace Tests.FrontendTests
 {
     [Collection("Selenium")]
     public class WrongLoginSeleniumTest

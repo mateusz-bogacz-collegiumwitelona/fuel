@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace Tests.Selenium
+namespace Tests.FrontendTests
 {
     [CollectionDefinition("Selenium", DisableParallelization = true)]
     public class SeleniumCollectionDefinition : ICollectionFixture<SeleniumFixture>

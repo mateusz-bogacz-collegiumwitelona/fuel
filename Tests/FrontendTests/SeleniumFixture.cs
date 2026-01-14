@@ -3,7 +3,7 @@ using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using Tests.Selenium.Pages;
 
-namespace Tests.Selenium
+namespace Tests.FrontendTests
 {
     public class SeleniumFixture : IDisposable
     {
