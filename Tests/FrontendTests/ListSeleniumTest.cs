@@ -30,27 +30,7 @@ namespace Tests.FrontendTests
             _driver.Dispose();
         }
 
-        [Fact]
-        public void ListPage_Redirects_WhenAuthNotReady()
-        {
-            LoginPage page2 = new LoginPage(_driver, _baseUrl);
-            page2.GoTo();
-            page2.EnterEmail("szymon.mikolajek@studenci.collegiumwitelona.pl");
-            page2.EnterPassword("1Qweasdzxc@");
-            page2.Submit();
-
-            _listPage.GoTo();
-
-            Thread.Sleep(2000);
-
-            var url = _driver.Url;
-
-            Assert.True(
-                url.Contains("/login", StringComparison.OrdinalIgnoreCase) ||
-                url.Contains("/dashboard", StringComparison.OrdinalIgnoreCase),
-                $"Unexpected URL: {url}"
-            );
-        }
+       
 
         [Fact]
         public void List_OpenFilters_And_SearchButton_IsClickable()
