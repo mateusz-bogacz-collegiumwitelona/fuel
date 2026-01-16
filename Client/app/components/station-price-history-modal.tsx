@@ -11,7 +11,6 @@ import {
 } from "recharts";
 import { API_BASE } from "./api";
 
-// --- TYPY DANYCH ---
 type FuelHistoryItem = {
   fuelType: string;
   fuelCode: string;
@@ -37,8 +36,7 @@ export function StationPriceHistoryModal({ isOpen, onClose, station }: StationPr
   const [historyData, setHistoryData] = React.useState<FuelHistoryItem[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  
-  // Stan aktywnej zakładki (wybrane paliwo)
+
   const [activeTabCode, setActiveTabCode] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -76,9 +74,6 @@ export function StationPriceHistoryModal({ isOpen, onClose, station }: StationPr
       
       let items: FuelHistoryItem[] = [];
 
-      // --- LOGIKA NAPRAWCZA ---
-      // Sprawdzamy, czy API zwróciło bezpośrednio tablicę (jak w Twoim logu),
-      // czy obiekt z polem 'data' (jak w Swaggerze).
       if (Array.isArray(json)) {
         items = json;
       } else if (json.data && Array.isArray(json.data)) {
@@ -87,7 +82,6 @@ export function StationPriceHistoryModal({ isOpen, onClose, station }: StationPr
 
       if (items.length > 0) {
         setHistoryData(items);
-        // Domyślnie wybierz pierwsze paliwo z listy
         setActiveTabCode(items[0].fuelCode);
       } else {
         setHistoryData([]);
@@ -101,39 +95,32 @@ export function StationPriceHistoryModal({ isOpen, onClose, station }: StationPr
     }
   };
 
-  // --- PRZETWARZANIE DANYCH DO WYKRESU ---
   const getChartData = () => {
     if (!activeTabCode) return [];
     
     const fuelData = historyData.find(f => f.fuelCode === activeTabCode);
     if (!fuelData) return [];
 
-    // Mapujemy tablice na obiekty { date, price }
     const chartPoints = fuelData.validFrom.map((dateStr, index) => {
       if (!dateStr) return null;
       const dateObj = new Date(dateStr);
       
-      // Walidacja daty (gdyby przyszło coś dziwnego)
       if (isNaN(dateObj.getTime())) return null;
 
       return {
         dateOriginal: dateStr,
-        // Formatowanie daty na oś X
         dateLabel: dateObj.toLocaleDateString(i18n.language, { day: '2-digit', month: '2-digit', year: '2-digit' }),
-        // Pełna data do tooltipa
         fullDate: dateObj.toLocaleString(i18n.language),
         price: fuelData.price[index]
       };
     }).filter(item => item !== null);
 
-    // Sortujemy chronologicznie
     return chartPoints.sort((a, b) => new Date(a!.dateOriginal).getTime() - new Date(b!.dateOriginal).getTime());
   };
 
   const currentChartData = getChartData();
   const currentFuelName = historyData.find(f => f.fuelCode === activeTabCode)?.fuelType || activeTabCode;
 
-  // Obliczanie min/max dla osi Y
   const prices = currentChartData.map(d => d!.price);
   const minPrice = prices.length ? Math.min(...prices) - 0.20 : 0;
   const maxPrice = prices.length ? Math.max(...prices) + 0.20 : 10;
@@ -164,7 +151,7 @@ export function StationPriceHistoryModal({ isOpen, onClose, station }: StationPr
            <div className="alert alert-info">{t("station.history_no_data")}</div>
         ) : (
           <div>
-            {/* --- ZAKŁADKI (TABS) --- */}
+
             <div className="tabs tabs-boxed mb-6 bg-base-200 p-1 gap-1 flex-wrap">
               {historyData.map((fuel) => (
                 <a 
@@ -177,7 +164,7 @@ export function StationPriceHistoryModal({ isOpen, onClose, station }: StationPr
               ))}
             </div>
 
-            {/* --- WYKRES --- */}
+
             <div className="h-[400px] w-full mt-4">
               <h4 className="text-center font-semibold mb-2 text-primary">{currentFuelName}</h4>
               
@@ -208,7 +195,7 @@ export function StationPriceHistoryModal({ isOpen, onClose, station }: StationPr
                     formatter={(value: number) => [`${value.toFixed(2)} zł`, t("station.history_chart_price")]}
                   />
                   <Line 
-                    type="stepAfter" // Wykres schodkowy
+                    type="stepAfter" 
                     dataKey="price" 
                     stroke="#00a96e" 
                     strokeWidth={3}
