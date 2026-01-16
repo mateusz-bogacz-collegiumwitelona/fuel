@@ -20,7 +20,7 @@ export default defineConfig({
     hmr: {
       clientPort: 443,
     },
-    allowedHosts: ["localhost", "nginx-dev"],
+    allowedHosts: ["localhost", "nginx-dev","web"],
     watch: {
       usePolling: true,
     },

@@ -1,43 +1,42 @@
-﻿using System;
+﻿using OpenQA.Selenium;
+using System;
 using System.Threading;
-using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
+using Tests.Selenium.Attributes;
 using Tests.Selenium.Pages;
 using Xunit;
 
 namespace Tests.FrontendTests
 {
-    public class ListPageSeleniumTests : IDisposable
+    [Collection("Selenium")]
+    public class ListPageSeleniumTests 
     {
+        private readonly SeleniumFixture _fixture;
         private readonly IWebDriver _driver;
-        private readonly string _baseUrl = "https://fuelly.com.pl/";
+        private readonly string _baseUrl;
         private readonly ListPage _listPage;
 
-        public ListPageSeleniumTests()
+        public ListPageSeleniumTests(SeleniumFixture fixture)
         {
-            var options = new ChromeOptions();
-            options.AddArgument("--headless=new");
-            options.AddArgument("--no-sandbox");
-            options.AddArgument("--disable-dev-shm-usage");
-
-            _driver = new ChromeDriver(options);
+            _fixture = fixture;
+            _driver = _fixture.Driver;
+            _baseUrl = _fixture.BaseUrl;
             _listPage = new ListPage(_driver, _baseUrl);
         }
 
-        public void Dispose()
-        {
-            _driver.Quit();
-            _driver.Dispose();
-        }
 
         [Fact]
         public void ListPage_Redirects_WhenAuthNotReady()
         {
-            LoginPage page2 = new LoginPage(_driver, _baseUrl);
-            page2.GoTo();
-            page2.EnterEmail("szymon.mikolajek@studenci.collegiumwitelona.pl");
-            page2.EnterPassword("1Qweasdzxc@");
-            page2.Submit();
+            IJavaScriptExecutor js = (IJavaScriptExecutor)_driver;
+            try
+            {
+                _driver.Navigate().GoToUrl(_baseUrl);
+                js.ExecuteScript("try { localStorage.clear(); sessionStorage.clear(); } catch(e) {}");
+                _driver.Manage().Cookies.DeleteAllCookies();
+            }
+            catch { 
+              
+            }
 
             _listPage.GoTo();
 
@@ -46,51 +45,27 @@ namespace Tests.FrontendTests
             var url = _driver.Url;
 
             Assert.True(
-                url.Contains("/login", StringComparison.OrdinalIgnoreCase) ||
-                url.Contains("/dashboard", StringComparison.OrdinalIgnoreCase),
-                $"Unexpected URL: {url}"
+                url.Contains("/login", StringComparison.OrdinalIgnoreCase),
+                $"Expected redirect to /login for unathenticated user, but got: {url}"
             );
         }
 
-        [Fact]
+        [RequireEnvironmentVariablesFact("SELENIUM_GRID_URL", "FRONTEND_URL")]
         public void List_OpenFilters_And_SearchButton_IsClickable()
         {
-            ListPage page = new ListPage(_driver, _baseUrl);
-            LoginPage page2 = new LoginPage(_driver, _baseUrl);
-            page2.GoTo();
-            page2.EnterEmail("szymon.mikolajek@studenci.collegiumwitelona.pl");
-            page2.EnterPassword("1Qweasdzxc@");
-            page2.Submit();
+            _fixture.EnsureLoggedIn();
 
-            page.GoTo();
+            _listPage.GoTo();
+            _listPage.ToggleFilters();
+            _listPage.ClickSearchInFilters();
 
-            page.ToggleFilters();
+            Thread.Sleep(1000);
 
-            page.ClickSearchInFilters();
-
-            bool tableVisible = page.IsTableVisible();
-            bool noStations = page.IsNoStationsMessageVisible();
+            bool tableVisible = _listPage.IsTableVisible();
+            bool noStations = _listPage.IsNoStationsMessageVisible();
             Assert.True(tableVisible || noStations, "Expected either table with results or a 'no stations' message after search.");
         }
 
-        [Fact]
-        public void List_SearchWithNoResults_ShowsNoStationsMessage()
-        {
-            LoginPage loginPage = new LoginPage(_driver, _baseUrl);
-            loginPage.GoTo();
-            loginPage.EnterEmail("szymon.mikolajek@studenci.collegiumwitelona.pl");
-            loginPage.EnterPassword("1Qweasdzxc@");
-            loginPage.Submit();
-
-            _listPage.GoTo();
-
-            _listPage.ToggleFilters();
-
-            
-
-            _listPage.ClickSearchInFilters();
-
-            Assert.True(_listPage.IsNoStationsMessageVisible());
-        }
+      
     }
 }

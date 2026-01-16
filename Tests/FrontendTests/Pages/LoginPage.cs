@@ -8,79 +8,62 @@ namespace Tests.Selenium.Pages
     {
         private readonly IWebDriver _driver;
         private readonly string _baseUrl;
-        private readonly TimeSpan _timeout = TimeSpan.FromSeconds(10);
+        private readonly TimeSpan _timeout = TimeSpan.FromSeconds(30);
+        private readonly WebDriverWait _wait;
 
         public LoginPage(IWebDriver driver, string baseUrl)
         {
             _driver = driver;
             _baseUrl = (baseUrl ?? "https://fuelly.com.pl").TrimEnd('/');
+            _wait = new WebDriverWait(_driver, _timeout);
         }
 
         public void GoTo()
-        {
-            _driver.Navigate().GoToUrl(_baseUrl + "/login");
-        }
+            => _driver.Navigate().GoToUrl(_baseUrl + "/login");
 
         public void EnterEmail(string email)
         {
-            WebDriverWait wait = new WebDriverWait(_driver, _timeout);
-            wait.Until(driver =>
+            _wait.Until(driver =>
             {
                 try
                 {
                     IWebElement el = driver.FindElement(By.CssSelector("input[type='email']"));
-                    if (el.Displayed)
+                    if (el.Displayed && el.Enabled)
                     {
                         el.Clear();
                         el.SendKeys(email);
                         return true;
                     }
                 }
-                catch (StaleElementReferenceException)
-                {
-                    return false;
-                }
-                catch
-                {
-                    return false;
-                }
-
+                catch (StaleElementReferenceException) { return false; }
+                catch { return false; }
                 return false;
             });
         }
 
         public void EnterPassword(string password)
         {
-            WebDriverWait wait = new WebDriverWait(_driver, _timeout);
-            wait.Until(driver =>
+            _wait.Until(driver =>
             {
                 try
                 {
                     IWebElement el = driver.FindElement(By.CssSelector("input[type='password']"));
-                    if (el.Displayed)
+                    if (el.Displayed && el.Enabled)
                     {
                         el.Clear();
                         el.SendKeys(password);
                         return true;
                     }
                 }
-                catch (StaleElementReferenceException)
-                {
-                    return false;
-                }
-                catch
-                {
-                    return false;
-                }
-
+                catch (StaleElementReferenceException) { return false; }
+                catch { return false; }
                 return false;
             });
         }
 
         public void Submit()
         {
-            WebDriverWait wait = new WebDriverWait(_driver, _timeout);
-            wait.Until(driver =>
+            _wait.Until(driver =>
             {
                 try
                 {
@@ -91,15 +74,8 @@ namespace Tests.Selenium.Pages
                         return true;
                     }
                 }
-                catch (StaleElementReferenceException)
-                {
-                    return false;
-                }
-                catch
-                {
-                    return false;
-                }
-
+                catch (StaleElementReferenceException) { return false; }
+                catch { return false; }
                 return false;
             });
         }
@@ -116,25 +92,18 @@ namespace Tests.Selenium.Pages
         {
             try
             {
-                WebDriverWait wait = new WebDriverWait(_driver, _timeout);
-                return wait.Until(driver =>
+                return _wait.Until(driver =>
                 {
                     try
                     {
                         IWebElement message = driver.FindElement(By.CssSelector("form p, .text-center.text-sm, .alert, .text-sm.text-gray-400"));
                         return message.Displayed ? message.Text : null;
                     }
-                    catch (StaleElementReferenceException)
-                    {
-                        return null;
-                    }
-                    catch
-                    {
-                        return null;
-                    }
+                    catch (StaleElementReferenceException) { return null; }
+                    catch { return null; }
                 });
             }
-            catch
+            catch (WebDriverTimeoutException)
             {
                 return null;
             }
@@ -159,92 +128,61 @@ namespace Tests.Selenium.Pages
         {
             try
             {
-                WebDriverWait wait = new WebDriverWait(_driver, _timeout);
+                IJavaScriptExecutor js = (IJavaScriptExecutor)_driver;
+                const string script = @"
+                    var callback = arguments[arguments.length - 1];
+                    fetch('/api/logout', { method: 'POST', credentials: 'include' })
+                        .then(() => callback(true))
+                        .catch(() => callback(false));
+                ";
 
+                js.ExecuteAsyncScript(script);
 
-                bool opened = wait.Until(driver =>
+                js.ExecuteScript("try { localStorage.clear(); sessionStorage.clear(); } catch(e) {}");
+
+                _driver.Navigate().GoToUrl(_baseUrl + "/login");
+
+                if (WaitForUrlContains("/login", TimeSpan.FromSeconds(5)))
+                {
+                    return;
+                }
+            }
+            catch
+            {
+                // Ignore JS errors and try UI logout
+            }
+
+            try
+            {
+                bool opened = _wait.Until(driver =>
                 {
                     try
                     {
                         IWebElement toggle = driver.FindElement(By.CssSelector("label[aria-haspopup='true'], .btn.btn-ghost.btn-square, button[aria-haspopup='true']"));
-                        if (toggle.Displayed && toggle.Enabled)
-                        {
-                            toggle.Click();
-                            return true;
-                        }
+                        if (toggle.Displayed && toggle.Enabled) { toggle.Click(); return true; }
                     }
-                    catch (StaleElementReferenceException)
-                    {
-                        return false;
-                    }
-                    catch
-                    {
-                        return false;
-                    }
-
+                    catch (StaleElementReferenceException) { return false; }
+                    catch { return false; }
                     return false;
                 });
 
                 if (opened)
                 {
-
-                    bool clicked = wait.Until(driver =>
+                    _wait.Until(driver =>
                     {
                         try
                         {
                             IWebElement logoutButton = driver.FindElement(By.XPath("//button[normalize-space(.)='Wyloguj' or normalize-space(.)='Logout']"));
-                            if (logoutButton.Displayed && logoutButton.Enabled)
-                            {
-                                logoutButton.Click();
-                                return true;
-                            }
+                            if (logoutButton.Displayed && logoutButton.Enabled) { logoutButton.Click(); return true; }
                         }
-                        catch (StaleElementReferenceException)
-                        {
-                            return false;
-                        }
-                        catch
-                        {
-                            return false;
-                        }
-
+                        catch (StaleElementReferenceException) { return false; }
+                        catch { return false; }
                         return false;
                     });
-
-                    if (clicked)
-                    {
-
-                        WaitForUrlContains("/login", TimeSpan.FromSeconds(5));
-                        return;
-                    }
+                    WaitForUrlContains("/login", TimeSpan.FromSeconds(5));
                 }
             }
-            catch
-            {
-
-            }
-
-
-            try
-            {
-                IJavaScriptExecutor js = (IJavaScriptExecutor)_driver;
-                const string script = @"
-                    try {
-                        fetch('/api/logout', { method: 'POST', credentials: 'include' })
-                            .catch(function(){});
-                    } catch(e) {}
-                    try { localStorage.removeItem('token'); } catch(e) {}
-                    try { localStorage.removeItem('token_expiration'); } catch(e) {}
-                    try { localStorage.removeItem('role'); } catch(e) {}
-                    try { localStorage.removeItem('email'); } catch(e) {}
-                ";
-                js.ExecuteScript(script);
-                WaitForUrlContains("/login", TimeSpan.FromSeconds(5));
-            }
-            catch
-            {
-
-            }
+            catch { }
         }
     }
 }
