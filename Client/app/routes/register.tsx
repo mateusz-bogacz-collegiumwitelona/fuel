@@ -2,7 +2,6 @@ import * as React from "react";
 import HeaderHome from "../components/HeaderHome";
 import FooterHome from "../components/FooterHome";
 import { API_BASE } from "../components/api";
-import FacebookButton from "../components/FacebookLoginButton";
 import { useTranslation } from "react-i18next";
 
 export default function Register() {
@@ -18,15 +17,6 @@ export default function Register() {
   const [message, setMessage] = React.useState("");
   const [loading, setLoading] = React.useState(false);
 
-
-  const handleFacebookSuccess = (data: any) => {
-    if (data?.email) localStorage.setItem("email", data.email);
-    if (data?.token) localStorage.setItem("token", data.token);
-
-    if (typeof window !== "undefined") {
-       window.location.href = "/dashboard";
-    }
-  };
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
