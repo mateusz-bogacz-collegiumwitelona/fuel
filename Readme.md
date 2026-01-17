@@ -40,8 +40,8 @@ Wykonaj poniższe kroki, aby uruchomić projekt lokalnie.
 ### 1. Sklonuj repozytorium
 
 ```bash
-git clone <twoj-url-repozytorium>
-cd <katalog-repozytorium>
+git clone https://github.com/mateusz-bogacz-collegiumwitelona/fuel
+cd fuel
 ```
 
 ### 2. Skonfiguruj Zmienne Środowiskowe
@@ -74,9 +74,9 @@ MAILPIT_PORT=63854
 REDIS_HOST=redis
 REDIS_PORT=6379
 
-#nginx (Zwróć uwagę na port HTTPS)
+#nginx
 NGINX_HTTP_PORT=8080
-NGINX_HTTPS_PORT=8443
+NGINX_HTTPS_PORT=443
 
 #client
 CLIENT_PORT=4000
@@ -86,13 +86,32 @@ AZURITE_BLOB_PORT=10000
 AZURITE_QUEUE_PORT=10001
 AZURITE_TABLE_PORT=10002
 
-#facebook oauth (Uzupełnij dla logowania FB)
+#facebook oauth
 FACEBOOK_OAUTH_CLIENT_ID=
 FACEBOOK_OAUTH_CLIENT_SECRET=
 
-#google oauth (Uzupełnij dla logowania Google)
+#google oauth
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+```
+
+3. Przejdź do katalogu Client
+
+```bash
+cd Client
+```
+
+4. Skopiuj przykładowy plik, aby utworzyć lokalny plik `.env`:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+5. Otwórz plik `.env`. Do podstawowego lokalnego developmentu domyślne wartości są wystarczające. Jeśli jednak chcesz przetestować logowanie społecznościowe (Facebook/Google), musisz podać własne klucze aplikacji OAuth w odpowiednich sekcjach.
+
+```dotenv
+VITE_FACEBOOK_CLIENT_ID=
+VITE_GOOGLE_CLIENT_ID=
 ```
 
 ### 3. Uruchom aplikację
@@ -115,7 +134,7 @@ Po uruchomieniu wszystkich kontenerów możesz uzyskać dostęp do poszczególny
 | **Backend API (Swagger)** | `http://localhost:5111/swagger` | Bezpośredni dostęp do dokumentacji i testowania API backendowego.                                   |
 | **Mailpit**               | `http://localhost:63854`        | Interfejs webowy do podglądu e-maili wysyłanych przez aplikację (np. potwierdzenia rejestracji).    |
 
-## 🧪 Uruchamianie testów
+## Uruchamianie testów
 
 Projekt zawiera dedykowany zestaw testów, który działa w izolowanym środowisku kontenerowym, zapewniając spójność między środowiskiem deweloperskim a potokami CI/CD.
 
