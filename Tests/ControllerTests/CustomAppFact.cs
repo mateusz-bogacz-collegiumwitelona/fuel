@@ -1,0 +1,353 @@
+﻿using Azure.Storage.Blobs;
+using Data.Context;
+using Data.Enums;
+using Data.Interfaces;
+using Data.Models;
+using Microsoft.AspNetCore.Authentication.Facebook;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using Moq;
+using NetTopologySuite;
+using NetTopologySuite.Geometries;
+using Services.Email;
+using Services.Event.Interfaces;
+using StackExchange.Redis;
+using System.Net;
+using System.Net.Sockets;
+using System.Security.Claims;
+
+namespace Tests.ControllerTests;
+
+public class CustomAppFact : WebApplicationFactory<Program>
+{
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseEnvironment("Testing");
+
+        builder.ConfigureServices(services =>
+        {
+            var fbDescriptors = services
+                .Where(d =>
+                    d.ServiceType != null && d.ServiceType.FullName?.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    d.ImplementationType != null && d.ImplementationType.FullName?.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    d.ImplementationInstance != null && d.ImplementationInstance.GetType().FullName?.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    d.ImplementationFactory != null && d.ImplementationFactory?.Method.DeclaringType?.FullName.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0
+                )
+                .ToList();
+
+            foreach (var d in fbDescriptors)
+                services.Remove(d);
+            services.RemoveAll<IConfigureOptions<FacebookOptions>>();
+            services.RemoveAll<IPostConfigureOptions<FacebookOptions>>();
+            var identityAppDescriptor = services.SingleOrDefault(d =>
+                d.ServiceType.Name == "IConfigureOptions`1" &&
+                d.ImplementationType?.Name.Contains("IdentityCookieOptionsSetup") == true);
+            if (identityAppDescriptor != null)
+                services.Remove(identityAppDescriptor);
+            var googleDescriptors = services
+                .Where(d =>
+                    d.ServiceType != null && d.ServiceType.FullName?.IndexOf("Google", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    d.ImplementationType != null && d.ImplementationType.FullName?.IndexOf("Google", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    d.ImplementationInstance != null && d.ImplementationInstance.GetType().FullName?.IndexOf("Google", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    d.ImplementationFactory != null && d.ImplementationFactory?.Method.DeclaringType?.FullName.IndexOf("Google", StringComparison.OrdinalIgnoreCase) >= 0
+                )
+                .ToList();
+            foreach (var d in googleDescriptors)
+                services.Remove(d);
+            services.RemoveAll<IConfigureOptions<GoogleOptions>>();
+            services.RemoveAll<IPostConfigureOptions<GoogleOptions>>();
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            });
+            var dbDescriptor = services.SingleOrDefault(d =>
+                d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
+            if (dbDescriptor != null)
+                services.Remove(dbDescriptor);
+            services.AddDbContext<ApplicationDbContext>(options =>
+            {
+                options.UseInMemoryDatabase("TestDb");
+                options.ConfigureWarnings(w =>
+                    w.Ignore(InMemoryEventId.TransactionIgnoredWarning)
+                );
+            });
+
+            var hostedServices = services.Where(s => s.ServiceType.Name.Contains("HostedService")).ToList();
+            foreach (var hs in hostedServices)
+                services.Remove(hs);
+
+            var redisMock = new Mock<IConnectionMultiplexer>();
+            var dbMock = new Mock<IDatabase>();
+            var serverMock = new Mock<IServer>();
+
+            dbMock.Setup(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+                  .ReturnsAsync(RedisValue.Null);
+
+            dbMock.Setup(d => d.StringSetAsync(
+                    It.IsAny<RedisKey>(),
+                    It.IsAny<RedisValue>(),
+                    It.IsAny<TimeSpan?>(),
+                    It.IsAny<When>(),
+                    It.IsAny<CommandFlags>()))
+                  .ReturnsAsync(true);
+
+            dbMock.Setup(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+                  .ReturnsAsync(true);
+
+            serverMock.Setup(s => s.Keys(
+                    It.IsAny<int>(),
+                    It.IsAny<RedisValue>(),
+                    It.IsAny<int>(),
+                    It.IsAny<long>(),
+                    It.IsAny<int>(),
+                    It.IsAny<CommandFlags>()))
+                .Returns(Enumerable.Empty<RedisKey>());
+
+            redisMock.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(dbMock.Object);
+            redisMock.Setup(r => r.GetEndPoints(It.IsAny<bool>())).Returns(new EndPoint[] { new IPEndPoint(IPAddress.Loopback, 6379) });
+            redisMock.Setup(r => r.GetServer(It.IsAny<EndPoint>(), It.IsAny<object>())).Returns(serverMock.Object);
+
+            services.RemoveAll<IConnectionMultiplexer>();
+            services.AddSingleton(redisMock.Object);
+
+            services.RemoveAll<BlobServiceClient>();
+            var blobMock = new Mock<BlobServiceClient>();
+            services.AddSingleton(blobMock.Object);
+
+            services.RemoveAll<IStorage>();
+            var storageMock = new Mock<IStorage>();
+            storageMock.Setup(s => s.UploadFileAsync(
+            It.IsAny<Stream>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()))
+            .ReturnsAsync((Stream stream, string fileName, string contentType, string? bucket, string? subPath) =>
+            {
+                var path = string.IsNullOrWhiteSpace(subPath) ? fileName : $"{subPath.TrimEnd('/')}/{fileName}";
+                return path;
+            });
+            storageMock.Setup(s => s.DeleteFileAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(true);
+            storageMock.Setup(s => s.GetPublicUrl(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns((string objectPath, string? bucket) => $"https://fake-storage/{objectPath}");
+            services.AddSingleton(storageMock.Object);
+            services.RemoveAll<IEmailQueue>();
+            var emailQueueMock = new Mock<IEmailQueue>();
+            emailQueueMock.Setup(q => q.QueueEmail(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()));
+            emailQueueMock.Setup(q => q.DequeueAsync(It.IsAny<CancellationToken>()))
+                          .Returns((CancellationToken ct) => new ValueTask<EmailMessage>(Task.FromResult(new EmailMessage(string.Empty, string.Empty, string.Empty))));
+            services.AddSingleton(emailQueueMock.Object);
+            services.RemoveAll<IEventDispatcher>();
+            services.AddSingleton<IEventDispatcher, NoOpEventDispatcher>();
+            var adminId = Guid.NewGuid();
+            var userId = Guid.NewGuid();
+            var userId2 = Guid.NewGuid();
+
+            services.PostConfigureAll<JwtBearerOptions>(options =>
+            {
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        if (context.Request.Headers.TryGetValue("Authorization", out var auth))
+                        {
+                            var authValue = auth.ToString();
+                            if (authValue.Contains("test-admin-token"))
+                            {
+                                var identity = new ClaimsIdentity(new[]
+                                {
+                                    new Claim(ClaimTypes.Email, "admin@test.com"),
+                                    new Claim(ClaimTypes.NameIdentifier, adminId.ToString()),
+                                    new Claim(ClaimTypes.Name, "TestAdmin"),
+                                    new Claim(ClaimTypes.Role, "Admin"),
+                                }, "Test");
+                                context.Principal = new ClaimsPrincipal(identity);
+                                context.Success();
+                            }
+                            else if (authValue.Contains("test-user-token"))
+                            {
+                                var identity = new ClaimsIdentity(new[]
+                                {
+                                    new Claim(ClaimTypes.Email, "user@test.com"),
+                                    new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                                    new Claim(ClaimTypes.Name, "TestUser"),
+                                    new Claim(ClaimTypes.Role, "User"),
+                                }, "Test");
+                                context.Principal = new ClaimsPrincipal(identity);
+                                context.Success();
+                            }
+                            else if (authValue.Contains("test-user2-token"))
+                            {
+                                var identity = new ClaimsIdentity(new[]
+                                {
+                                    new Claim(ClaimTypes.Email, "user2@test.com"),
+                                    new Claim(ClaimTypes.NameIdentifier, userId2.ToString()),
+                                    new Claim(ClaimTypes.Name, "TestUser2"),
+                                    new Claim(ClaimTypes.Role, "User"),
+                                }, "Test");
+                                context.Principal = new ClaimsPrincipal(identity);
+                                context.Success();
+                            }
+                        }
+                        return Task.CompletedTask;
+
+                    }
+                };
+            });
+
+            var sp = services.BuildServiceProvider();
+            using (var scope = sp.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                db.Database.EnsureDeleted();
+                db.Database.EnsureCreated();
+                var geometryFactory = NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
+                db.RemoveRange(db.Set<Brand>());
+                db.RemoveRange(db.Set<FuelType>());
+                db.RemoveRange(db.Set<Station>());
+                db.RemoveRange(db.Set<PriceProposal>());
+                db.RemoveRange(db.Set<FuelPrice>());
+                db.RemoveRange(db.Users);
+                db.RemoveRange(db.Set<ApplicationUser>());
+                var date = new DateTime(2025, 12, 1, 10, 0, 0, DateTimeKind.Utc);
+                var location = geometryFactory.CreatePoint(new Coordinate(10.0, 10.0));
+                var user1 = new ApplicationUser { UserName = "TestUser", Id = userId, Email = "user@test.com", NormalizedUserName = "USER", NormalizedEmail = "USER@TEST.COM", SecurityStamp = Guid.NewGuid().ToString() };
+                var user2 = new ApplicationUser { UserName = "TestUser2", Id = userId2, Email = "user2@test.com", NormalizedUserName = "USER2", NormalizedEmail = "USER2@TEST.COM", SecurityStamp = Guid.NewGuid().ToString() };
+                var admin = new ApplicationUser { UserName = "TestAdmin", Id = adminId, Email = "admin@test.com", NormalizedEmail = "ADMIN@TEST.COM", NormalizedUserName = "TESTADMIN", SecurityStamp = Guid.NewGuid().ToString() };
+                var brand1 = new Brand { Name = "Orlen", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+                var brand2 = new Brand { Name = "Shell", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+                var brand3 = new Brand { Name = "Test", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+                var address1 = new StationAddress { City = "test", Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, HouseNumber = "1", PostalCode = "1", Street = "test", UpdatedAt = DateTime.UtcNow, Location = location };
+                var station1 = new Station { Id = Guid.NewGuid(), Brand = brand1, BrandId = brand1.Id, CreatedAt = DateTime.UtcNow, Address = address1, AddressId = address1.Id };
+                var ft1 = new FuelType { Name = "LPG gas", Code = "LPG", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
+                var ft2 = new FuelType { Name = "Diesel", Code = "ON", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
+                var ft3 = new FuelType { Name = "ZBenzyna 98", Code = "PB98", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
+                var ft4 = new FuelType { Name = "YBenzyna 98", Code = "Y", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
+                var ft5 = new FuelType { Name = "XDeleteBenzyna", Code = "X", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
+                var ft6 = new FuelType { Name = "ZBenzyna", Code = "Z", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Id = Guid.NewGuid() };
+                var pp1 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token1", ProposedPrice = 5.0m, PhotoUrl = "url1", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Pending, ReviewedAt = null, ReviewedBy = null, Reviewer = null };
+                var pp2 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token2", ProposedPrice = 4.0m, PhotoUrl = "url2", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Rejected, ReviewedAt = null, ReviewedBy = null, Reviewer = null };
+                var pp3 = new PriceProposal { Id = Guid.NewGuid(), CreatedAt = DateTime.UtcNow, FuelType = ft2, FuelTypeId = ft2.Id, Token = "token3", ProposedPrice = 4.0m, PhotoUrl = "url3", Station = station1, StationId = station1.Id, User = user1, UserId = user1.Id, Status = PriceProposalStatus.Pending, ReviewedAt = DateTime.UtcNow.AddDays(-1), ReviewedBy = admin.Id, Reviewer = admin };
+                if (!db.Users.Any())
+                {
+                    db.Users.AddRange(admin, user1, user2);
+                    db.SaveChanges();
+                }
+                var hasher = new PasswordHasher<ApplicationUser>();
+                user1.PasswordHash = hasher.HashPassword(user1, "User123!");
+                user1.EmailConfirmed = true;
+                var report1 = new ReportUserRecord
+                {
+                    ReportedUser = user1,
+                    ReportedUserId = user1.Id,
+                    Id = Guid.NewGuid(),
+                    CreatedAt = date,
+                    Status = ReportStatusEnum.Pending,
+                    ReportingUser = admin,
+                    ReportingUserId = admin.Id,
+                    Description = "some description",
+                };
+
+                db.ReportUserRecords.Add(report1);
+                db.SaveChanges();
+
+                var adminRole = new IdentityRole<Guid>
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Admin",
+                    NormalizedName = "ADMIN"
+                };
+
+                var userRole = new IdentityRole<Guid>
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "User",
+                    NormalizedName = "USER"
+                };
+
+                db.Roles.Add(adminRole);
+                db.Roles.Add(userRole);
+                db.SaveChanges();
+
+                var adminUserRole = new IdentityUserRole<Guid>
+                {
+                    RoleId = adminRole.Id,
+                    UserId = admin.Id
+                };
+
+                var normalUserRole = new IdentityUserRole<Guid>
+                {
+                    RoleId = userRole.Id,
+                    UserId = user1.Id
+                };
+                var normalUserRole2 = new IdentityUserRole<Guid>
+                {
+                    RoleId = userRole.Id,
+                    UserId = user2.Id
+                };
+
+                db.UserRoles.Add(adminUserRole);
+                db.UserRoles.Add(normalUserRole);
+                db.UserRoles.Add(normalUserRole2);
+                db.SaveChanges();
+
+                if (!db.Brand.Any())
+                {
+                    db.Brand.AddRange(new[] { brand1, brand2, brand3 });
+                    db.SaveChanges();
+                }
+
+                if (!db.FuelTypes.Any())
+                {
+                    db.FuelTypes.AddRange(new[] { ft1, ft2, ft3, ft4, ft5, ft6 });
+                    db.SaveChanges();
+                }
+
+                if (!db.PriceProposals.Any())
+                {
+                    db.PriceProposals.AddRange(pp1, pp2, pp3);
+                    db.SaveChanges();
+                }
+                if (!db.ProposalStatistics.Any(ps => ps.UserId == user1.Id))
+                {
+                    db.ProposalStatistics.Add(new ProposalStatistic
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = user1.Id,
+                        TotalProposals = 3,
+                        ApprovedProposals = 1,
+                        RejectedProposals = 1,
+                        AcceptedRate = 33,
+                        Points = 1,
+                        UpdatedAt = DateTime.UtcNow
+                    });
+                    db.SaveChanges();
+                }
+                if (!db.FuelPrices.Any(fp => fp.StationId == station1.Id))
+                {
+                    db.FuelPrices.Add(new FuelPrice
+                    {
+                        Id = Guid.NewGuid(),
+                        Station = station1,
+                        StationId = station1.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        FuelType = ft2,
+                        FuelTypeId = ft2.Id,
+                        ValidFrom = DateTime.UtcNow,
+                        Price = 3.0m,
+                        UpdatedAt = DateTime.UtcNow
+                    });
+                    db.SaveChanges();
+                }
+            }
+        });
+    }
+}

@@ -1,19 +1,16 @@
-﻿using Data.Context;
-using Data.Interfaces;
+﻿using Data.Interfaces;
 using Data.Models;
-using Data.Reopsitories;
 using DTO.Responses;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestPlatform.Utilities;
 using Moq;
+using Services.Helpers;
 using Services.Services;
+using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Net;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
@@ -22,217 +19,100 @@ namespace Tests.ServicesTests
 {
     public class ProposalStatisticServicesTest
     {
-        private readonly Mock<IProposalStatisticRepository> _repository;
+        private readonly Mock<IProposalStatisticRepository> _repoMock;
+        private readonly Mock<IConnectionMultiplexer> _redisMock;
+        private readonly Mock<IDatabase> _dbMock;
+        private readonly Mock<IServer> _serverMock;
+        private readonly CacheService _cache;
         private readonly Mock<ILogger<ProposalStatisticServices>> _loggerMock;
+        private readonly Mock<UserManager<ApplicationUser>> _userManagerMock;
         private readonly ProposalStatisticServices _service;
         private readonly ITestOutputHelper _output;
 
         public ProposalStatisticServicesTest(ITestOutputHelper output)
         {
-            // test output setup
             _output = output;
+            _repoMock = new Mock<IProposalStatisticRepository>();
+            _redisMock = new Mock<IConnectionMultiplexer>(MockBehavior.Strict);
+            _dbMock = new Mock<IDatabase>(MockBehavior.Loose);
+            _serverMock = new Mock<IServer>(MockBehavior.Loose);
+            _redisMock.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(_dbMock.Object);
+            var endpoint = new DnsEndPoint("127.0.0.1", 6379);
+            _redisMock.Setup(r => r.GetEndPoints(It.IsAny<bool>())).Returns(new EndPoint[] { endpoint });
+            _redisMock.Setup(r => r.GetServer(endpoint, It.IsAny<object>())).Returns(_serverMock.Object);
+            _serverMock.Setup(s => s.Keys(It.IsAny<int>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CommandFlags>()))
+                .Returns(Enumerable.Empty<RedisKey>());
+            _cache = new CacheService(_redisMock.Object, Mock.Of<ILogger<CacheService>>());
 
-            //repo, logger, service
-            _repository = new Mock<IProposalStatisticRepository>(MockBehavior.Strict);
             _loggerMock = new Mock<ILogger<ProposalStatisticServices>>();
-            //_service = new ProposalStatisticServices(_repository.Object, _loggerMock.Object);
+            var store = new Mock<IUserStore<ApplicationUser>>();
+            _userManagerMock = new Mock<UserManager<ApplicationUser>>(
+                store.Object, null, null, null, null, null, null, null, null
+            ) { DefaultValue = DefaultValue.Mock };
+            _repoMock.Setup(r => r.GetTopUserListAsync()).ReturnsAsync(new List<TopUserResponse>());
+
+            _service = new ProposalStatisticServices(
+                _repoMock.Object,
+                _loggerMock.Object,
+                _userManagerMock.Object,
+                _cache
+            );
         }
 
         [Fact]
-        public async Task GetUserProposalStatisticResponseTest_NullEmail_SuccessWhenReturnsBad()
+        public async Task GetUserProposalStatisticResponse_ReturnsNotFound_WhenUserDoesNotExist()
         {
             // Arrange
-            //
+            var email = "missing@example.com";
+            _userManagerMock.Setup(u => u.FindByEmailAsync(email)).ReturnsAsync((ApplicationUser?)null);
 
             // Act
-            //we try to get a response for an empty email
-            var result = await _service.GetUserProposalStatisticResponse(string.Empty);
+            var result = await _service.GetUserProposalStatisticResponse(email);
 
             // Assert
-            // GetUserProposalStatisticResponse() should return Bad response (!IsSuccess, code 400)
             Assert.False(result.IsSuccess);
-            Assert.Equal(401, result.StatusCode);
-            Assert.Contains("Email is required", result.Errors);
-            _loggerMock.Verify(x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("Email is required to fetch user proposal statistics.")),
-                It.Is<Exception>(ex => ex == null),
-                It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
-            _output.WriteLine("Test passed: GetUserProposalStatisticResponse() doesn't let a nonexistent email address pass and returns 400");
+            Assert.Equal(404, result.StatusCode);
+            _output.WriteLine("Test passed: GetUserProposalStatisticResponse returns NotFound when user is missing");
         }
 
-        //[Fact]
-        //public async Task GetUserProposalStatisticResponseTest_ExistingUserNoData_SuccessWhenReturnsBad()
-        //{
-        //    //Arrange
-        //    //set repo up to return null response for this email
-        //    _repository.Setup(r => r.GetUserProposalStatisticAsync("user123@example.com"))
-        //    .ReturnsAsync((GetProposalStatisticResponse?)null);
+        [Fact]
+        public async Task GetUserProposalStatisticResponse_ReturnsError_WhenRepositoryThrows()
+        {
+            // Arrange
+            var email = "user@example.com";
+            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = email };
+            _userManagerMock.Setup(u => u.FindByEmailAsync(email)).ReturnsAsync(user);
+            _repoMock.Setup(r => r.GetUserProposalStatisticAsync(user)).ThrowsAsync(new Exception("repo failure"));
 
-        //    //Act
-        //    var result = await _service.GetUserProposalStatisticResponse("user123@example.com");
+            // Act
+            var result = await _service.GetUserProposalStatisticResponse(email);
 
-        //    // Assert
-        //    Assert.False(result.IsSuccess);
-        //    Assert.Equal(404, result.StatusCode);
-        //    Assert.Contains("User proposal statistic not found", result.Errors);
-        //    _loggerMock.Verify(x => x.Log(
-        //        LogLevel.Warning,
-        //        It.IsAny<EventId>(),
-        //        It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("No proposal statistics found for user with email")),
-        //        It.Is<Exception>(ex => ex == null),
-        //        It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
-        //    _output.WriteLine("Test passed: GetUserProposalStatisticResponse() finds the user, but not the stats and retunrs 404");
-        //}
+            // Assert
+            Assert.False(result.IsSuccess);
+            Assert.NotEqual(200, result.StatusCode);
+            _output.WriteLine("Test passed: GetUserProposalStatisticResponse returns error when repository throws");
+        }
 
-        //[Fact]
-        //public async Task GetUserProposalStatisticResponseTest_EverythingGood_SuccessWhenReturnsData()
-        //{
-        //    // Arrange\
-        //    //set repo up to respond with a statistic for test email
-        //    var response = new GetProposalStatisticResponse { TotalProposals = 1 }; 
-        //    _repository.Setup(r => r.GetUserProposalStatisticAsync("user123@example.com"))
-        //             .ReturnsAsync(response);
+        [Fact]
+        public async Task GetUserProposalStatisticResponse_ReturnsSuccess_WhenRepositoryReturnsData()
+        {
+            // Arrange
+            var email = "ok@example.com";
+            var user = new ApplicationUser { Id = Guid.NewGuid(), Email = email };
+            var expected = new GetProposalStatisticResponse(); 
 
-        //    // Act
-        //    var result = await _service.GetUserProposalStatisticResponse("user123@example.com");
+            _userManagerMock.Setup(u => u.FindByEmailAsync(email)).ReturnsAsync(user);
+            _repoMock.Setup(r => r.GetUserProposalStatisticAsync(user)).ReturnsAsync(expected);
 
-        //    // Assert
-        //    Assert.True(result.IsSuccess);
-        //    Assert.Equal(200, result.StatusCode);
-        //    Assert.Equal(response, result.Data);
-        //    _loggerMock.Verify(x => x.Log(
-        //        It.Is<LogLevel>(lvl => lvl == LogLevel.Warning || lvl == LogLevel.Error),
-        //        It.IsAny<EventId>(),
-        //        It.IsAny<It.IsAnyType>(),
-        //        It.IsAny<Exception>(),
-        //        It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Never);
-        //    _output.WriteLine("Test passed: GetUserProposalStatisticResponse() gets the data correctly and returns 200");
-        //}
-        
-        //[Fact]
-        //public async Task GetUserProposalStatisticResponseTest_SomethingWentWrongEx_SuccessWhenExceptionThrown()
-        //{
-        //    // Arrange
-        //    // set repo up to throw an exception for our email
-        //    _repository.Setup(r => r.GetUserProposalStatisticAsync("user123@example.com")).
-        //        ThrowsAsync(new Exception("Test error"));
+            // Act
+            var result = await _service.GetUserProposalStatisticResponse(email);
 
-        //    // Act
-        //    var result = await _service.GetUserProposalStatisticResponse("user123@example.com");
-
-        //    // Assert
-        //    Assert.False(result.IsSuccess);
-        //    Assert.Equal(500, result.StatusCode);
-        //    Assert.Contains("Test error", result.Errors);
-        //    _loggerMock.Verify(
-        //        x => x.Log(
-        //            LogLevel.Error,
-        //            It.IsAny<EventId>(),
-        //            It.Is<It.IsAnyType>((v, _) =>
-        //                v.ToString()!.Contains("An error occurred while fetching proposal statistics for email:")),
-        //            It.Is<Exception>(ex => ex.Message == "Test error"),
-        //            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-        //        Times.Once);
-        //    _output.WriteLine("Test passed: GetUserProposalStatisticResponse() catches exception and throws 500");
-        //}
-
-        //[Fact]
-        //public async Task UpdateTotalProposalsAsyncTest_WrongEmail_SuccessWhenReturnsBad()
-        //{
-        //    // Arrange
-        //    //
-
-        //    // Act
-        //    //we try to get a response for an empty email
-        //    var result = await _service.UpdateTotalProposalsAsync(false, string.Empty);
-
-        //    // Assert
-        //    // GetUserProposalStatisticResponse() should return Bad response (!IsSuccess, code 400)
-        //    Assert.False(result.IsSuccess);
-        //    Assert.Equal(400, result.StatusCode);
-        //    Assert.Contains("Email is required", result.Errors);
-        //    _loggerMock.Verify(x => x.Log(
-        //        LogLevel.Warning,
-        //        It.IsAny<EventId>(),
-        //        It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("Email is required to update user proposal statistics.")),
-        //        It.Is<Exception>(ex => ex == null),
-        //        It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
-        //    _output.WriteLine("Test passed: UpdateTotalProposalsAsync() doesn't let a nonexistent email address pass and returns 400");
-        //}
-
-        //[Fact]
-        //public async Task UpdateTotalProposalsAsyncTest_FailedToUpdate_SuccessWhenReturnsBad()
-        //{
-        //    // Arrange
-        //    // set repo up to respond with failure
-        //    _repository.Setup(r => r.UpdateTotalProposalsAsync(true, "user123@example.com"))
-        //     .ReturnsAsync(false);
-
-        //    // Act
-        //    var result = await _service.UpdateTotalProposalsAsync(true, "user123@example.com");
-
-        //    // Assert
-        //    Assert.False(result.IsSuccess);
-        //    Assert.Equal(500, result.StatusCode);
-        //    Assert.Contains("Failed to update user proposal statistic", result.Errors);
-        //    _loggerMock.Verify(x => x.Log(
-        //        LogLevel.Warning,
-        //        It.IsAny<EventId>(),
-        //        It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("Failed to update proposal statistics for user with email")),
-        //        It.Is<Exception>(ex => ex == null),
-        //        It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
-        //    _output.WriteLine("Test passed: UpdateTotalProposalsAsync() returns 404");
-        //}
-        
-        //[Fact]
-        //public async Task UpdateTotalProposalsAsyncTest_EverythingGood_SuccessWhenUpdatesCorrectly()
-        //{
-        //    // Arrange
-        //    _repository.Setup(r => r.UpdateTotalProposalsAsync(true, "user123@example.com"))
-        //     .ReturnsAsync(true);
-
-        //    // Act
-        //    var result = await _service.UpdateTotalProposalsAsync(true, "user123@example.com");
-
-        //    // Assert
-        //    Assert.True(result.IsSuccess);
-        //    Assert.Equal(200, result.StatusCode);
-        //    Assert.True(result.Data);
-        //    _loggerMock.Verify(x => x.Log(
-        //        It.Is<LogLevel>(lvl => lvl == LogLevel.Warning || lvl == LogLevel.Error),
-        //        It.IsAny<EventId>(),
-        //        It.IsAny<It.IsAnyType>(),
-        //        It.IsAny<Exception>(),
-        //        It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Never);
-        //    _output.WriteLine("Test passed: UpdateTotalProposalsAsync() returned 200 and threw no errors");
-        //}
-
-        //[Fact]
-        //public async Task UpdateTotalProposalsAsyncTest_SomethingWentWrongEx_SuccessWhenExceptionThrown()
-        //{
-        //    // Arrange
-        //    _repository.Setup(r => r.UpdateTotalProposalsAsync(true, "user123@example.com")).
-        //             ThrowsAsync(new Exception("Test error"));
-
-        //    // Act
-        //    var result = await _service.UpdateTotalProposalsAsync(true, "user123@example.com");
-
-        //    // Assert
-        //    Assert.False(result.IsSuccess);
-        //    Assert.Equal(500, result.StatusCode);
-        //    Assert.Contains("Test error", result.Errors);
-        //    _loggerMock.Verify(
-        //        x => x.Log(
-        //            LogLevel.Error,
-        //            It.IsAny<EventId>(),
-        //            It.Is<It.IsAnyType>((v, _) =>
-        //                v.ToString()!.Contains("An error occurred while updating proposal statistics for email:")),
-        //            It.Is<Exception>(ex => ex.Message == "Test error"),
-        //            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-        //        Times.Once);
-        //    _output.WriteLine("Test passed: UpdateTotalProposalsAsync() catches exception and throws 500");
-        //}
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(200, result.StatusCode);
+            Assert.Same(expected, result.Data);
+            _output.WriteLine("Test passed: GetUserProposalStatisticResponse returns success and data");
+        }
     }
 }
+

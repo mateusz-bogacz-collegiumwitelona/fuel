@@ -47,17 +47,32 @@ services:
     depends_on:
       - postgis
       - redis
+      - web
+      - selenium
     environment:
       - ConnectionStrings__DefaultConnection=User ID=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Host=postgis;Port=${POSTGRES_PORT};Database=${POSTGRES_DB};
       - Redis__Host=${REDIS_HOST}
       - Redis__Port=${REDIS_PORT}
       - ASPNETCORE_ENVIRONMENT=Test
+      - SELENIUM_GRID_URL=http://selenium:4444/wd/hub
+      - FRONTEND_URL=https://web
     volumes:
       - shared-volume:/shared/volume
     networks:
       - dev
     stdin_open: true
     tty: true
+
+  selenium:
+    image: selenium/standalone-chrome
+    container_name: selenium-dev
+    shm_size: "2g"
+    depends_on:
+      - web
+    networks:
+      - dev
+    ports:
+      - "7900:7900"
 
   postgis:
     image: postgis/postgis:17-3.5
